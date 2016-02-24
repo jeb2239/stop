@@ -19,6 +19,7 @@ let ident_num = ['a'-'z' 'A'-'Z' '0'-'9']
 rule token = parse
       [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
     | '#'       { comment lexbuf }          (* Comments *)
+    | '\n'      { NEWLINE }
 	| '('       { LPAREN }
 	| ')'       { RPAREN }
     | '{'       { LBRACE }
@@ -28,8 +29,8 @@ rule token = parse
     | ','       { COMMA }
 	| '+'       { PLUS }
 	| '-'       { MINUS }
-	| '*'       { MULT }
-	| '/'       { DIV }
+	| '*'       { TIMES }
+	| '/'       { DIVIDE }
 	| '='       { ASSIGN }
 	| '^'       { CARET }
     | "=="      { EQ }
@@ -55,7 +56,7 @@ rule token = parse
 			FNCT f
 			with Not_found -> VAR word
 		}
-	| eof { EOF }
+	| eof { raise End_of_file }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and comment = parse

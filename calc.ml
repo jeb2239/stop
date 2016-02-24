@@ -1,6 +1,7 @@
 open Parser
 open Lexing
 open Scanner
+
 let main () =
 	try
 		let lexbuf = Lexing.from_channel stdin in

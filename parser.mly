@@ -3,19 +3,22 @@
 	open Lexing
 
 	let var_table = Hashtbl.create 16
-
 %}
 
+%token SEMI LPAREN RPAREN LBRACE RBRACE COMMA COLON
+%token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET
+%token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
+%token RETURN IF ELSE FOR WHILE INT BOOL VOID
+%token EOF
+
 %token NEWLINE
-%token LPAREN RPAREN EQ
 %token <float> NUM
-%token PLUS MINUS MULT DIV CARET
 %token <string> VAR 
 %token <float->float> FNCT
 
 %right EQ
 %left PLUS MINUS
-%left MULT DIV 
+%left TIMES DIVIDE
 %left NEG
 %right CARET 
 
@@ -43,12 +46,12 @@ exp: NUM	{$1}
 	}
 
 	|FNCT LPAREN exp RPAREN { $1 $3 }
-	|exp PLUS exp {$1 +. $3}
-	|exp MINUS exp {$1 -. $3}
-	|exp MULT exp {$1 *. $3}
-	|exp DIV exp {$1 /. $3}
-	|MINUS exp %prec NEG { -. $2}
-	|exp CARET exp { $1 ** $3}
-	|LPAREN exp RPAREN {$2}
+	|exp PLUS exp { $1 +. $3 }
+	|exp MINUS exp { $1 -. $3 }
+	|exp TIMES exp { $1 *. $3 }
+	|exp DIVIDE exp { $1 /. $3 }
+	|MINUS exp %prec NEG { -. $2 }
+	|exp CARET exp { $1 ** $3 }
+	|LPAREN exp RPAREN { $2 }
 	;
 %%

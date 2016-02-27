@@ -47,8 +47,8 @@ rule token = parse
     | "for"     { FOR }
     | "while"   { WHILE }
     | "return"  { RETURN }
-	|digit+
-	|"." digit+
+	| digit+
+	| "." digit+
 	| digit+ "." digit* as num { NUM (float_of_string num) }
 	| ident ident_num* as word 
 		{try

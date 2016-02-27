@@ -1,7 +1,8 @@
+/* Ocamlyacc Parser for Stop */
+
 %{
 	open Printf
 	open Lexing
-
 	let var_table = Hashtbl.create 16
 %}
 
@@ -45,12 +46,12 @@ exp: NUM	{$1}
 		$3
 	}
 
-	|FNCT LPAREN exp RPAREN { $1 $3 }
-	|exp PLUS exp { $1 +. $3 }
-	|exp MINUS exp { $1 -. $3 }
-	|exp TIMES exp { $1 *. $3 }
-	|exp DIVIDE exp { $1 /. $3 }
-	|MINUS exp %prec NEG { -. $2 }
+	| FNCT LPAREN exp RPAREN { $1 $3 }
+	| exp PLUS exp { $1 +. $3 }
+	| exp MINUS exp { $1 -. $3 }
+	| exp TIMES exp { $1 *. $3 }
+	| exp DIVIDE exp { $1 /. $3 }
+	| MINUS exp %prec NEG { -. $2 }
 	|exp CARET exp { $1 ** $3 }
 	|LPAREN exp RPAREN { $2 }
 	;

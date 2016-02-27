@@ -18,7 +18,7 @@ let ident_num = ['a'-'z' 'A'-'Z' '0'-'9']
 
 rule token = parse
       [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
-    | '#'       { comment lexbuf }          (* Comments *)
+    | "//"      { comment lexbuf }          (* Comments *)
     | '\n'      { NEWLINE }
 	| '('       { LPAREN }
 	| ')'       { RPAREN }
@@ -47,15 +47,16 @@ rule token = parse
     | "for"     { FOR }
     | "while"   { WHILE }
     | "return"  { RETURN }
+    | "def"		{ DEF }
+    | "class"	{ CLASS }
+    | '%'		{ MODULO }
+    | '['		{ LSQUARE }
+    | ']'		{ RSQUARE }
+    | "Unit"	{ UNIT }
+    | ""
 	|digit+
 	|"." digit+
-	| digit+ "." digit* as num { NUM (float_of_string num) }
-	| ident ident_num* as word 
-		{try
-			let f = Hashtbl.find fun_table word in 
-			FNCT f
-			with Not_found -> VAR word
-		}
+	| digit+ "." digit* as num { FLOAT(float_of_string num) }
 	| eof { raise End_of_file }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 

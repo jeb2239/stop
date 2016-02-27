@@ -9,12 +9,18 @@
 %token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF ELSE FOR WHILE INT BOOL VOID
+%token RETURN IF ELSE FOR WHILE VOID
+%token INT BOOL 
 %token DEF CLASS UNIT
 %token EOF
-
 %token NEWLINE
+
+/* Primitives */
+
+%token <int> INT
 %token <float> FLOAT
+%token <bool> BOOLVAL
+
 %token <string> VAR 
 %token <float->float> FNCT
 

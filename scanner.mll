@@ -13,6 +13,10 @@
 }
 
 let digit =  ['0'-'9']
+let exp = (('e'|'E')('-'|'+')?digit+)
+
+(* Regex for C-Style Float *)
+let flot = (digit+'.'digit*exp?)|(digit+'.'?digit*exp)|(digit*'.'digit+exp?)|(digit*'.'?digit+exp)
 
 rule token = parse
       [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
@@ -51,12 +55,11 @@ rule token = parse
     | "def"		{ DEF }
     | "class"	{ CLASS }
     | "Unit"	{ UNIT }
-    | ""
-	|digit+
-	|"." digit+
-	| digit+ "." digit* as num { FLOAT(float_of_string num) }
-	| eof { raise End_of_file }
+    (* PRIMITIVE TYPES *)
+    | "true"|"false"        as lit { BOOLVAL(bool_of_string lit) }
+    | flot                  as lit { FLOAT(float_of_string lit) }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
+	| eof { raise End_of_file }
 
 and comment = parse
 '\n'      { token lexbuf }

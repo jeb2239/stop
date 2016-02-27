@@ -16,6 +16,7 @@
 /* Primitive Types */
 
 %token INT FLOAT BOOL
+%token TYPE 
 
 %token DEF CLASS UNIT
 %token EOF
@@ -26,6 +27,7 @@
 %token <int> INT_LIT
 %token <float> FLOAT_LIT
 %token <bool> BOOL_LIT
+%token <string> TYPE_ID
 
 %token <string> VAR 
 %token <float->float> FNCT

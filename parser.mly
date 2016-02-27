@@ -6,14 +6,15 @@
 	let var_table = Hashtbl.create 16
 %}
 
-%token SEMI LPAREN RPAREN LBRACE RBRACE COMMA COLON
-%token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET
+%token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
+%token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token RETURN IF ELSE FOR WHILE INT BOOL VOID
+%token DEF CLASS UNIT
 %token EOF
 
 %token NEWLINE
-%token <float> NUM
+%token <float> FLOAT
 %token <string> VAR 
 %token <float->float> FNCT
 
@@ -36,7 +37,7 @@ line: NEWLINE { }
 	| exp NEWLINE { printf "\t%.10g\n" $1; flush stdout}
 	;
 
-exp: NUM	{$1}
+exp: FLOAT	{$1}
 	| VAR {try Hashtbl.find var_table $1
 		with Not_found -> printf "no such variable '%s'\n" $1;
 		0.0

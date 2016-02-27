@@ -13,8 +13,6 @@
 }
 
 let digit =  ['0'-'9']
-let ident = ['a'-'z' 'A'-'Z']
-let ident_num = ['a'-'z' 'A'-'Z' '0'-'9']
 
 rule token = parse
       [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
@@ -24,6 +22,8 @@ rule token = parse
 	| ')'       { RPAREN }
     | '{'       { LBRACE }
     | '}'       { RBRACE }
+    | '['		{ LSQUARE }
+    | ']'		{ RSQUARE }
     | ':'       { COLON }
     | ';'       { SEMI }
     | ','       { COMMA }
@@ -33,6 +33,7 @@ rule token = parse
 	| '/'       { DIVIDE }
 	| '='       { ASSIGN }
 	| '^'       { CARET }
+    | '%'		{ MODULO }
     | "=="      { EQ }
     | "!="      { NEQ }
     | '<'       { LT }
@@ -49,9 +50,6 @@ rule token = parse
     | "return"  { RETURN }
     | "def"		{ DEF }
     | "class"	{ CLASS }
-    | '%'		{ MODULO }
-    | '['		{ LSQUARE }
-    | ']'		{ RSQUARE }
     | "Unit"	{ UNIT }
     | ""
 	|digit+

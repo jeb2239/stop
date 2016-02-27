@@ -3,5 +3,5 @@ open Lexing
 open Scanner
 
 let _ = 
-    let lexbuf = Lexing.form_channel stdin in 
-    Printexc.print main ()
+    let lexbuf = Lexing.from_channel stdin in 
+    Scanner.token lexbuf 

@@ -17,8 +17,8 @@ let ident = ['a'-'z' 'A'-'Z']
 let ident_num = ['a'-'z' 'A'-'Z' '0'-'9']
 
 rule token = parse
-      [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
-    | '#'       { comment lexbuf }          (* Comments *)
+      [' ' '\t' '\r' '\n'] { token lexbuf }     (* Whitespace *)
+    | "//"|"/*"      { comment lexbuf }        (* Comments *)
     | '\n'      { NEWLINE }
 	| '('       { LPAREN }
 	| ')'       { RPAREN }
@@ -37,7 +37,7 @@ rule token = parse
     | "!="      { NEQ }
     | '<'       { LT }
     | "<="      { LEQ }
-    | ">"       { GT }
+    | '>'       { GT }
     | ">="      { GEQ }
     | "&&"      { AND }
     | "||"      { OR }
@@ -60,5 +60,5 @@ rule token = parse
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and comment = parse
-'\n'      { token lexbuf }
-| _         { comment lexbuf }
+      '\n'|"*/"     { token lexbuf }
+    | _             { comment lexbuf }

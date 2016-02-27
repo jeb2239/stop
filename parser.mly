@@ -9,11 +9,12 @@
 %token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF ELSE ELSEIF FOR WHILE VOID
+%token IF ELSE ELSEIF FOR WHILE
+%token RETURN VOID 
+%token FINAL
 
 /* Primitive Types */
-
-%token INT BOOL 
+%token INT FLOAT BOOL
 
 %token DEF CLASS UNIT
 %token EOF
@@ -39,19 +40,17 @@
 
 %%
 
-input: /* none */ { }
+/* Context-Free Grammar */
 
-// input: /*none*/ { }
-//	| input line { }
-//	;
-
-/*
+input: /*none*/ { }
+     | input line { }
+	 ;
 
 line: NEWLINE { }
 	| exp NEWLINE { printf "\t%.10g\n" $1; flush stdout}
 	;
 
-exp: FLOAT_LIT {$1}
+exp:
 	| VAR {try Hashtbl.find var_table $1
 		with Not_found -> printf "no such variable '%s'\n" $1;
 		0.0
@@ -61,14 +60,13 @@ exp: FLOAT_LIT {$1}
 		$3
 	}
 
-	| FNCT LPAREN exp RPAREN { $1 $3 }
-	| exp PLUS exp { $1 +. $3 }
-	| exp MINUS exp { $1 -. $3 }
-	| exp TIMES exp { $1 *. $3 }
-	| exp DIVIDE exp { $1 /. $3 }
-	| MINUS exp %prec NEG { -. $2 }
-	|exp CARET exp { $1 ** $3 }
-	|LPAREN exp RPAREN { $2 }
+	| FNCT LPAREN exp RPAREN        { $1 $3 }
+	| exp PLUS exp                  { $1 +. $3 }
+	| exp MINUS exp                 { $1 -. $3 }
+	| exp TIMES exp                 { $1 *. $3 }
+	| exp DIVIDE exp                { $1 /. $3 }
+	| MINUS exp %prec NEG           { -. $2 }
+	| exp CARET exp                 { $1 ** $3 }
+	| LPAREN exp RPAREN             { $2 }
 	;
-*/
 %%

@@ -52,7 +52,7 @@ rule token = parse
     | "final"   { FINAL } 
     (* Conditionals *)
     | "if"      { IF }
-    | "else if" { ELSEIF }
+    | "elseif" { ELSEIF }
     | "else"    { ELSE }
     | "for"     { FOR }
     | "while"   { WHILE }

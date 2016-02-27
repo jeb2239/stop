@@ -17,8 +17,8 @@ let ident = ['a'-'z' 'A'-'Z']
 let ident_num = ['a'-'z' 'A'-'Z' '0'-'9']
 
 rule token = parse
-      [' ' '\t' '\r' '\n'] { token lexbuf }     (* Whitespace *)
-    | "//"|"/*"      { comment lexbuf }        (* Comments *)
+      [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
+    | "//"      { comment lexbuf }          (* Comments *)
     | '\n'      { NEWLINE }
 	| '('       { LPAREN }
 	| ')'       { RPAREN }
@@ -37,7 +37,7 @@ rule token = parse
     | "!="      { NEQ }
     | '<'       { LT }
     | "<="      { LEQ }
-    | '>'       { GT }
+    | ">"       { GT }
     | ">="      { GEQ }
     | "&&"      { AND }
     | "||"      { OR }
@@ -47,18 +47,19 @@ rule token = parse
     | "for"     { FOR }
     | "while"   { WHILE }
     | "return"  { RETURN }
-	| digit+
-	| "." digit+
-	| digit+ "." digit* as num { NUM (float_of_string num) }
-	| ident ident_num* as word 
-		{try
-			let f = Hashtbl.find fun_table word in 
-			FNCT f
-			with Not_found -> VAR word
-		}
+    | "def"		{ DEF }
+    | "class"	{ CLASS }
+    | '%'		{ MODULO }
+    | '['		{ LSQUARE }
+    | ']'		{ RSQUARE }
+    | "Unit"	{ UNIT }
+    | ""
+	|digit+
+	|"." digit+
+	| digit+ "." digit* as num { FLOAT(float_of_string num) }
 	| eof { raise End_of_file }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and comment = parse
-      '\n'|"*/"     { token lexbuf }
-    | _             { comment lexbuf }
+'\n'      { token lexbuf }
+| _         { comment lexbuf }

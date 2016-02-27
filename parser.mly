@@ -14,6 +14,7 @@
 %token FINAL
 
 /* Primitive Types */
+
 %token INT FLOAT BOOL
 
 %token DEF CLASS UNIT
@@ -42,21 +43,19 @@
 
 /* Context-Free Grammar */
 
-input: /*none*/ { }
-     | input line { }
-	 ;
+input: { } 
 
 line: NEWLINE { }
 	| exp NEWLINE { printf "\t%.10g\n" $1; flush stdout}
 	;
 
-exp:
+exp: 
 	| VAR {try Hashtbl.find var_table $1
 		with Not_found -> printf "no such variable '%s'\n" $1;
 		0.0
 
 	}
-	|VAR EQ exp {Hashtbl.replace var_table $1 $3;
+	| VAR EQ exp {Hashtbl.replace var_table $1 $3;
 		$3
 	}
 
@@ -69,4 +68,5 @@ exp:
 	| exp CARET exp                 { $1 ** $3 }
 	| LPAREN exp RPAREN             { $2 }
 	;
+
 %%

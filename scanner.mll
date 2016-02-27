@@ -12,7 +12,10 @@
 	let fun_table =  create_hashtable 16 [ ("sin", sin); ]
 }
 
-let digit =  ['0'-'9']
+let digit = ['0'-'9']
+let alpha = ['a'-'z']
+let upper_alpha = ['A'-'Z']
+
 let exp = (('e'|'E')('-'|'+')?digit+)
 
 (* Regex for C-Style Float *)
@@ -50,13 +53,15 @@ rule token = parse
     | "!"       { NOT }
     (* Modifiers *)
     | "final"   { FINAL } 
+    | "type"    { TYPE }
     (* Conditionals *)
     | "if"      { IF }
-    | "elseif" { ELSEIF }
+    | "elseif"  { ELSEIF }
     | "else"    { ELSE }
     | "for"     { FOR }
     | "while"   { WHILE }
     | "return"  { RETURN }
+    (* *)
     | "def"		{ DEF }
     | "class"	{ CLASS }
     | "Unit"	{ UNIT }
@@ -65,9 +70,9 @@ rule token = parse
     | "float"   { FLOAT }
     | "bool"    { BOOL }
     (* PRIMITIVE LITERALS *)
-    | "true"|"false"        as lit { BOOL_LIT(bool_of_string lit) }
     | digit+                as lit { INT_LIT(int_of_string lit) }
     | flot                  as lit { FLOAT_LIT(float_of_string lit) }
+    | upper_alpha+alpha+    as lit { TYPE_ID(lit) }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 	| eof { raise End_of_file }
 

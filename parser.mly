@@ -9,17 +9,21 @@
 %token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF ELSE FOR WHILE VOID
+%token RETURN IF ELSE ELSEIF FOR WHILE VOID
+
+/* Primitive Types */
+
 %token INT BOOL 
+
 %token DEF CLASS UNIT
 %token EOF
 %token NEWLINE
 
 /* Primitives */
 
-%token <int> INT
-%token <float> FLOAT
-%token <bool> BOOLVAL
+%token <int> INT_LIT
+%token <float> FLOAT_LIT
+%token <bool> BOOL_LIT
 
 %token <string> VAR 
 %token <float->float> FNCT
@@ -35,15 +39,19 @@
 
 %%
 
-input: /*none*/ { }
-	| input line { }
-	;
+input: /* none */ { }
+
+// input: /*none*/ { }
+//	| input line { }
+//	;
+
+/*
 
 line: NEWLINE { }
 	| exp NEWLINE { printf "\t%.10g\n" $1; flush stdout}
 	;
 
-exp: FLOAT	{$1}
+exp: FLOAT_LIT {$1}
 	| VAR {try Hashtbl.find var_table $1
 		with Not_found -> printf "no such variable '%s'\n" $1;
 		0.0
@@ -62,4 +70,5 @@ exp: FLOAT	{$1}
 	|exp CARET exp { $1 ** $3 }
 	|LPAREN exp RPAREN { $2 }
 	;
+*/
 %%

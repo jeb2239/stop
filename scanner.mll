@@ -31,6 +31,7 @@ rule token = parse
     | ':'       { COLON }
     | ';'       { SEMI }
     | ','       { COMMA }
+    (* Operators *)
 	| '+'       { PLUS }
 	| '-'       { MINUS }
 	| '*'       { TIMES }
@@ -47,7 +48,11 @@ rule token = parse
     | "&&"      { AND }
     | "||"      { OR }
     | "!"       { NOT }
+    (* Modifiers *)
+    | "final"   { FINAL } 
+    (* Conditionals *)
     | "if"      { IF }
+    | "else if" { ELSEIF }
     | "else"    { ELSE }
     | "for"     { FOR }
     | "while"   { WHILE }
@@ -55,9 +60,14 @@ rule token = parse
     | "def"		{ DEF }
     | "class"	{ CLASS }
     | "Unit"	{ UNIT }
-    (* PRIMITIVE TYPES *)
-    | "true"|"false"        as lit { BOOLVAL(bool_of_string lit) }
-    | flot                  as lit { FLOAT(float_of_string lit) }
+    (* PRIMITIVES *)
+    | "int"     { INT }
+    | "float"   { FLOAT }
+    | "bool"    { BOOL }
+    (* PRIMITIVE LITERALS *)
+    | "true"|"false"        as lit { BOOL_LIT(bool_of_string lit) }
+    | digit+                as lit { INT_LIT(int_of_string lit) }
+    | flot                  as lit { FLOAT_LIT(float_of_string lit) }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 	| eof { raise End_of_file }
 

@@ -63,6 +63,7 @@ expr:
     | expr OR       expr    { Binop($1, Or, $3) }
     | MINUS expr %prec NEG  { Unop(Neg, $2) }
     | NOT expr              { Unop(Not, $2) }
+    | LPAREN expr RPAREN    { $2 }
 
 literals:
       INT_LIT           { IntLit($1) }

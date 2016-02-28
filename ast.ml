@@ -5,7 +5,6 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
 
 type uop = Neg | Not
 
-
 type expr = 
     IntLit of int
   | FloatLit of float

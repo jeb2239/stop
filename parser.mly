@@ -30,11 +30,15 @@
 %token <string> VAR 
 %token <float->float> FNCT
 
-%right EQ
+%nonassoc ELSE
+%right ASSIGN
+%left OR
+%left AND
+%left EQ NEQ
+%left LT GT LEQ GEQ
 %left PLUS MINUS
 %left TIMES DIVIDE
-%left NEG
-%right CARET 
+%right NOT NEG
 
 %start expr
 %type <Ast.expr> expr
@@ -49,7 +53,6 @@ expr:
     | expr MINUS    expr    { Binop($1, Sub, $3) }
     | expr TIMES    expr    { Binop($1, Mult, $3) }
     | expr DIVIDE   expr    { Binop($1, Div, $3) }
-    /*
     | expr EQ       expr    { Binop($1, Equal, $3) }
     | expr NEQ      expr    { Binop($1, Neq, $3) }
     | expr LT       expr    { Binop($1, Less, $3) }
@@ -58,7 +61,8 @@ expr:
     | expr GEQ      expr    { Binop($1, Geq, $3) }
     | expr AND      expr    { Binop($1, And, $3) }
     | expr OR       expr    { Binop($1, Or, $3) }
-    */
+    | MINUS expr %prec NEG  { Unop(Neg, $2) }
+    | NOT expr              { Unop(Not, $2) }
 
 literals:
       INT_LIT           { IntLit($1) }

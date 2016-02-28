@@ -1,10 +1,6 @@
 /* Ocamlyacc Parser for Stop */
 
-%{
-	open Printf
-	open Lexing
-	let var_table = Hashtbl.create 16
-%}
+%{ open Ast %}
 
 %token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
@@ -38,15 +34,17 @@
 %left NEG
 %right CARET 
 
-%start input 
-%type <unit> input 
+%start expr
+%type <Ast.expr> expr
 
 %%
 
 /* Context-Free Grammar */
 
-input: { } 
+expr:
+    expr PLUS expr { Binop($1, Add, $3) }
 
+/*
 line: NEWLINE { }
 	| exp NEWLINE { printf "\t%.10g\n" $1; flush stdout}
 	;
@@ -70,5 +68,6 @@ exp:
 	| exp CARET exp                 { $1 ** $3 }
 	| LPAREN exp RPAREN             { $2 }
 	;
+*/
 
 %%

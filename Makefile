@@ -1,6 +1,6 @@
 # Makefile for Stop Language compiler
 
-OBJS = parser.cmo scanner.cmo calc.cmo ast.ml
+OBJS = parser.cmo scanner.cmo calc.cmo ast.cmo
 
 calc : $(OBJS)
 	ocamlc -o calc $(OBJS)

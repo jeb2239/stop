@@ -13,7 +13,8 @@ let flot = (digit+'.'digit*exp?)|(digit+'.'?digit*exp)|(digit*'.'digit+exp?)|(di
 
 rule token = parse
       [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
-    | "//"      { comment lexbuf }          (* Comments *)
+    | "//"      { single_comment lexbuf }          (* Comments *)
+    | "/*"      { multi_comment lexbuf }
     | '\n'      { NEWLINE }
 	| '('       { LPAREN }
 	| ')'       { RPAREN }
@@ -68,6 +69,10 @@ rule token = parse
 	| eof { EOF  }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
-and comment = parse
-'\n'      { token lexbuf }
-| _         { comment lexbuf }
+and single_comment = parse
+      '\n'      { token lexbuf }
+    | _         { single_comment lexbuf }
+
+and multi_comment = parse
+      "*/"    { token lexbuf }
+    | _     { multi_comment lexbuf }

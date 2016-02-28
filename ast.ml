@@ -7,6 +7,7 @@ type expr =
     IntLit of int
   | FloatLit of float
   | BoolLit of bool
+  | Id of string
   | Binop of expr * op * expr
   | Noexpr
 
@@ -33,6 +34,7 @@ let rec string_of_expr = function
   | FloatLit(f) -> string_of_float f
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
+  | Id(i) -> i
   | Binop(e1, op, e2) ->
         string_of_expr e1 ^ " " ^ string_of_op op ^ " " ^ string_of_expr e2
   | Noexpr -> ""

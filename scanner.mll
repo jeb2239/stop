@@ -3,10 +3,11 @@
 { open Parser }	
 
 let digit = ['0'-'9']
-let alpha = ['a'-'z']
-let upper_alpha = ['A'-'Z']
-
 let exp = (('e'|'E')('-'|'+')?digit+)
+
+let alpha = ['a'-'z' 'A'-'Z']
+let upper_alpha = ['A'-'Z']
+let lower_alpha = ['a'-'z']
 
 (* Regex for C-Style Float *)
 let flot = (digit+'.'digit*exp?)|(digit+'.'?digit*exp)|(digit*'.'digit+exp?)|(digit*'.'?digit+exp)
@@ -25,6 +26,7 @@ rule token = parse
     | ':'       { COLON }
     | ';'       { SEMI }
     | ','       { COMMA }
+
     (* Operators *)
 	| '+'       { PLUS }
 	| '-'       { MINUS }
@@ -42,9 +44,11 @@ rule token = parse
     | "&&"      { AND }
     | "||"      { OR }
     | "!"       { NOT }
+
     (* Modifiers *)
     | "final"   { FINAL } 
     | "type"    { TYPE }
+
     (* Conditionals *)
     | "if"      { IF }
     | "elseif"  { ELSEIF }
@@ -52,20 +56,24 @@ rule token = parse
     | "for"     { FOR }
     | "while"   { WHILE }
     | "return"  { RETURN }
+
     (* *)
     | "def"		{ DEF }
     | "class"	{ CLASS }
     | "Unit"	{ UNIT }
+
     (* PRIMITIVES *)
     | "int"     { INT }
     | "float"   { FLOAT }
     | "bool"    { BOOL }
+
     (* PRIMITIVE LITERALS *)
     | "true"    { TRUE }
     | "false"   { FALSE }
-    | digit+                as lit { INT_LIT(int_of_string lit) }
-    | flot                  as lit { FLOAT_LIT(float_of_string lit) }
-    | upper_alpha+alpha+    as lit { TYPE_ID(lit) }
+    | digit+                    as lit { INT_LIT(int_of_string lit) }
+    | flot                      as lit { FLOAT_LIT(float_of_string lit) }
+    | (lower_alpha)(alpha)+     as lit { ID(lit) }
+    | (upper_alpha)(alpha)+     as lit { TYPE_ID(lit) }
 	| eof { EOF  }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 

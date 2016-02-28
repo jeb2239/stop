@@ -60,11 +60,13 @@ rule token = parse
     | "float"   { FLOAT }
     | "bool"    { BOOL }
     (* PRIMITIVE LITERALS *)
+    | "true"    { TRUE }
+    | "false"   { FALSE }
     | digit+                as lit { INT_LIT(int_of_string lit) }
     | flot                  as lit { FLOAT_LIT(float_of_string lit) }
     | upper_alpha+alpha+    as lit { TYPE_ID(lit) }
+	| eof { EOF  }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
-	| eof { raise End_of_file }
 
 and comment = parse
 '\n'      { token lexbuf }

@@ -8,6 +8,7 @@
 %token IF ELSE ELSEIF FOR WHILE
 %token RETURN VOID 
 %token FINAL
+%token EOF
 
 /* Primitive Types */
 
@@ -42,7 +43,16 @@
 /* Context-Free Grammar */
 
 expr:
-    expr PLUS expr { Binop($1, Add, $3) }
+      literals          { $1 }
+    | expr PLUS expr    { Binop($1, Add, $3) }
+
+literals:
+      INT_LIT           { IntLit($1) }
+    | FLOAT_LIT         { FloatLit($1) }
+    | TRUE              { BoolLit(true) }
+    | FALSE             { BoolLit(false) }
+
+    
 
 /*
 line: NEWLINE { }

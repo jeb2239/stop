@@ -10,6 +10,5 @@ let _ =
     let ast = Parser.expr Scanner.token lexbuf in
     match action with
         Ast -> print_string (Ast.string_of_program ast)
-        | LLVM_IR -> print_string "Not Yet Implemented"
-        | Compile -> print_string "Not Yet Implemented"
-
+        | LLVM_IR -> print_string "Not Yet Implemented\n"
+        | Compile -> print_string "Not Yet Implemented\n"

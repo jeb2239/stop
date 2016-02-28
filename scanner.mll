@@ -1,16 +1,6 @@
 (* Ocamllex scanner for Stop Language *)
 
-{
-	open Parser
-	open Lexing
-
-	let create_hashtable size init =
-		let tbl = Hashtbl.create size in 
-		List.iter (fun (key,data) -> Hashtbl.add tbl key data) init;
-		tbl
-
-	let fun_table =  create_hashtable 16 [ ("sin", sin); ]
-}
+{ open Parser }	
 
 let digit = ['0'-'9']
 let alpha = ['a'-'z']

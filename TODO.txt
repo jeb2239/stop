@@ -1,0 +1,8 @@
+TODO: 
+-----
+
+Integrate among ast.ml, scanner.mll, and parser.mly:
+	Arrays
+	Conditionals & Loops
+	Classes, Methods, & Functions
+	Templates

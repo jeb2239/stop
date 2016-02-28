@@ -15,6 +15,7 @@ type expr =
   | Noexpr
 
 type program = expr
+(* type program = include_stmt list * class_decl list *)
 
 (* Pretty-printing Functions *)
 

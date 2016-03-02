@@ -8,6 +8,7 @@
 %token IF ELSE ELSEIF FOR WHILE
 %token RETURN VOID 
 %token FINAL
+%token INCLUDE
 %token EOF
 
 /* Primitive Types */
@@ -24,6 +25,7 @@
 %token <int> INT_LIT
 %token <float> FLOAT_LIT
 %token <bool> BOOL_LIT
+%token <string> STRING_LIT
 %token <string> TYPE_ID
 %token <string> ID
 
@@ -40,12 +42,27 @@
 %left TIMES DIVIDE
 %right NOT NEG
 
-%start expr
-%type <Ast.expr> expr
+%start program
+%type <Ast.program> program
 
 %%
 
 /* Context-Free Grammar */
+/* -------------------- */
+
+program:
+      includes EOF          { Program($1) }
+
+includes: 
+      /* nothing */         { [] }
+    | include_list          { List.rev $1 }
+
+include_list:
+      include_decl                  { [$1] }
+    | include_list include_decl     { $2::$1 }
+
+include_decl:
+    INCLUDE STRING_LIT      { Include($2) }
 
 expr:
       literals              { $1 }

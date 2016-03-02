@@ -7,7 +7,7 @@ let _ =
                                  ("-c", Compile) ]  (* Generate, check LLVM IR *)
     else Ast in
     let lexbuf = Lexing.from_channel stdin in 
-    let ast = Parser.expr Scanner.token lexbuf in
+    let ast = Parser.program Scanner.token lexbuf in
     match action with
         Ast -> print_string (Ast.string_of_program ast)
         | LLVM_IR -> print_string "Not Yet Implemented\n"

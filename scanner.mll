@@ -58,9 +58,10 @@ rule token = parse
     | "return"  { RETURN }
 
     (* *)
-    | "def"		{ DEF }
-    | "class"	{ CLASS }
-    | "Unit"	{ UNIT }
+    | "def"		    { DEF }
+    | "class"	    { CLASS }
+    | "Unit"	    { UNIT }
+    | "#include"    { INCLUDE }
 
     (* PRIMITIVES *)
     | "int"     { INT }
@@ -72,6 +73,7 @@ rule token = parse
     | "false"   { FALSE }
     | digit+                    as lit { INT_LIT(int_of_string lit) }
     | flot                      as lit { FLOAT_LIT(float_of_string lit) }
+    | '"'(alpha* as s)'"'       { STRING_LIT(s) }
     | (lower_alpha)(alpha)+     as lit { ID(lit) }
     | (upper_alpha)(alpha)+     as lit { TYPE_ID(lit) }
 	| eof { EOF }

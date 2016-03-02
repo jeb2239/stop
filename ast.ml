@@ -14,10 +14,13 @@ type expr =
   | Unop of uop * expr
   | Noexpr
 
-type program = expr
+type include_stmt = Include of string
+
 (* type program = include_stmt list * class_decl list *)
+type program =  Program of include_stmt list
 
 (* Pretty-printing Functions *)
+(* ------------------------- *)
 
 let string_of_op = function 
     Add -> "+"
@@ -49,5 +52,9 @@ let rec string_of_expr = function
         string_of_uop op ^ " " ^ string_of_expr e1
   | Noexpr -> ""
      
-let string_of_program expr =
-    string_of_expr expr ^ "\n"
+let string_of_include = function
+    Include(s) -> "include \"" ^ s ^ "\"\n"
+
+let string_of_program = function
+    Program(includes) -> String.concat "" 
+                            (List.map string_of_include includes) ^ "\n"

@@ -13,8 +13,8 @@ let lower_alpha = ['a'-'z']
 let flot = (digit+'.'digit*exp?)|(digit+'.'?digit*exp)|(digit*'.'digit+exp?)|(digit*'.'?digit+exp)
 
 rule token = parse
-      [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
-    | "//"      { single_comment lexbuf }          (* Comments *)
+      [' ' '\t' '\r' '\n'] { token lexbuf }         (* Whitespace *)
+    | "//"      { single_comment lexbuf }           (* Comments *)
     | "/*"      { multi_comment lexbuf }
     | '\n'      { NEWLINE }
 	| '('       { LPAREN }
@@ -74,7 +74,7 @@ rule token = parse
     | flot                      as lit { FLOAT_LIT(float_of_string lit) }
     | (lower_alpha)(alpha)+     as lit { ID(lit) }
     | (upper_alpha)(alpha)+     as lit { TYPE_ID(lit) }
-	| eof { EOF  }
+	| eof { EOF }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and single_comment = parse

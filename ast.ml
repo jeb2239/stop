@@ -56,5 +56,5 @@ let string_of_include = function
     Include(s) -> "include \"" ^ s ^ "\"\n"
 
 let string_of_program = function
-    Program(includes) -> String.concat "" 
-                            (List.map string_of_include includes) ^ "\n"
+    Program(includes) -> 
+        String.concat "" (List.map string_of_include includes) ^ "\n"

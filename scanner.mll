@@ -57,10 +57,9 @@ rule token = parse
     | "while"   { WHILE }
     | "return"  { RETURN }
 
-    (* *)
+    (* Reserved *)
     | "def"		    { DEF }
     | "class"	    { CLASS }
-    | "Unit"	    { UNIT }
     | "#include"    { INCLUDE }
 
     (* PRIMITIVES *)
@@ -69,6 +68,7 @@ rule token = parse
     | "bool"    { BOOL }
 
     (* PRIMITIVE LITERALS *)
+    | "Unit"    { UNIT }
     | "true"    { TRUE }
     | "false"   { FALSE }
     | digit+                    as lit { INT_LIT(int_of_string lit) }

@@ -14,10 +14,18 @@ type expr =
   | Unop of uop * expr
   | Noexpr
 
+type stmt =
+    Block of stmt list
+  | Expr of expr
+  | Return of expr
+  | If of expr * stmt * stmt
+  | For of expr * expr * expr * stmt
+  | While of expr * stmt
+
 type include_stmt = Include of string
 
 (* type program = include_stmt list * class_decl list *)
-type program =  Program of include_stmt list
+type program =  Program of include_stmt list * stmt list
 
 (* Pretty-printing Functions *)
 (* ------------------------- *)
@@ -51,10 +59,23 @@ let rec string_of_expr = function
   | Unop(op, e1) ->
         string_of_uop op ^ " " ^ string_of_expr e1
   | Noexpr -> ""
-     
+  
+let rec string_of_stmt = function
+    Block(stmts) ->
+        "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
+  | Expr(expr) -> string_of_expr expr ^ ";\n"
+  | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
+  | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
+  | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s1 
+                        ^ "else\n" ^ string_of_stmt s2
+  | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " 
+                            ^ string_of_expr e3  ^ ") " ^ string_of_stmt s
+  | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
+
 let string_of_include = function
     Include(s) -> "include \"" ^ s ^ "\"\n"
 
 let string_of_program = function
-    Program(includes) -> 
-        String.concat "" (List.map string_of_include includes) ^ "\n"
+    Program(includes, stmts) -> 
+        String.concat "" (List.map string_of_include includes) ^ "\n" ^
+        String.concat "" (List.map string_of_stmt stmts) ^ "\n"

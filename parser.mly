@@ -15,6 +15,7 @@
 
 %token INT FLOAT BOOL
 %token TYPE 
+%token UNIT
 
 %token DEF CLASS UNIT
 %token EOF
@@ -32,6 +33,7 @@
 %token <string> VAR 
 %token <float->float> FNCT
 
+%nonassoc NOELSE
 %nonassoc ELSE
 %right ASSIGN
 %left OR
@@ -51,7 +53,10 @@
 /* -------------------- */
 
 program:
-      includes EOF          { Program($1) }
+      includes stmt_list EOF          { Program($1, $2) }
+
+/* Includes */
+/* -------- */
 
 includes: 
       /* nothing */         { [] }
@@ -63,6 +68,47 @@ include_list:
 
 include_decl:
     INCLUDE STRING_LIT      { Include($2) }
+
+/* Statements */
+/* ---------- */
+
+stmt_list:
+      /* nothing */         { [] }
+    | stmt_list stmt        { $2::$1 }
+
+// NOTE: Had to differ from spec here becuase no SEMI causes ambiguity with MINUS:
+// We have rules for expr MINUS expr, MINUS expr, so there's always a shift/reduce conflict
+
+stmt:
+      expr SEMI                     { Expr($1) }
+    | RETURN SEMI                   { Return(Noexpr) }
+    | RETURN expr SEMI              { Return($2) }
+    | LBRACE stmt_list RBRACE       { Block(List.rev $2) } 
+    | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([Expr(Noexpr)])) }
+    | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
+    | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
+    | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
+
+
+/* Functions */
+/* --------- */
+
+/*
+fdecls:
+                            { [] }
+    | fdecl_list            { List.rev $1 }
+
+fdecl_list:
+      fdecl                 { [$1] }
+    | fdecl_list fdecl      { $2::$1 }
+
+fdecl:
+    DEF ID                  { $2 }
+*/
+
+expr_opt:
+      /* nothing */         { Noexpr }
+    | expr                  { $1 }
 
 expr:
       literals              { $1 }
@@ -78,7 +124,7 @@ expr:
     | expr GEQ      expr    { Binop($1, Geq, $3) }
     | expr AND      expr    { Binop($1, And, $3) }
     | expr OR       expr    { Binop($1, Or, $3) }
-    | MINUS expr %prec NEG  { Unop(Neg, $2) }
+    | MINUS expr %prec NEG  { Unop(Neg, $2) } 
     | NOT expr              { Unop(Not, $2) }
     | LPAREN expr RPAREN    { $2 }
 

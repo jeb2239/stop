@@ -1,0 +1,2 @@
+
+./stop.native -a < tests/test-$1.stp

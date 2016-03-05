@@ -61,16 +61,17 @@ rule token = parse
     | "def"		    { DEF }
     | "class"	    { CLASS }
     | "#include"    { INCLUDE }
+    | "var"         { VAR }
 
     (* PRIMITIVES *)
-    | "int"     { INT }
-    | "float"   { FLOAT }
-    | "bool"    { BOOL }
-
+ (*  | "Int"     { INT }
+    | "Float"   { FLOAT }
+    | "Bool"    { BOOL }
+*)
     (* PRIMITIVE LITERALS *)
-    | "Unit"    { UNIT }
-    | "true"    { TRUE }
-    | "false"   { FALSE }
+   (* | "Unit"    { UNIT }*)
+    | "True"    { TRUE }
+    | "False"   { FALSE }
     | digit+                    as lit { INT_LIT(int_of_string lit) }
     | flot                      as lit { FLOAT_LIT(float_of_string lit) }
     | '"'(alpha* as s)'"'       { STRING_LIT(s) }

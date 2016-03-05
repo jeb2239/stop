@@ -13,11 +13,11 @@
 
 /* Primitive Types */
 
-%token INT FLOAT BOOL
+/*%token INT FLOAT BOOL*/
 %token TYPE 
 %token UNIT
 
-%token DEF CLASS UNIT
+%token DEF CLASS UNIT VAR
 %token EOF
 %token NEWLINE
 
@@ -30,7 +30,7 @@
 %token <string> TYPE_ID
 %token <string> ID
 
-%token <string> VAR 
+/*%token <string> VAR */
 %token <float->float> FNCT
 
 %nonassoc NOELSE
@@ -79,8 +79,10 @@ stmt_list:
 // NOTE: Had to differ from spec here becuase no SEMI causes ambiguity with MINUS:
 // We have rules for expr MINUS expr, MINUS expr, so there's always a shift/reduce conflict
 
+
+
 stmt:
-      expr SEMI                     { Expr($1) }
+      expr SEMI                      { Expr($1) }
     | RETURN SEMI                   { Return(Noexpr) }
     | RETURN expr SEMI              { Return($2) }
     | LBRACE stmt_list RBRACE       { Block(List.rev $2) } 
@@ -88,23 +90,33 @@ stmt:
     | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
     | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
     | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
+    | VAR ID COLON TYPE_ID ASSIGN expr SEMI  {print_endline $2; print_endline $4; Return(Noexpr)}
+    | fdecl SEMI {Return(Noexpr)}
 
 
 /* Functions */
 /* --------- */
 
-/*
-fdecls:
-                            { [] }
-    | fdecl_list            { List.rev $1 }
 
-fdecl_list:
-      fdecl                 { [$1] }
-    | fdecl_list fdecl      { $2::$1 }
+formals_opt:
+    /* nothing */ { [] }
+  |   formal_list   { List.rev $1 }
+
+formal_list:
+    formal                   { [$1] }
+  |   formal_list COMMA formal { $3 :: $1 }
+
+formal:
+  VAR ID COLON TYPE_ID  { print_endline $2;print_endline $4; print_endline "hey"; Formal($4,$2) }
+
 
 fdecl:
-    DEF ID                  { $2 }
-*/
+    DEF ID ASSIGN LPAREN formals_opt RPAREN LBRACE stmt_list RBRACE     {  print_endline $2; }
+
+
+
+
+
 
 expr_opt:
       /* nothing */         { Noexpr }
@@ -123,7 +135,7 @@ expr:
     | expr GT       expr    { Binop($1, Greater, $3) }
     | expr GEQ      expr    { Binop($1, Geq, $3) }
     | expr AND      expr    { Binop($1, And, $3) }
-    | expr OR       expr    { Binop($1, Or, $3) }
+    | expr OR       expr    { Binop($1, Or, $3) }   
     | MINUS expr %prec NEG  { Unop(Neg, $2) } 
     | NOT expr              { Unop(Not, $2) }
     | LPAREN expr RPAREN    { $2 }

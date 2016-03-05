@@ -5,14 +5,14 @@
 # Easiest way to build: using ocamlbuild, which in turn uses ocamlfind
 
 stop.native :
-	ocamlbuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
+	corebuild -no-hygiene -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
 		stop.native
 
 # "make clean" removes all generated files
 
 .PHONY : clean
 clean :
-	ocamlbuild -clean
+	corebuild -clean
 	rm -rf testall.log *.diff stop scanner.ml parser.ml parser.mli
 	rm -rf *.cmx *.cmi *.cmo *.cmx *.o
 

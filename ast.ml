@@ -4,7 +4,7 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or
 
 type uop = Neg | Not
-
+type formal = Formal of string * string | Many of string 
 type expr = 
     IntLit of int
   | FloatLit of float
@@ -24,9 +24,19 @@ type stmt =
 
 type include_stmt = Include of string
 
+(*type formal = Formal of datatype * string | Many of datatype*)
 (* type program = include_stmt list * class_decl list *)
 type program =  Program of include_stmt list * stmt list
 
+(*type func_decl = {
+  (* scope : scope; *)
+  fname : fname;
+  returnType : datatype;
+  formals : formal list;
+  body : stmt list;
+  overrides : bool;
+  root_cname : string option;
+}*)
 (* Pretty-printing Functions *)
 (* ------------------------- *)
 
@@ -74,6 +84,7 @@ let rec string_of_stmt = function
 
 let string_of_include = function
     Include(s) -> "include \"" ^ s ^ "\"\n"
+
 
 let string_of_program = function
     Program(includes, stmts) -> 

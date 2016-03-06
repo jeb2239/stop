@@ -1,6 +1,7 @@
 /* Ocamlyacc Parser for Stop */
 
-%{ open Ast %}
+%{ open Ast
+   open Core.Std %}
 
 %token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
@@ -10,15 +11,15 @@
 %token FINAL
 %token INCLUDE
 %token EOF
-
+ 
 /* Primitive Types */
 
 /*%token INT FLOAT BOOL*/
 %token TYPE 
-%token UNIT
+/*%token UNIT*/
 
 %token DEF CLASS UNIT VAR
-%token EOF
+/*%token EOF*/
 %token NEWLINE
 
 /* Primitives */
@@ -69,6 +70,75 @@ include_list:
 include_decl:
     INCLUDE STRING_LIT      { Include($2) }
 
+
+cdecls:
+    cdecl_list    { List.rev $1 }
+
+cdecl_list:
+    cdecl             { [$1] }
+  | cdecl_list cdecl  { $2::$1 }
+
+cdecl:
+    CLASS TYPE_ID ASSIGN LPAREN match_list RPAREN LBRACE cbody RBRACE { {
+      cname = $2;
+      extends = NoParent;
+      cbody = $8
+    } }
+
+cbody:
+    /* nothing */ { { 
+      fields = [];
+      methods = [];
+    } }
+  |   cbody field { { 
+      fields = $2 :: $1.fields;   
+      methods = $1.methods;
+    } }
+  |   cbody fdecl { { 
+      fields = $1.fields;
+      methods = $2 :: $1.methods;
+    } }
+
+field:
+    VAR ID COLON datatype SEMI { Field($1, $2, $3) }
+
+/******
+methods
+*****/
+
+fname:
+  ID { $1 }
+
+fdecl:
+  DEF fname ASSIGN LPAREN formals_opt RPAREN COLON TYPE_ID LBRACE stmt_list RBRACE 
+  { 
+    {
+      
+      fname = FName($2);
+      returnType = $7;
+      formals = $4;
+      body = List.rev $10;
+      overrides = false;
+      root_cname = None;
+    } 
+  }
+/*Lists*/
+
+formals_opt:
+    /* nothing */ { [] }
+  |   formal_list   { List.rev $1 }
+
+formal_list:
+    formal                   { [$1] }
+  |   formal_list COMMA formal { $3 :: $1 }
+
+formal:
+  VAR ID COLON datatype { Formal($2 , $1) }
+
+
+
+
+
 /* Statements */
 /* ---------- */
 
@@ -81,6 +151,7 @@ stmt_list:
 
 
 
+
 stmt:
       expr SEMI                      { Expr($1) }
     | RETURN SEMI                   { Return(Noexpr) }
@@ -90,28 +161,11 @@ stmt:
     | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
     | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
     | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
-    | VAR ID COLON TYPE_ID ASSIGN expr SEMI  {print_endline $2; print_endline $4; Return(Noexpr)}
-    | fdecl SEMI {Return(Noexpr)}
+    
 
 
-/* Functions */
-/* --------- */
 
 
-formals_opt:
-    /* nothing */ { [] }
-  |   formal_list   { List.rev $1 }
-
-formal_list:
-    formal                   { [$1] }
-  |   formal_list COMMA formal { $3 :: $1 }
-
-formal:
-  VAR ID COLON TYPE_ID  { print_endline $2;print_endline $4; print_endline "hey"; Formal($4,$2) }
-
-
-fdecl:
-    DEF ID ASSIGN LPAREN formals_opt RPAREN LBRACE stmt_list RBRACE     {  print_endline $2; }
 
 
 

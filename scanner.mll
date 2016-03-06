@@ -1,6 +1,7 @@
 (* Ocamllex scanner for Stop Language *)
 
-{ open Parser }	
+{ open Parser
+open Core }	
 
 let digit = ['0'-'9']
 let exp = (('e'|'E')('-'|'+')?digit+)

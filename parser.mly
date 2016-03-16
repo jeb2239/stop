@@ -27,8 +27,8 @@
 %token <float> FLOAT_LIT
 %token <char> CHAR_LIT
 %token <string> STRING_LIT
-%token <string> TYPE_ID
 %token <string> ID
+%token <string> TYPE_ID
 
 %token <string> VAR 
 %token <float->float> FNCT
@@ -53,7 +53,7 @@
 /* -------------------- */
 
 program:
-      includes stmt_list EOF          { Program($1, $2) }
+      includes stmts EOF          { Program($1, $2) }
 
 /* Includes */
 /* -------- */
@@ -88,15 +88,19 @@ datatype:
 /* Statements */
 /* ---------- */
 
-stmt_list:
+stmts:
       /* nothing */         { [] }
+    | stmt_list             { List.rev $1 }
+    
+stmt_list:
+      stmt                  { [$1] }
     | stmt_list stmt        { $2::$1 }
 
 stmt:
       expr SEMI                     { Expr($1) }
     | RETURN SEMI                   { Return(Noexpr) }
     | RETURN expr SEMI              { Return($2) }
-    | LBRACE stmt_list RBRACE       { Block(List.rev $2) } 
+    | LBRACE stmt_list RBRACE       { Block($2) } 
     | IF LPAREN expr RPAREN stmt %prec NOELSE   
                                         { If($3, $5, Block([Expr(Noexpr)])) }
     | IF LPAREN expr RPAREN stmt ELSE stmt      

@@ -32,12 +32,27 @@ type stmt =
 type field = Field of datatype * string
 type include_stmt = Include of string
 
+(* Classes *)
+
+type extends = NoParent | Parent of string
+
+type cbody = {
+    fields : field list;
+}
+
+type class_decl = {
+    cname : string;
+    extends : extends;
+    cbody : cbody; 
+}
+
+
+
+(* Program Definition *)
+
 (* type program = include_stmt list * class_decl list *)
 type program =  Program of include_stmt list * stmt list
 
-type cbody = {
-    fields : field list
-}
 
 (* Pretty-printing Functions *)
 (* ------------------------- *)

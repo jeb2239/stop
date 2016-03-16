@@ -83,7 +83,12 @@ spec_decls_list:
 	|spec_decls_list spec_decl {$2::$1}
 
 spec_decl:
-	| SPEC ID LBRACE sbody RBRACE SEMI
+	| SPEC ID LBRACE sbody RBRACE SEMI {
+		{
+			sname = $2
+			sbody = $4
+		}
+	}
 
 
 sbody:
@@ -118,7 +123,8 @@ class_decl_list:
 
 class_decl:
 	 CLASS ID LBRACE cbody RBRACE {{
-
+	 		cname = $2;
+	 		cbody = $4;
 	 	}}
 	
 
@@ -152,7 +158,7 @@ cbody:
 
 /***********
 Constructor
-********/
+************/
 
 pattern_constructor:
 	PATTERN ASSIGN LPAREN formal_option RPAREN LBRACE stmt_list RBRACE {
@@ -211,10 +217,10 @@ function_decl:
 		}}
 	| ANON LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
 	{{
-		name= (*we need to make a unique name for every anon function*)
-		returnType=$8;
-		formal_param=$5;
-		body=$10;
+		name= "afdf"(*we need to make a unique name for every anon function*)
+		returnType=$6;
+		formal_param=$3;
+		body=$8;
 		}}
 
 formals_option:
@@ -226,7 +232,7 @@ formal_list:
 	| 	formal_list COMMA formal_param { $3 :: $1 }
 
 formal_param:
-	 ID COLON dtype { Formal($2, $1) }
+	 ID COLON dtype { Formal($3, $1) }
 
 actuals_opt:
 		/* nothing */ { [] }
@@ -263,11 +269,13 @@ concrete_type_tag:
 	| array_type {$1} 
 
 abstract_type_tag:
-	|spec {$1}
+	 spec {$1}
 	|concrete_type_tag {$1}
 
 dtype:
-		
+	(*need to figure out a way to parse datatypes*)
+	
+
 
 brackets:
 		/* nothing */ 			   { 1 }
@@ -363,4 +371,4 @@ exp:
 	;
 */
 
-%%
+

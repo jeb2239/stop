@@ -46,8 +46,11 @@ rule token = parse
     | "!"       { NOT }
 
     (* Modifiers *)
-    | "final"   { FINAL } 
+    | "final"   { FINAL }
+    | "var"     { VAR }
+    (* Self referential kw*) 
     | "type"    { TYPE }
+    | "this"    { THIS }
 
     (* Conditionals *)
     | "if"      { IF }
@@ -58,14 +61,21 @@ rule token = parse
     | "return"  { RETURN }
 
     (* Reserved *)
+    | "spec"        { SPEC }
     | "def"		    { DEF }
     | "class"	    { CLASS }
     | "#include"    { INCLUDE }
+    (*access mods*)
+    | "pub" { PUB }
+    | "priv" { PRIV }
+    | '@'   {ANON}
+    | "pattern" {PATTERN}
 
     (* PRIMITIVES *)
-    | "int"     { INT }
-    | "float"   { FLOAT }
-    | "bool"    { BOOL }
+    | "Int"     { INT }
+    | "Float"   { FLOAT }
+    | "Bool"    { BOOL }
+    | "Char"    { CHAR }
 
     (* PRIMITIVE LITERALS *)
     | "Unit"    { UNIT }

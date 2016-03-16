@@ -6,8 +6,8 @@
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE ELSEIF FOR WHILE
-%token RETURN VOID 
-%token FINAL
+%token RETURN VOID SPEC PUB PRIV
+%token FINAL VAR ANON
 %token INCLUDE
 %token EOF
 
@@ -17,7 +17,7 @@
 %token TYPE 
 %token UNIT
 
-%token DEF CLASS UNIT
+%token DEF CLASS UNIT 
 %token EOF
 %token NEWLINE
 
@@ -30,7 +30,7 @@
 %token <string> TYPE_ID
 %token <string> ID
 
-%token <string> VAR 
+//%token <string> VAR 
 %token <float->float> FNCT
 
 %nonassoc NOELSE
@@ -53,7 +53,7 @@
 /* -------------------- */
 
 program:
-      includes stmt_list EOF          { Program($1, $2) }
+      includes spec_decls cdecls EOF          { Program($1, $2 , $3) }
 
 /* Includes */
 /* -------- */
@@ -69,8 +69,80 @@ include_list:
 include_decl:
     INCLUDE STRING_LIT      { Include($2) }
 
+/* Specs*/
+/*------*/
+spec_decls:
+	spec_decls_list  {List.rev $1}
+
+spec_decls_list:
+	
+	|spec_decl					{[$1]}
+	|spec_decls_list spec_decl {$2::$1}
+
+spec_decl:
+	| SPEC ID LBRACE sbody RBRACE SEMI
+
+
+sbody:
+		{{
+		methods=[];
+		typereq=[];
+		}}
+	| sbody typereq 
+	{{
+		methods=$1.methods;
+		typereq=$2::$1.typereq;
+		
+	}}
+
+	| sbody method_decl 
+	{
+		{
+			methods=$2::$1.methods;
+			typereq=$1.typereq;
+		}
+	}
+
+
+/*Class decl*/
+
+class_decls:
+	class_decl_list { List.rev   }
+
+class_decl_list:
+	class_decl {[$1]}
+	| cdecl_list cdecl {$2::$1}
+
+class_decl:
+	 CLASS ID cbody SEMI
+	| DEF ID ASSIGN function_body SEMI
+	| ANON function_body SEMI (*generate a name here*)
+
+
+
+cbody:
+
+
+
+
+
+
+
+/******************
+ FIELDS
+******************/
+visibility:
+	  PRIV   {Priv}
+	| PUB	 {Pub}
 /* Statements */
 /* ---------- */
+
+field:
+	visibility ID COLON dtype SEMI {Field($1,$4,$2)}
+
+/************
+METHODS
+********/
 
 stmt_list:
       /* nothing */         { [] }

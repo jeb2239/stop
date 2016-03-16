@@ -8,7 +8,8 @@
         Scanf.sscanf ("\"" ^ s ^ "\"") "%S%!" (fun x -> x)
 }	
 
-let whitespace = [' ' '\t' '\r']
+
+let whitespace = [' ' '\t' '\r' '\n']
 
 let alpha = ['a'-'z' 'A'-'Z']
 let upper_alpha = ['A'-'Z']
@@ -32,7 +33,6 @@ rule token = parse
       whitespace { token lexbuf }                   (* Whitespace *)
     | "//"      { single_comment lexbuf }           (* Comments *)
     | "/*"      { incr depth; multi_comment lexbuf }
-    | '\n'      { NEWLINE }
 	| '('       { LPAREN }
 	| ')'       { RPAREN }
     | '{'       { LBRACE }

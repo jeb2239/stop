@@ -134,6 +134,8 @@ literals:
     | FLOAT_LIT         { FloatLit($1) }
     | TRUE              { BoolLit(true) }
     | FALSE             { BoolLit(false) }
+    | CHAR_LIT          { CharLit($1) }
+    | STRING_LIT        { StringLit($1) }
     | ID                { Id($1) }
 
 /*

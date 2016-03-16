@@ -9,6 +9,8 @@ type expr =
     IntLit of int
   | FloatLit of float
   | BoolLit of bool
+  | CharLit of char
+  | StringLit of string
   | Id of string
   | Binop of expr * op * expr
   | Unop of uop * expr
@@ -53,6 +55,8 @@ let rec string_of_expr = function
   | FloatLit(f) -> string_of_float f
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
+  | CharLit(c) -> String.make 1 c
+  | StringLit(s) -> s
   | Id(i) -> i
   | Binop(e1, op, e2) ->
         string_of_expr e1 ^ " " ^ string_of_op op ^ " " ^ string_of_expr e2

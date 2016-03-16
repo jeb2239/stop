@@ -7,7 +7,7 @@
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE ELSEIF FOR WHILE
 %token RETURN VOID SPEC PUB PRIV
-%token FINAL VAR ANON
+%token FINAL VAR ANON PATTERN FUN
 %token INCLUDE
 %token EOF
 
@@ -47,7 +47,10 @@
 %start program
 %type <Ast.program> program
 
+
 %%
+
+
 
 /* Context-Free Grammar */
 /* -------------------- */
@@ -114,15 +117,58 @@ class_decl_list:
 	| cdecl_list cdecl {$2::$1}
 
 class_decl:
-	 CLASS ID cbody SEMI
-	| DEF ID ASSIGN function_body SEMI
-	| ANON function_body SEMI (*generate a name here*)
+	 CLASS ID LBRACE cbody RBRACE {{
+
+	 	}}
+	
 
 
 
 cbody:
+	{{
+		fields = [];
+		pattern_constructors = [];
+		methods =[];
+		}}
+	| cbody field {{
+			fields = $2 :: $1.fields;
+			pattern_constructors = $1.pattern_constructors;
+			methods = $1.methods;
+		}}
+	| cbody patten_constructor {{
+		fields = $1.fields;
+		pattern_constructors = $2::$1.pattern_constructors;
+		methods = $1.methods;
+
+		}}
+	| cbody method_decl {{
+
+		fields = $1.fields;
+		pattern_constructors = $1.pattern_constructors;
+		methods = $2::$1.methods;
+
+		}}
 
 
+/***********
+Constructor
+********/
+
+pattern_constructor:
+	PATTERN ASSIGN LPAREN formal_option RPAREN LBRACE stmt_list RBRACE {
+		{
+			visibility=Pub;
+			name="pattern"
+			returnType
+			formal_param = $4;
+			body=List.rev $7;
+			(*if we were some how going to do inheritance we would have 
+				to add shit here*)
+		}
+	}
+
+
+	
 
 
 
@@ -141,8 +187,92 @@ field:
 	visibility ID COLON dtype SEMI {Field($1,$4,$2)}
 
 /************
-METHODS
+METHODS + functions
 ********/
+method_decl:
+	visibility DEF ID ASSIGN LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
+	{
+		{
+			visibility=$1;
+			name = $3;
+			returnType = $9;
+			formal_param = $6;
+			body = $11;
+		}
+	}
+
+function_decl:
+	| FUN ID ASSIGN LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
+	{{
+		name=$2;
+		returnType=$8;
+		formal_param=$5;
+		body=$10;
+		}}
+	| ANON LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
+	{{
+		name= (*we need to make a unique name for every anon function*)
+		returnType=$8;
+		formal_param=$5;
+		body=$10;
+		}}
+
+formals_option:
+		/* nothing */ { [] }
+	| 	formal_list   { List.rev $1 }
+
+formal_list:
+		formal                   { [$1] }
+	| 	formal_list COMMA formal_param { $3 :: $1 }
+
+formal_param:
+	 ID COLON dtype { Formal($2, $1) }
+
+actuals_opt:
+		/* nothing */ { [] }
+	| 	actuals_list  { List.rev $1 }
+
+actuals_list:
+		expr                    { [$1] }
+	| 	actuals_list COMMA expr { $3 :: $1 }
+
+/******
+datatypes
+******/
+primitive:
+		INT 		{ Int_t }
+	| 	FLOAT		{ Float_t } 
+	| 	CHAR		{ Char_t }
+	| 	BOOL 		{ Bool_t }
+	| 	UNIT    	{ Unit_t }
+
+name:
+	CLASS ID { Class_t($2)}
+spec:
+	SPEC ID {Spec_t($2)}
+type_tag:
+	primitive {$1}
+	|name {$1}
+
+array_type:
+	type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
+ 
+
+concrete_type_tag:
+	type_tag  {$1}
+	| array_type {$1} 
+
+abstract_type_tag:
+	|spec {$1}
+	|concrete_type_tag {$1}
+
+dtype:
+		
+
+brackets:
+		/* nothing */ 			   { 1 }
+	| 	brackets RBRACKET LBRACKET { $1 + 1 }
+
 
 stmt_list:
       /* nothing */         { [] }

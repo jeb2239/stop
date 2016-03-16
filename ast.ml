@@ -4,7 +4,7 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or
 
 type uop = Neg | Not
-type primitive = Int_t | Float_t | Void_t | Bool_t | Char_t | Class_t of string | Spec_t of string
+type primitive = Int_t | Float_t | Unit_t | Bool_t | Char_t | Class_t of string | Spec_t of string
 type dtype = Arraytype of primitive * int | Dtype of primitive | Any
 type visibility = Pub | Priv
 type formal_param = Formal of dtype * string | Many of dtype
@@ -48,7 +48,7 @@ type method_decl = {
   visibility: visibility;
   name:string;
   returnType: dtype;
-  formal_param : formal_param list;
+  formal_param : formal_param list option;
   body : stmt list option; (*there may be not implementation if in a spec dec*)
   
 }
@@ -56,12 +56,23 @@ type method_decl = {
 type cbody ={
   fields : field list;
   methods: method_decl list;
+  pattern_constructors : method_decl list;
 }
 
 type class_decl = {
   cname : string;
   cbody : cbody;
-  pattern_constructor : formal_param list option;
+ 
+}
+
+type func_decl = {
+  
+  name:string;
+  returnType: dtype;
+ (* func_type: dtype list; (*do we actually need this?*)*)
+  formal_param : formal_param list option;
+  body : stmt list option; (*there may be not implementation if in a spec dec*)
+
 }
 
 (* Pretty-printing Functions *)

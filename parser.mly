@@ -5,7 +5,7 @@
 %token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token IF ELSE ELSEIF FOR WHILE
+%token IF ELSE FOR WHILE
 %token RETURN VOID 
 %token FINAL
 %token INCLUDE
@@ -23,9 +23,10 @@
 
 /* Primitives */
 
+%token <bool> BOOL_LIT
 %token <int> INT_LIT
 %token <float> FLOAT_LIT
-%token <bool> BOOL_LIT
+%token <char> CHAR_LIT
 %token <string> STRING_LIT
 %token <string> TYPE_ID
 %token <string> ID

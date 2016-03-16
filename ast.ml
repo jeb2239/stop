@@ -3,6 +3,10 @@
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or
 
+type primitive = Int | Float | Void | Bool | Char 
+
+type datatype = Datatype of primitive
+
 type uop = Neg | Not
 
 type expr = 
@@ -23,11 +27,17 @@ type stmt =
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | While of expr * stmt
+  | Local of datatype * string * expr
 
+type field = Field of datatype * string
 type include_stmt = Include of string
 
 (* type program = include_stmt list * class_decl list *)
 type program =  Program of include_stmt list * stmt list
+
+type cbody = {
+    fields : field list
+}
 
 (* Pretty-printing Functions *)
 (* ------------------------- *)
@@ -77,7 +87,7 @@ let rec string_of_stmt = function
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
 
 let string_of_include = function
-    Include(s) -> "include \"" ^ s ^ "\"\n"
+    Include(s) -> "#include \"" ^ s ^ "\"\n"
 
 let string_of_program = function
     Program(includes, stmts) -> 

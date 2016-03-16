@@ -29,6 +29,8 @@ let char_lit = '''(ascii|digit as lit)'''
 let escape_char_lit = '''(escape_char as lit)'''
 let string_lit = '"'((ascii|escape_char)* as lit)'"'
 
+let id = upper_alpha(alpha | digit | '_')*
+
 rule token = parse
       whitespace { token lexbuf }                   (* Whitespace *)
     | "//"      { single_comment lexbuf }           (* Comments *)
@@ -91,7 +93,7 @@ rule token = parse
     | char_lit                     { CHAR_LIT(lit) }
     | escape_char_lit              { CHAR_LIT(String.get (unescape lit) 0) }
     | string_lit                   { STRING_LIT(unescape lit) }
-    | (lower_alpha)(alpha)+ as lit { ID(lit) }
+    | id                    as lit { ID(lit) }
     | (upper_alpha)(alpha)+ as lit { TYPE_ID(lit) }
 	| eof { EOF }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }

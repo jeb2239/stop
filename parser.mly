@@ -70,6 +70,18 @@ include_list:
 include_decl:
     INCLUDE STRING_LIT      { Include($2) }
 
+/* Datatypes */
+/* --------- */
+
+primitive:
+    INT               { Int }
+
+type_tag:
+      primitive { $1 }
+
+datatype:
+      type_tag          { Datatype($1) }
+
 /* Statements */
 /* ---------- */
 
@@ -77,19 +89,20 @@ stmt_list:
       /* nothing */         { [] }
     | stmt_list stmt        { $2::$1 }
 
-// NOTE: Had to differ from spec here becuase no SEMI causes ambiguity with MINUS:
-// We have rules for expr MINUS expr, MINUS expr, so there's always a shift/reduce conflict
-
 stmt:
       expr SEMI                     { Expr($1) }
     | RETURN SEMI                   { Return(Noexpr) }
     | RETURN expr SEMI              { Return($2) }
     | LBRACE stmt_list RBRACE       { Block(List.rev $2) } 
-    | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([Expr(Noexpr)])) }
-    | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
-    | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
-    | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
-
+    | IF LPAREN expr RPAREN stmt %prec NOELSE   
+                                        { If($3, $5, Block([Expr(Noexpr)])) }
+    | IF LPAREN expr RPAREN stmt ELSE stmt      
+                                        { If($3, $5, $7) }
+    | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt 
+                                        { For($3, $5, $7, $9) }
+    | WHILE LPAREN expr RPAREN stmt     
+                                        { While($3, $5) }
+    | datatype ID SEMI                  { Local($1, $2, Noexpr) }
 
 /* Functions */
 /* --------- */
@@ -137,31 +150,5 @@ literals:
     | CHAR_LIT          { CharLit($1) }
     | STRING_LIT        { StringLit($1) }
     | ID                { Id($1) }
-
-/*
-line: NEWLINE { }
-	| exp NEWLINE { printf "\t%.10g\n" $1; flush stdout}
-	;
-
-exp: 
-	| VAR {try Hashtbl.find var_table $1
-		with Not_found -> printf "no such variable '%s'\n" $1;
-		0.0
-
-	}
-	| VAR EQ exp {Hashtbl.replace var_table $1 $3;
-		$3
-	}
-
-	| FNCT LPAREN exp RPAREN        { $1 $3 }
-	| exp PLUS exp                  { $1 +. $3 }
-	| exp MINUS exp                 { $1 -. $3 }
-	| exp TIMES exp                 { $1 *. $3 }
-	| exp DIVIDE exp                { $1 /. $3 }
-	| MINUS exp %prec NEG           { -. $2 }
-	| exp CARET exp                 { $1 ** $3 }
-	| LPAREN exp RPAREN             { $2 }
-	;
-*/
 
 %%

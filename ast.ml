@@ -3,7 +3,7 @@
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or
 
-type primitive = Int | Float | Void | Bool | Char 
+type primitive = Int | Float | Bool | Char | Unit
 
 type datatype = Datatype of primitive
 
@@ -60,6 +60,16 @@ let string_of_uop = function
     Neg -> "-"
   | Not -> "!"
 
+let string_of_primitive = function 
+    Int -> "int"
+  | Float -> "float"
+  | Bool -> "bool"
+  | Char -> "char"
+  | Unit -> "Unit"
+
+let string_of_datatype = function
+    Datatype(d) -> string_of_primitive d
+
 let rec string_of_expr = function
     IntLit(i) -> string_of_int i
   | FloatLit(f) -> string_of_float f
@@ -85,6 +95,10 @@ let rec string_of_stmt = function
   | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " 
                             ^ string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
+  | Local(dtype, s, e) -> ( match e with 
+          Noexpr -> string_of_datatype dtype ^ " " ^ s ^ ";\n"
+        | _ -> string_of_datatype dtype ^ " " ^ s ^ " = " ^ string_of_expr e ^ ";\n" )
+            
 
 let string_of_include = function
     Include(s) -> "#include \"" ^ s ^ "\"\n"

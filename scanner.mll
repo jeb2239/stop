@@ -84,9 +84,10 @@ rule token = parse
     | "int"     { INT }
     | "float"   { FLOAT }
     | "bool"    { BOOL }
+    | "char"    { CHAR }
+    | "Unit"    { UNIT }
 
     (* PRIMITIVE LITERALS *)
-    | "Unit"    { UNIT }
     | "true"    { TRUE }
     | "false"   { FALSE }
     | int_lit               { INT_LIT(int_of_string lit) }
@@ -96,7 +97,7 @@ rule token = parse
     | string_lit            { STRING_LIT(unescape lit) }
     | id                    { ID(lit) }
     | typeid                { TYPE_ID(lit) }
-	| eof { EOF }
+	| eof                   { EOF }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and single_comment = parse

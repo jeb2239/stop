@@ -13,9 +13,8 @@
 
 /* Primitive Types */
 
-%token INT FLOAT BOOL
+%token INT FLOAT BOOL CHAR UNIT
 %token TYPE 
-%token UNIT
 
 %token DEF CLASS UNIT
 %token EOF
@@ -74,7 +73,11 @@ include_decl:
 /* --------- */
 
 primitive:
-    INT               { Int }
+      INT               { Int }
+    | FLOAT             { Float }
+    | CHAR              { Char }
+    | BOOL              { Bool }
+    | UNIT              { Unit }
 
 type_tag:
       primitive { $1 }
@@ -103,6 +106,7 @@ stmt:
     | WHILE LPAREN expr RPAREN stmt     
                                         { While($3, $5) }
     | datatype ID SEMI                  { Local($1, $2, Noexpr) }
+    | datatype ID ASSIGN expr SEMI      { Local($1, $2, $4) }
 
 /* Functions */
 /* --------- */

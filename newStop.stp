@@ -1,0 +1,90 @@
+
+spec CanPrint {
+	
+	impl type.toString():String | type:String
+	//type is the type in question
+
+
+}
+
+
+function print = (a:CanPrint):Unit{
+	
+	__low_level_print__(a.toString()) //  <- this returns unit. 
+
+}
+
+
+
+
+
+
+class Person {
+	pub var weight:Int;
+	pub var name:String; //this has to be done if we want to access these in our methods
+	pattern = (weight:Int, name:String){  // this can be matched like Person(x,y) , this is a 
+											//pattern constructor
+			This.weight= weight; 
+			This.name= name;     
+	}
+
+	pub def printName = ():Unit {
+			print(This.name)
+	}
+	pub def toString = ():String {
+
+		weight+name; //this we will need to case out why this is valid 
+
+	}
+
+}
+
+
+
+
+
+function pattern_matching = (a:Person):String {
+	
+	match(a){ //we could also do switch
+ 	
+ 	case Person(x,"James") => {return "its james hello!"} //these returns should not be necessary
+	case Person(x,y) => { return y }
+
+
+	} //this is the last expression ,really for loops and all should just be expressions which 
+	//return unit
+
+}
+
+
+
+function MAIN = (args:String[]):Unit {
+	
+
+	var a:Person = Person(100,"james");
+	var iamAfunction:Fun(Int)->Int = @(c:Int):Int{ c* a.weight } ; //use of anon function, captures 
+	//will be given a fake name but 
+	//when assigned we replace that name with "IamAfunction" this is kinda fuzzy
+
+	print(pattern_matching(a)); //prints out "its james hello!" , eager evaluation 
+								//the spec is invoked to check if type String is is either a String
+								//or implements the toString method, this happens at compile time,
+								//we need to reach into a and get its type in order to check the 
+								//spec against it
+	print(a); //prints out "100james" , in order to be added to a string you need to implement the 
+			  //still working out the type changing which is going on here with the Int + String	
+			  //the operator+ method is overloaded for Int 
+			  // the compiler pretends as if
+			  // class Int {
+			  //	pub operator+ = (q:String):String{
+			  //			this.toString() + q //now this is legit
+			  //			}
+			  //    /*******other overloads and stuff********/
+			  //         }
+			  
+	print(iamAfunction(3)) //prints out 300
+
+
+
+
+}

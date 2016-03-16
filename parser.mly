@@ -10,6 +10,7 @@
 %token FINAL VAR ANON PATTERN FUN
 %token INCLUDE
 %token EOF
+%token FUNCTION
 
 /* Primitive Types */
 
@@ -208,7 +209,7 @@ method_decl:
 	}
 
 function_decl:
-	| FUN ID ASSIGN LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
+	| FUNCTION ID ASSIGN LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
 	{{
 		name=$2;
 		returnType=$8;
@@ -252,6 +253,14 @@ primitive:
 	| 	BOOL 		{ Bool_t }
 	| 	UNIT    	{ Unit_t }
 
+func_type:
+	| FUN LPAREN formals_option RPAREN COLON dtype {{
+		Functiontype($3,$6)
+		}}
+
+
+
+
 name:
 	CLASS ID { Class_t($2)}
 spec:
@@ -266,7 +275,8 @@ array_type:
 
 concrete_type_tag:
 	type_tag  {$1}
-	| array_type {$1} 
+	| array_type {$1}
+	| func_type {$1} 
 
 abstract_type_tag:
 	 spec {$1}
@@ -274,7 +284,7 @@ abstract_type_tag:
 
 dtype:
 	(*need to figure out a way to parse datatypes*)
-	
+	abstract_type_tag {dtype($1)} 
 
 
 brackets:

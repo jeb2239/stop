@@ -6,7 +6,7 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
 type uop = Neg | Not
 type primitive = Int_t | Float_t | Unit_t | Bool_t | Char_t | Class_t of string | Spec_t of string
 
-type dtype = Arraytype of primitive * int | Dtype of primitive | Functiontype of dtype list * dtype | Any 
+type dtype = Arraytype of primitive * int | Dtype of primitive | Functiontype of formal_param list * dtype | Any 
 type visibility = Pub | Priv
 type formal_param = Formal of dtype * string | Many of dtype
 

@@ -70,7 +70,8 @@ rule token = parse
     | "priv" { PRIV }
     | '@'   {ANON}
     | "pattern" {PATTERN}
-    | "fun"     {FUN}
+    | "function"     {FUNCTION}
+    | "fun"         {FUN}
 
     (* PRIMITIVES *)
     | "Int"     { INT }

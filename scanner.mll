@@ -22,14 +22,15 @@ let ascii = [' '-'!' '#'-'[' ']'-'~']
 let escape_char = '\\' ['\\' ''' '"' 'n' 'r' 't']
 
 (* Regexes for Primitives *) 
-let int_lit = digit+
+let int_lit = digit+ as lit
 let float_lit = (digit+'.'digit*exp?)|(digit+'.'?digit*exp)
-                    |(digit*'.'digit+exp?)|(digit*'.'?digit+exp)
+                    |(digit*'.'digit+exp?)|(digit*'.'?digit+exp) as lit
 let char_lit = '''(ascii|digit as lit)'''
 let escape_char_lit = '''(escape_char as lit)'''
 let string_lit = '"'((ascii|escape_char)* as lit)'"'
 
-let id = upper_alpha(alpha | digit | '_')*
+let id = lower_alpha (alpha | digit | '_')* as lit
+let typeid = upper_alpha (alpha | digit | '_')* as lit
 
 rule token = parse
       whitespace { token lexbuf }                   (* Whitespace *)
@@ -88,13 +89,13 @@ rule token = parse
     | "Unit"    { UNIT }
     | "true"    { TRUE }
     | "false"   { FALSE }
-    | int_lit               as lit { INT_LIT(int_of_string lit) }
-    | float_lit             as lit { FLOAT_LIT(float_of_string lit) }
-    | char_lit                     { CHAR_LIT(lit) }
-    | escape_char_lit              { CHAR_LIT(String.get (unescape lit) 0) }
-    | string_lit                   { STRING_LIT(unescape lit) }
-    | id                    as lit { ID(lit) }
-    | (upper_alpha)(alpha)+ as lit { TYPE_ID(lit) }
+    | int_lit               { INT_LIT(int_of_string lit) }
+    | float_lit             { FLOAT_LIT(float_of_string lit) }
+    | char_lit              { CHAR_LIT(lit) }
+    | escape_char_lit       { CHAR_LIT(String.get (unescape lit) 0) }
+    | string_lit            { STRING_LIT(unescape lit) }
+    | id                    { ID(lit) }
+    | typeid                { TYPE_ID(lit) }
 	| eof { EOF }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 

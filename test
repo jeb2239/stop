@@ -43,7 +43,7 @@ if [ ! -f ${TEST_FOLDER}/parse-$1.stp ]; then
 	error_exit "${TEST_FOLDER}/parse-$1.stp not found"
 fi
 
-if [ ! -f /$(basename $STOP) ]; then
+if [ ! -f $(basename $STOP) ]; then
 	globalerror=1
 	error_exit "Missing $(basename $STOP) executable. Try building project."
 fi

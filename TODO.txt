@@ -5,4 +5,7 @@ Integrate among ast.ml, scanner.mll, and parser.mly:
 	Arrays
 	Conditionals & Loops
 	Classes, Methods, & Functions
-	Templates
+	All features in tests/test-allfeatures1.stp
+
+Testing:
+	Finish regression testing suite	

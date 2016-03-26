@@ -5,20 +5,22 @@
 # Testing Script for Parser Tests
 # =============================== #
 
-# Usage: ./test <filename> 
-#
-# In particular, it is <name> in test-<name>.stp
-#
-# Usage Example:
-#	Want to run parser_tests/test-comments1.stp
-#	$ ./test comments1
-
 STOP="./stop.native"
-globalerror=0
+PROGNAME=$(basename $0)
+TEST_FOLDER="tests"
 
 # Set time limit for all operations
 ulimit -t 30
 
+globalerror=0
+
+error_exit() {
+	echo "${PROGNAME}: ${1:-"Unknown Error"}" 1>&2
+	echo "($ ./test -h for help)"
+	exit $globalerror
+}
+
+# Usage informaition
 Usage() {
 	echo "Usage: test [filename]"
 	echo "[filename] is <name> in parser_tests/test-<name>.stp"
@@ -27,6 +29,7 @@ Usage() {
 	exit 1
 }
 
+# Handle -options
 while getopts ":h[help]" opt; do
 	case $opt in
 		h) # Help
@@ -35,6 +38,14 @@ while getopts ":h[help]" opt; do
 	esac
 done
 
-$STOP -a < tests_parser/test-$1.stp
+if [ ! -f ${TEST_FOLDER}/parse-$1.stp ]; then
+	globalerror=1
+	error_exit "${TEST_FOLDER}/parse-$1.stp not found"
+fi
 
-exit $globalerror
+if [ ! -f /$(basename $STOP) ]; then
+	globalerror=1
+	error_exit "Missing $(basename $STOP) executable."
+fi
+
+$STOP -a < ${TEST_FOLDER}/parse-$1.stp

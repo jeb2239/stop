@@ -25,17 +25,17 @@ class Person {
 	// this can be matched like Person(x,y) , this is a
 	// pattern constructor
 	pattern = (weight:Int, name:String){	
-			This.weight= weight; 
-			This.name= name;     
+		This.weight= weight; 
+		This.name= name;     
 	}
 
 	pub def printName = ():Unit {
-			print(This.name)
+		print(This.name);
 	}
 
 	pub def toString = ():String {
 		//this we will need to case out why this is valid 
-		weight+name; 
+		"(" + weight + ", " + name + ")"; 
 	}
 }
 
@@ -45,7 +45,7 @@ function pattern_matching = (a:Person):String {
 	match(a){ 
 
 		//these returns should not be necessary
-		case Person(x,"James") => { return "its james hello!"; } 
+		case Person(x,"James") => { return "Hello!"; } 
 
 		case Person(x,y) => { return y; }
 
@@ -57,7 +57,7 @@ function pattern_matching = (a:Person):String {
 function MAIN = (args:String[]):Unit {
 
 	// Let a be a person object 
-	var a:Person = Person(100,"james");
+	var a:Person = Person(100,"James");
 
 	//use of anon function, captures 
 	//will be given a fake name but
@@ -65,14 +65,14 @@ function MAIN = (args:String[]):Unit {
 	//(this is kinda fuzzy)
 	var iamAfunction:Fun(Int)->Int = @(c:Int):Int{ c * a.weight };
 
-	// prints out "its james hello!" , eager evaluation
+	// prints out "Hello!", eager evaluation
 	// the spec is invoked to check if type String is is either a String
 	// or implements the toString method, this happens at compile time,
 	// we need to reach into a and get its type in order to check the 
 	// spec against it
 	print(pattern_matching(a)); 
 
-	// prints out "100james" , in order to be added to a string you need to implement the 
+	// prints out "(100, James)", in order to be added to a string you need to implement the 
 	// still working out the type changing which is going on here with the Int + String	
 	// the operator+ method is overloaded for Int 
 	// the compiler pretends as if
@@ -85,5 +85,5 @@ function MAIN = (args:String[]):Unit {
 	//  }
 	print(a); 	  
 
-	print(iamAfunction(3)) //prints out 300
+	print(iamAfunction(3)); //prints out 300
 }

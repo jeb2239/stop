@@ -23,8 +23,8 @@ error_exit() {
 # Usage informaition
 Usage() {
 	echo "Usage: test [filename]"
-	echo "[filename] is <name> in parser_tests/test-<name>.stp"
-	echo "e.g. Running parser_tests/test-comments1.stp:"
+	echo "[filename] is <name> in ${TEST_FOLDER}/parse-<name>.stp"
+	echo "e.g. Running ${TEST_FOLDER}/parse-comments1.stp:"
 	echo "$ ./test comments1"
 	exit 1
 }
@@ -45,7 +45,7 @@ fi
 
 if [ ! -f /$(basename $STOP) ]; then
 	globalerror=1
-	error_exit "Missing $(basename $STOP) executable."
+	error_exit "Missing $(basename $STOP) executable. Try building project."
 fi
 
 $STOP -a < ${TEST_FOLDER}/parse-$1.stp

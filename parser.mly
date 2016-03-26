@@ -16,9 +16,8 @@
 %token INT FLOAT BOOL CHAR UNIT
 %token TYPE 
 
-%token DEF CLASS UNIT
+%token DEF CLASS EXTENDS 
 %token EOF
-%token NEWLINE
 
 /* Primitives */
 
@@ -53,7 +52,7 @@
 /* -------------------- */
 
 program:
-      includes stmts EOF          { Program($1, $2) }
+      includes cdecls EOF          { Program($1, $2) }
 
 /* Includes */
 /* -------- */
@@ -111,6 +110,36 @@ stmt:
                                         { While($3, $5) }
     | datatype ID SEMI                  { Local($1, $2, Noexpr) }
     | datatype ID ASSIGN expr SEMI      { Local($1, $2, $4) }
+
+/* Classes */
+/* ------- */
+
+cdecls:
+      /* nothing */         { [] }
+    | cdecl_list            { List.rev $1 }
+
+cdecl_list:
+      cdecl                 { [$1] }
+    | cdecl_list cdecl      { $2::$1 }
+
+cdecl:
+      CLASS ID LBRACE cbody RBRACE { {
+            cname = $2;
+            extends = NoParent;
+            cbody = $4;
+      } }
+    | CLASS ID EXTENDS ID LBRACE cbody RBRACE { {
+            cname = $2;
+            extends = Parent($4);
+            cbody = $6;
+      }}
+
+cbody:
+      /* nothing */ { {
+          fields = [];
+      } }
+
+
 
 /* Functions */
 /* --------- */

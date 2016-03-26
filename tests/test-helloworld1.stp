@@ -1,5 +1,0 @@
-class test-helloworld1 {
-	def main(args: Array[String]): Unit = {
-		printf("Hello, world!");
-	}
-}

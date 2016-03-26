@@ -8,7 +8,6 @@
         Scanf.sscanf ("\"" ^ s ^ "\"") "%S%!" (fun x -> x)
 }	
 
-
 let whitespace = [' ' '\t' '\r' '\n']
 
 let alpha = ['a'-'z' 'A'-'Z']
@@ -29,8 +28,8 @@ let char_lit = '''(ascii|digit as lit)'''
 let escape_char_lit = '''(escape_char as lit)'''
 let string_lit = '"'((ascii|escape_char)* as lit)'"'
 
-let id = lower_alpha (alpha | digit | '_')* as lit
-let typeid = upper_alpha (alpha | digit | '_')* as lit
+let id = lower_alpha (alpha | digit | '_' | '-')* as lit
+let typeid = upper_alpha (alpha | digit | '_' | '-')* as lit
 
 rule token = parse
       whitespace { token lexbuf }                   (* Whitespace *)
@@ -78,6 +77,7 @@ rule token = parse
     (* Reserved *)
     | "def"		    { DEF }
     | "class"	    { CLASS }
+    | "extends"     { EXTENDS }
     | "#include"    { INCLUDE }
 
     (* PRIMITIVES *)

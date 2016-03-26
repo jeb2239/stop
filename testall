@@ -1,0 +1,19 @@
+#!/bin/sh
+# vim: filetype=sh
+# Sources: MicroC, Professor Stephen A. Edwards, 3/26/2016
+
+# ================================== #
+# Regression Testing Script for Stop
+# ================================== #
+
+# Step through a list of files
+# Compile, run, and check output of each expected-to-work test
+# Compile and check the error of each expected-to-fail test
+
+STOP="./stop.native"
+
+ulimit -t 30
+globallog=testall.log
+rm -f $globallog
+error=0
+globalerror=0

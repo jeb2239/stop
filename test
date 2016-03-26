@@ -1,2 +1,40 @@
+#!/bin/bash
+# vim: filetype=sh
 
-./stop.native -a < tests/test-$1.stp
+# =============================== #
+# Testing Script for Parser Tests
+# =============================== #
+
+# Usage: ./test <filename> 
+#
+# In particular, it is <name> in test-<name>.stp
+#
+# Usage Example:
+#	Want to run parser_tests/test-comments1.stp
+#	$ ./test comments1
+
+STOP="./stop.native"
+globalerror=0
+
+# Set time limit for all operations
+ulimit -t 30
+
+Usage() {
+	echo "Usage: test [filename]"
+	echo "[filename] is <name> in parser_tests/test-<name>.stp"
+	echo "e.g. Running parser_tests/test-comments1.stp:"
+	echo "$ ./test comments1"
+	exit 1
+}
+
+while getopts ":h[help]" opt; do
+	case $opt in
+		h) # Help
+			Usage
+			;;
+	esac
+done
+
+$STOP -a < tests_parser/test-$1.stp
+
+exit $globalerror

@@ -43,16 +43,13 @@ type cbody = {
 type class_decl = {
     cname : string;
     extends : extends;
-    cbody : cbody; 
+    cbody: cbody;
 }
-
-
 
 (* Program Definition *)
 
 (* type program = include_stmt list * class_decl list *)
-type program =  Program of include_stmt list * stmt list
-
+type program =  Program of include_stmt list * class_decl list
 
 (* Pretty-printing Functions *)
 (* ------------------------- *)
@@ -114,11 +111,16 @@ let rec string_of_stmt = function
           Noexpr -> string_of_datatype dtype ^ " " ^ s ^ ";\n"
         | _ -> string_of_datatype dtype ^ " " ^ s ^ " = " ^ string_of_expr e ^ ";\n" )
             
-
 let string_of_include = function
     Include(s) -> "#include \"" ^ s ^ "\"\n"
 
+let string_of_cdecl cdecl = match cdecl.extends with
+    NoParent ->
+        "class " ^ cdecl.cname ^ " { }\n"
+    | Parent(s) ->
+        "class " ^ cdecl.cname ^ " extends " ^ s ^ " { }\n"
+
 let string_of_program = function
-    Program(includes, stmts) -> 
+    Program(includes, cdecls) ->
         String.concat "" (List.map string_of_include includes) ^ "\n" ^
-        String.concat "" (List.map string_of_stmt stmts) ^ "\n"
+        String.concat "" (List.map string_of_cdecl cdecls) ^ "\n"

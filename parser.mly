@@ -3,11 +3,11 @@
 %{ open Ast %}
 
 %token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
-%token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
+%token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO DOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE ELSEIF FOR WHILE
 %token RETURN VOID SPEC PUB PRIV
-%token FINAL VAR ANON PATTERN FUN
+%token FINAL VAR ANON PATTERN FUN 
 %token INCLUDE
 %token EOF
 %token FUNCTION
@@ -57,7 +57,7 @@
 /* -------------------- */
 
 program:
-      includes spec_decls class_decls EOF          { Program($1, $2 , $3) }
+      includes spec_decls class_decls stmt_list EOF          { Program($1, $2 , $3) }
 
 /* Includes */
 /* -------- */
@@ -105,7 +105,7 @@ sbody:
 		
 	}}
 
-	| sbody method_decl 
+	| sbody method_spec 
 	{
 		{
 			methods=$2::$1.methods;
@@ -200,6 +200,17 @@ field:
 METHODS + functions
 ********/
 
+method_spec:
+	visibility DEF ID ASSIGN LPAREN formal_option RPAREN COLON dtype {
+		{
+			visibility=$1;
+			name = $3;
+			returnType = $9;
+			formal_param = $6;
+		}
+	}
+	
+
 method_decl:
 	visibility DEF ID ASSIGN LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
 	{
@@ -226,7 +237,7 @@ function_decl:
 		returnType=$6;
 		formal_param=$3;
 		body=$8;
-		}}
+		}} 
 
 formal_option:
 		/* nothing */ { [] }
@@ -318,7 +329,7 @@ stmt:
     | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
     | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
     | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
-
+    | function_decl {$1} 
 
 /* Functions */
 /* --------- */
@@ -364,6 +375,7 @@ literals:
     | TRUE              { BoolLit(true) }
     | FALSE             { BoolLit(false) }
     | ID                { Id($1) }
+    | FUNC_LIT 			{ }
 
 /*
 line: NEWLINE { }

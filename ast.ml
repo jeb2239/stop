@@ -34,6 +34,9 @@ type expr =
   | Id of string
   | Binop of expr * op * expr
   | Unop of uop * expr
+  | FuncLit of formal_param * dtype * stmt list (*the idea is that this return a function literal*)
+                                                (* when someone declares a function they immidialy assign
+                                                it to a name*)
   | Noexpr
 
 type stmt =
@@ -60,9 +63,17 @@ type method_decl = {
   
 }
 
+type method_spec = {
+
+  visibility: visibility;
+  name:string;
+  returnType: dtype ;
+  formal_param : formal_param list ;
+}
+
 
 type sbody ={
-   methods: method_decl list;
+   methods: method_spec list;
   typereq: dtype list;
 }
 
@@ -97,8 +108,8 @@ type func_decl = {
 
 }
 
-type requirements = Method_Req of method_decl | Type_Req of dtype
-type program =  Program of include_stmt list * spec_decl list * class_decl list
+type requirements = Method_Req of method_spec | Type_Req of dtype
+type program =  Program of include_stmt list * spec_decl list * class_decl * stmt list
 (* Pretty-printing Functions *)
 (* ------------------------- *)
 
@@ -147,10 +158,13 @@ let rec string_of_stmt = function
 let string_of_include = function
     Include(s) -> "include \"" ^ s ^ "\"\n"
 
+let string_of_specs = function 
+
+
 
 
 
 let string_of_program = function
-    Program(includes, specs,classes) -> 
+    Program(includes, specs,classes , stmts) -> 
         String.concat "" (List.map string_of_include includes) ^ "\n" 
         (*String.concat "" (List.map string_of_stmt stmts) ^ "\n"*)

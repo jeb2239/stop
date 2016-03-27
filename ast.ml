@@ -4,16 +4,28 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or
 
 type uop = Neg | Not
-type primitive = Int_t | Float_t | Unit_t | Bool_t | Char_t | Class_t of string | Spec_t of string
+type primitive = Int_t | Float_t | Unit_t | Bool_t | Char_t | Class_t of string | Spec_t of string 
+|Functiontype of formal_param list * dtype | Arraytype of primitive * int
+and dtype = Dtype of primitive | Any 
+and formal_param = Formal of dtype * string | Many of dtype
 
-type dtype = Arraytype of primitive * int | Dtype of primitive | Functiontype of formal_param list * dtype | Any 
+(*
+formal params are a mutually recursive type with dtype
+
+--the reason this is mutually recursive is because if you look
+at the different terms of dtype, you will see Function types are defined in terms of their
+parameters (aka formal_param list) and their return type
+
+but formal_param lists also depend on certain members of dtype hence they are mutually recursive
+*)
+
 type visibility = Pub | Priv
-type formal_param = Formal of dtype * string | Many of dtype
+
 
 
  
 
-type requirements = Method_Req of method_decl | Type_Req of dtype
+
 
 type expr = 
     IntLit of int
@@ -35,27 +47,33 @@ type stmt =
 type include_stmt = Include of string
 
 (* type program = include_stmt list * class_decl list *)
-type program =  Program of include_stmt list * spec_decl list * cdecl list
+
 type field = Field of visibility * dtype * string (*string is the var name*)
-type spec_decl = {
-  sname : string;
-  body: sbody;
+
+type method_decl = {
+  
+  visibility: visibility;
+  name:string;
+  returnType: dtype ;
+  formal_param : formal_param list ;
+  body : stmt list; (*there may be not implementation if in a spec dec*)
+  
 }
+
 
 type sbody ={
    methods: method_decl list;
   typereq: dtype list;
 }
 
-type method_decl = {
-  
-  visibility: visibility;
-  name:string;
-  returnType: dtype;
-  formal_param : formal_param list option;
-  body : stmt list option; (*there may be not implementation if in a spec dec*)
-  
+type spec_decl = {
+  sname : string;
+  body: sbody;
 }
+
+
+
+
 
 type cbody ={
   fields : field list;
@@ -74,11 +92,13 @@ type func_decl = {
   name:string;
   returnType: dtype;
  (* func_type: dtype list; (*do we actually need this?*)*)
-  formal_param : formal_param list option;
-  body : stmt list option; (*there may be not implementation if in a spec dec*)
+  formal_param : formal_param list;
+  body : stmt list; (*there may be not implementation if in a spec dec*)
 
 }
 
+type requirements = Method_Req of method_decl | Type_Req of dtype
+type program =  Program of include_stmt list * spec_decl list * class_decl list
 (* Pretty-printing Functions *)
 (* ------------------------- *)
 
@@ -127,7 +147,10 @@ let rec string_of_stmt = function
 let string_of_include = function
     Include(s) -> "include \"" ^ s ^ "\"\n"
 
+
+
+
 let string_of_program = function
-    Program(includes, stmts) -> 
-        String.concat "" (List.map string_of_include includes) ^ "\n" ^
-        String.concat "" (List.map string_of_stmt stmts) ^ "\n"
+    Program(includes, specs,classes) -> 
+        String.concat "" (List.map string_of_include includes) ^ "\n" 
+        (*String.concat "" (List.map string_of_stmt stmts) ^ "\n"*)

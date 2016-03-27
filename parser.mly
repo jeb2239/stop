@@ -14,8 +14,8 @@
 
 /* Primitive Types */
 
-%token INT FLOAT BOOL
-%token TYPE 
+%token INT FLOAT BOOL CHAR
+%token TYPE THIS
 %token UNIT
 
 %token DEF CLASS UNIT 
@@ -87,8 +87,8 @@ spec_decls_list:
 spec_decl:
 	| SPEC ID LBRACE sbody RBRACE SEMI {
 		{
-			sname = $2
-			sbody = $4
+			sname = $2;
+			body = $4
 		}
 	}
 
@@ -117,7 +117,7 @@ sbody:
 /*Class decl*/
 
 class_decls:
-	class_decl_list { List.rev   }
+	class_decl_list { List.rev $1 }
 
 class_decl_list:
 	class_decl {[$1]}
@@ -166,8 +166,8 @@ pattern_constructor:
 	PATTERN ASSIGN LPAREN formal_option RPAREN LBRACE stmt_list RBRACE {
 		{
 			visibility=Pub;
-			name="pattern"
-			returnType
+			name="pattern";
+			returnType=Dtype(Unit_t);
 			formal_param = $4;
 			body=List.rev $7;
 			(*if we were some how going to do inheritance we would have 
@@ -222,7 +222,7 @@ function_decl:
 		} }
 	| ANON LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
 	{{
-		name= "afdf"(*we need to make a unique name for every anon function*)
+		name= "lol"(*we need to make a unique name for every anon function*);
 		returnType=$6;
 		formal_param=$3;
 		body=$8;
@@ -256,11 +256,15 @@ primitive:
 	| 	CHAR		{ Char_t }
 	| 	BOOL 		{ Bool_t }
 	| 	UNIT    	{ Unit_t }
+	| func_type     {$1}
+	| spec			{$1}
+	| name			{$1}
+	| primitive LSQUARE brackets RSQUARE { Arraytype($1, $3) }
 
 func_type:
-	| FUN LPAREN formals_option RPAREN COLON dtype {{
+	| FUN LPAREN formal_option RPAREN COLON dtype {
 		Functiontype($3,$6)
-		}}
+		}
 
 
 
@@ -269,16 +273,17 @@ name:
 spec:
 	SPEC ID {Spec_t($2)}
 
-type_tag:
+/*type_tag:
 	primitive {$1}
 	|name {$1}
 
+*/
 
-array_type:
-	type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
+/*array_type:
+	concrete_type_tag LSQUARE brackets RSQUARE { Arraytype($1, $3) }
+*/
 
-
-concrete_type_tag:
+/*concrete_type_tag:
 	type_tag  {$1}
 	| array_type {$1}
 	| func_type {$1} 
@@ -286,15 +291,15 @@ concrete_type_tag:
 abstract_type_tag:
 	 spec {$1}
 	|concrete_type_tag {$1}
-
+*/
 dtype:
 	
-	abstract_type_tag {dtype($1)} 
+	primitive {Dtype($1)} 
 
 
 brackets:
 		/* nothing */ 			   { 1 }
-	| 	brackets RBRACKET LBRACKET { $1 + 1 }
+	| 	brackets RSQUARE LSQUARE { $1 + 1 }
 
 
 stmt_list:

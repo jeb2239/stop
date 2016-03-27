@@ -57,7 +57,7 @@
 /* -------------------- */
 
 program:
-      includes spec_decls cdecls EOF          { Program($1, $2 , $3) }
+      includes spec_decls class_decls EOF          { Program($1, $2 , $3) }
 
 /* Includes */
 /* -------- */
@@ -75,6 +75,7 @@ include_decl:
 
 /* Specs*/
 /*------*/
+
 spec_decls:
 	spec_decls_list  {List.rev $1}
 
@@ -97,7 +98,7 @@ sbody:
 		methods=[];
 		typereq=[];
 		}}
-	| sbody typereq 
+	| sbody dtype 
 	{{
 		methods=$1.methods;
 		typereq=$2::$1.typereq;
@@ -120,7 +121,7 @@ class_decls:
 
 class_decl_list:
 	class_decl {[$1]}
-	| cdecl_list cdecl {$2::$1}
+	| class_decl_list class_decl {$2::$1}
 
 class_decl:
 	 CLASS ID LBRACE cbody RBRACE {{
@@ -142,7 +143,7 @@ cbody:
 			pattern_constructors = $1.pattern_constructors;
 			methods = $1.methods;
 		}}
-	| cbody patten_constructor {{
+	| cbody pattern_constructor {{
 		fields = $1.fields;
 		pattern_constructors = $2::$1.pattern_constructors;
 		methods = $1.methods;
@@ -184,9 +185,11 @@ pattern_constructor:
 /******************
  FIELDS
 ******************/
+
 visibility:
 	  PRIV   {Priv}
 	| PUB	 {Pub}
+	
 /* Statements */
 /* ---------- */
 
@@ -196,6 +199,7 @@ field:
 /************
 METHODS + functions
 ********/
+
 method_decl:
 	visibility DEF ID ASSIGN LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
 	{
@@ -210,12 +214,12 @@ method_decl:
 
 function_decl:
 	| FUNCTION ID ASSIGN LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
-	{{
+	{ {
 		name=$2;
 		returnType=$8;
 		formal_param=$5;
 		body=$10;
-		}}
+		} }
 	| ANON LPAREN formal_option RPAREN COLON dtype LBRACE stmt_list RBRACE
 	{{
 		name= "afdf"(*we need to make a unique name for every anon function*)
@@ -224,12 +228,12 @@ function_decl:
 		body=$8;
 		}}
 
-formals_option:
+formal_option:
 		/* nothing */ { [] }
 	| 	formal_list   { List.rev $1 }
 
 formal_list:
-		formal                   { [$1] }
+		formal_param                   { [$1] }
 	| 	formal_list COMMA formal_param { $3 :: $1 }
 
 formal_param:
@@ -260,18 +264,19 @@ func_type:
 
 
 
-
 name:
 	CLASS ID { Class_t($2)}
 spec:
 	SPEC ID {Spec_t($2)}
+
 type_tag:
 	primitive {$1}
 	|name {$1}
 
+
 array_type:
 	type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
- 
+
 
 concrete_type_tag:
 	type_tag  {$1}
@@ -283,7 +288,7 @@ abstract_type_tag:
 	|concrete_type_tag {$1}
 
 dtype:
-	(*need to figure out a way to parse datatypes*)
+	
 	abstract_type_tag {dtype($1)} 
 
 

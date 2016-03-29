@@ -5,15 +5,16 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
 
 type uop = Neg | Not
 
-
-
-
 type dtype = 
-	Int_t 
-	| Float_t 
-	| Unit_t 
-	| Bool_t 
-	| Char_t 
+    Int_t 
+  | Float_t 
+  | Unit_t 
+  | Bool_t 
+  | Char_t 
+
+
+
+
 (*	
   | Name_t of string
 	| Functiontype of dtype list * dtype 
@@ -29,9 +30,14 @@ type expr =
     IntLit of int
   | FloatLit of float
   | BoolLit of bool
- (* | Id of string *)
+  | Id of string 
   | Binop of expr * op * expr
   | Unop of uop * expr
+(* I am calling this an expr for now but it will be renamed into a vdecl type*)
+  | Vdec of string * dtype  
+
+(* type vdecl =  *)
+
  (* | FuncLit of formal_param * dtype * stmt list the idea is that this returns a function literal
                                                 (* when someone declares a function they immidialy assign
                                                 it to a name*)*)
@@ -68,14 +74,25 @@ let string_of_uop = function
     Neg -> "-"
   | Not -> "!"
 
+let string_of_dtype = function
+    Int_t -> "Int"
+    | Float_t -> "Float"
+    | Unit_t -> "Unit"
+    | Bool_t -> "Bool"
+    | Char_t -> "Char"
+
+(* let string_of_vdecl (t,tid) = string_of_dtype t ^ " " ^ tid  *)
 
 let rec string_of_expr = function
     | IntLit(i) -> string_of_int i
     | FloatLit(f) -> Pervasives.string_of_float f
+    | Id(r) -> r
     | BoolLit(true) -> "true"
     | BoolLit(false) -> "false"
     | Binop(e1,o,e2) -> string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2 ^ ";"
     | Unop(o,e) -> string_of_uop o ^ " " ^ string_of_expr e ^ ";"
+    | Vdec(e,dt) -> "var " ^  e ^ ":" ^ string_of_dtype dt ^ ";"
+    (*this needs to be moved, to a string_of_vdecl function but for now..*)
 
 
 

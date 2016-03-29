@@ -57,7 +57,7 @@ literals:
     | FLOAT_LIT         { FloatLit($1) }
     | TRUE              { BoolLit(true) }
     | FALSE             { BoolLit(false) }
-   /* | ID                { Id($1) }*/
+    | ID                { Id($1) }
   /*  | fun_lit 			{ $1 }*/
 /*
 fun_lit:
@@ -82,14 +82,14 @@ type_list:
 	| type_list COMMA dtype {$1::$3}
 */
 	
-/*
+
 dtype:
 	INT {Int_t}
 	| BOOL {Bool_t}
 	| FLOAT {Float_t}
 	| CHAR {Char_t}
 	| UNIT {Unit_t}
-	| ID   {Name_t($1)}*/
+	/*| TYPE_ID   {Name_t($1)}*/
 /*	| fun_type { $1 }*/
 	
 /*
@@ -98,11 +98,14 @@ fun_type:
 */
 
 
+
+vdecl:
+  VAR ID COLON dtype { Vdec($2,$4) }
+
+
+
 expr:
     literals          { $1 }
- /* | TRUE             { BoolLit(true) }
-  | FALSE            { BoolLit(false) }*/
- /* | ID               { Id($1) }*/
   | expr PLUS   expr { Binop($1, Add,   $3); }
   | expr MINUS  expr { Binop($1, Sub,   $3); }
   | expr TIMES  expr { Binop($1, Mult,  $3) }
@@ -117,6 +120,7 @@ expr:
   | expr OR     expr { Binop($1, Or,    $3) }
   | MINUS expr %prec NEG { Unop(Neg, $2) }
   | NOT expr         { Unop(Not, $2) }
+  | vdecl             { $1 }
  /* | ID ASSIGN expr   { Assign($1, $3) }*/
  /* | ID LPAREN actuals_opt RPAREN { Call($1, $3) }*/ /*if we call a named function*/
   /*| fun_lit            {$1} */

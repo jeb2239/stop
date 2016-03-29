@@ -59,7 +59,7 @@ rule token = parse
     | "for"     { FOR }
     | "while"   { WHILE }
     | "return"  { RETURN }
-
+    | "->"      { ARROW }
     (* Reserved *)
     | "spec"        { SPEC }
     | "def"		    { DEF }

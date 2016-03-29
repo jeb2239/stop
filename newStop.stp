@@ -56,7 +56,7 @@ function pattern_matching = (a:Person):String {
 
 }
 
-
+function iamAfunction = (c:Int):Int{ c* a.weight }
 
 function MAIN = (args:String[]):Unit {
 	
@@ -65,7 +65,7 @@ function MAIN = (args:String[]):Unit {
 	var iamAfunction:Fun(Int)->Int = @(c:Int):Int{ c* a.weight } ; //use of anon function, captures 
 	//will be given a fake name but 
 	//when assigned we replace that name with "IamAfunction" this is kinda fuzzy
-
+	map(iamAfunction,list);
 	print(pattern_matching(a)); //prints out "its james hello!" , eager evaluation 
 								//the spec is invoked to check if type String is is either a String
 								//or implements the toString method, this happens at compile time,
@@ -82,7 +82,7 @@ function MAIN = (args:String[]):Unit {
 			  //    /*******other overloads and stuff********/
 			  //         }
 			  
-	print(iamAfunction(3)) //prints out 300
+	print(iamAfunction(3)); //prints out 300
 
 
 

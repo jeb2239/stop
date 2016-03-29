@@ -10,7 +10,7 @@
 %token FINAL VAR ANON PATTERN FUN 
 %token INCLUDE
 %token EOF
-%token FUNCTION
+%token FUNCTION ARROW
 
 
 /* Primitive Types */
@@ -29,6 +29,7 @@
 %token <float> FLOAT_LIT
 %token <bool> BOOL_LIT
 %token <string> STRING_LIT
+%token <string> TYPE_ID
 %token <string> ID
 %nonassoc NOELSE
 %nonassoc ELSE
@@ -41,13 +42,14 @@
 %left TIMES DIVIDE
 %right NOT NEG
 
-%start program
-%type <Ast.program> program
+%start expr
+%type <Ast.expr> expr
 
 
 %%
 
-
+/*program:
+	stmt_list EOF {Program($1)}*/
 
 
 literals:
@@ -55,54 +57,54 @@ literals:
     | FLOAT_LIT         { FloatLit($1) }
     | TRUE              { BoolLit(true) }
     | FALSE             { BoolLit(false) }
-    | ID                { Id($1) }
-    | fun_lit 			{ $1 }
-
+   /* | ID                { Id($1) }*/
+  /*  | fun_lit 			{ $1 }*/
+/*
 fun_lit:
 	LPAREN formal_list RPAREN COLON dtype stmts {FuncLit($2,$5,$6)}
+*/
 
-
-
+/*
 formals_opt:
-    /* nothing */ { [] }
+     nothing { [] }
   | formal_list   { List.rev $1 }
 
 formal_list:
-    ID COLON dtype                   { [($1,$2)] }
-  | formal_list COMMA ID COLON dtype  { ($3,$4) :: $1 }
+    ID COLON dtype                   { [($3,$1)] }
+  | formal_list COMMA ID COLON dtype  { ($5,$3) :: $1 }
 
 types_opt:
-	/*nothing*/ { [] }
+	nothing { [] }
 	| type_list {List.rev $1}
 
 type_list:
 	dtype {[$1]}
 	| type_list COMMA dtype {$1::$3}
-
+*/
 	
-
+/*
 dtype:
 	INT {Int_t}
 	| BOOL {Bool_t}
 	| FLOAT {Float_t}
 	| CHAR {Char_t}
 	| UNIT {Unit_t}
-	| ID   {Name_t($1)}
-	| fun_type { $1 }
+	| ID   {Name_t($1)}*/
+/*	| fun_type { $1 }*/
 	
-
+/*
 fun_type:
-	FUN LPAREN type_opt RPAREN COLON dtype { Functiontype($3,$6) }
-
+	FUN LPAREN type_opt RPAREN ARROW dtype { Functiontype($3,$6) }
+*/
 
 
 expr:
     literals          { $1 }
-  | TRUE             { BoolLit(true) }
-  | FALSE            { BoolLit(false) }
-  | ID               { Id($1) }
-  | expr PLUS   expr { Binop($1, Add,   $3) }
-  | expr MINUS  expr { Binop($1, Sub,   $3) }
+ /* | TRUE             { BoolLit(true) }
+  | FALSE            { BoolLit(false) }*/
+ /* | ID               { Id($1) }*/
+  | expr PLUS   expr { Binop($1, Add,   $3); }
+  | expr MINUS  expr { Binop($1, Sub,   $3); }
   | expr TIMES  expr { Binop($1, Mult,  $3) }
   | expr DIVIDE expr { Binop($1, Div,   $3) }
   | expr EQ     expr { Binop($1, Equal, $3) }
@@ -115,17 +117,27 @@ expr:
   | expr OR     expr { Binop($1, Or,    $3) }
   | MINUS expr %prec NEG { Unop(Neg, $2) }
   | NOT expr         { Unop(Not, $2) }
-  | ID ASSIGN expr   { Assign($1, $3) }
-  | ID LPAREN actuals_opt RPAREN { Call($1, $3) } /*if we call a named function*/
-  | fun_lit            {$1} 
-  | LPAREN expr RPAREN { $2 }
-
-
+ /* | ID ASSIGN expr   { Assign($1, $3) }*/
+ /* | ID LPAREN actuals_opt RPAREN { Call($1, $3) }*/ /*if we call a named function*/
+  /*| fun_lit            {$1} */
+ /* | LPAREN expr RPAREN { $2 }*/
+/*
+stmt:
+    expr SEMI { Expr $1 }
+  | RETURN SEMI { Return Noexpr }
+  | RETURN expr SEMI { Return $2 }
+  | LBRACE stmt_list RBRACE { Block(List.rev $2) }
+  | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
+  | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
+  | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
+     { For($3, $5, $7, $9) }
+  | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
 
 actuals_opt:
-    /* nothing */ { [] }
+     nothing  { [] }
   | actuals_list  { List.rev $1 }
 
 actuals_list:
     expr                    { [$1] }
   | actuals_list COMMA expr { $3 :: $1 }
+*/

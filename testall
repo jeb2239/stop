@@ -13,8 +13,65 @@
 STOP="./stop.native"
 
 ulimit -t 30
+
 globallog=testall.log
 rm -f $globallog
-
 error=0
 globalerror=0
+
+keep=0
+
+Usage() {
+	echo "Usage: $ ./testall [options] [.stp files]"
+	echo "-k	Keep intermediate files"
+	echo "-h	Print this help"
+	exit 1
+}
+
+Check() {
+	error=0
+	basename=$(echo $1 | sed 's;.stp;;' | sed 's;.*/;;')
+	reffile=$(echo $1 | sed 's;;;') 
+	basedir=$(echo $1 | sed 's;;;')
+
+	echo -n "$basename..."
+}
+
+while getopts k[keep intermediate files]h[help] opt
+do
+	case $opt in
+	k) # Keep intermediate files
+		keep=1
+		;;
+	h) # Help
+		Usage
+		;;
+	esac
+done
+
+shift $((OPTIND - 1)) # Remove options, leave arguments
+
+if [ $# -ge 1 ]
+then
+	files="tests/$@"
+else 
+	files="tests/test-*.stp tests/fail-*.stp"
+fi
+
+for file in $files
+do
+	case $file in
+	*test-*)
+		Check $file 2>> $globallog
+		;;
+	*fail-*)
+		# CheckFail $file 2>> $globallog
+		;;
+	*)
+		echo "unkown file type $file"
+		globalerror=1
+		;;
+	esac
+done
+
+exit $globalerror

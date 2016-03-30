@@ -6,19 +6,12 @@
 # =============================== #
 
 STOP="./stop.native"
-PROGNAME=$(basename $0)
 TEST_FOLDER="tests"
 
 # Set time limit for all operations
 ulimit -t 30
 
 globalerror=0
-
-error_exit() {
-	echo "${PROGNAME}: ${1:-"Unknown Error"}" 1>&2
-	echo "($ ./test -h for help)"
-	exit $globalerror
-}
 
 # Usage informaition
 Usage() {
@@ -29,8 +22,8 @@ Usage() {
 	exit 1
 }
 
-# Handle -options
-while getopts ":h[help]" opt; do
+while getopts h[help] opt 
+do
 	case $opt in
 		h) # Help
 			Usage
@@ -38,14 +31,7 @@ while getopts ":h[help]" opt; do
 	esac
 done
 
-if [ ! -f ${TEST_FOLDER}/parse-$1.stp ]; then
-	globalerror=1
-	error_exit "${TEST_FOLDER}/parse-$1.stp not found"
-fi
-
-if [ ! -f $(basename $STOP) ]; then
-	globalerror=1
-	error_exit "Missing $(basename $STOP) executable. Try building project."
-fi
+# Remove options, leave arguments
+shift $((OPTIND - 1))
 
 $STOP -a < ${TEST_FOLDER}/parse-$1.stp

@@ -1,9 +1,0 @@
-// Hello World 1 Test File
-
-#include "example.stp"
-
-class test-helloworld1 {
-	def main(args: String[]): Unit = {
-		printf("Hello, world!");
-	}
-}

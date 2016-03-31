@@ -1,13 +1,13 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
-type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
-          And | Or
-
-type primitive = Int | Float | Bool | Char | Unit
-
-type datatype = Datatype of primitive
-
+type op = Add | Sub | Mult | Div | And | Or |
+          Equal | Neq | Less | Leq | Greater | Geq 
 type uop = Neg | Not
+type primitive = Int_t | Float_t | Bool_t | Char_t | Unit_t | Object_t of string
+(* i.e. Arraytype (a, 2) <=> a[][]; (a, 3) <=> a[][][] *)
+type datatype = Datatype of primitive | Arraytype of primitive * int
+type fname = FName of string
+type formal = Formal of datatype * string
 
 type expr = 
     IntLit of int
@@ -18,6 +18,7 @@ type expr =
   | Id of string
   | Binop of expr * op * expr
   | Unop of uop * expr
+  | Call of string * expr list
   | Noexpr
 
 type stmt =
@@ -32,7 +33,18 @@ type stmt =
 type field = Field of datatype * string
 type include_stmt = Include of string
 
+(* Functions *)
+(* --------- *)
+
+type fdecl = {
+    fname : fname;
+    return_t : datatype;
+    formals : formal list;
+    body : stmt list;
+}
+
 (* Classes *)
+(* ------- *)
 
 type extends = NoParent | Parent of string
 
@@ -47,9 +59,9 @@ type class_decl = {
 }
 
 (* Program Definition *)
+(* ------------------ *)
 
-(* type program = include_stmt list * class_decl list *)
-type program =  Program of include_stmt list * class_decl list
+type program =  Program of include_stmt list * fdecl list
 
 (* Pretty-printing Functions *)
 (* ------------------------- *)
@@ -73,14 +85,28 @@ let string_of_uop = function
   | Not -> "!"
 
 let string_of_primitive = function 
-    Int -> "int"
-  | Float -> "float"
-  | Bool -> "bool"
-  | Char -> "char"
-  | Unit -> "Unit"
+    Int_t -> "int"
+  | Float_t -> "float"
+  | Bool_t -> "bool"
+  | Char_t -> "char"
+  | Unit_t -> "Unit"
+  | Object_t(s) -> "class" ^ s
+
+let rec print_brackets = function
+    1 -> "[]"
+  | i -> "[]" ^ print_brackets (i - 1)
 
 let string_of_datatype = function
-    Datatype(d) -> string_of_primitive d
+    Datatype(p) -> string_of_primitive p
+  | Arraytype(p, i) -> string_of_primitive p ^ print_brackets i
+
+(* type fname = FName of string *)
+let string_of_fname = function
+    FName(s) -> s
+
+(* type formal = Formal of datatype * string *)
+let string_of_formal = function
+    Formal(data_t, s) -> s ^ ":" ^ string_of_datatype data_t 
 
 let rec string_of_expr = function
     IntLit(i) -> string_of_int i
@@ -94,6 +120,7 @@ let rec string_of_expr = function
         string_of_expr e1 ^ " " ^ string_of_op op ^ " " ^ string_of_expr e2
   | Unop(op, e1) ->
         string_of_uop op ^ " " ^ string_of_expr e1
+  | Call(s, e_list) -> s ^ "(" ^ String.concat ", " (List.map string_of_expr e_list) ^ ")"
   | Noexpr -> ""
   
 let rec string_of_stmt = function
@@ -120,7 +147,15 @@ let string_of_cdecl cdecl = match cdecl.extends with
     | Parent(s) ->
         "class " ^ cdecl.cname ^ " extends " ^ s ^ " { }\n"
 
+let string_of_fdecl fdecl =
+    "function" ^ " " ^ string_of_fname fdecl.fname ^ " = (" ^
+    String.concat ", " (List.map string_of_formal fdecl.formals) ^
+    "):" ^ string_of_datatype fdecl.return_t ^ "{\n" ^ 
+    String.concat "" (List.map string_of_stmt fdecl.body) ^
+    "}\n"
+
 let string_of_program = function
-    Program(includes, cdecls) ->
+    Program(includes, fdecls) -> 
         String.concat "" (List.map string_of_include includes) ^ "\n" ^
-        String.concat "" (List.map string_of_cdecl cdecls) ^ "\n"
+        String.concat "" (List.map string_of_fdecl fdecls) ^ "\n"
+

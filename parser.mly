@@ -10,6 +10,7 @@
 %token FINAL
 %token INCLUDE
 %token EOF
+%token FUNCTION
 
 /* Primitive Types */
 
@@ -26,11 +27,9 @@
 %token <float> FLOAT_LIT
 %token <char> CHAR_LIT
 %token <string> STRING_LIT
+
 %token <string> ID
 %token <string> TYPE_ID
-
-%token <string> VAR 
-%token <float->float> FNCT
 
 %nonassoc NOELSE
 %nonassoc ELSE
@@ -52,7 +51,7 @@
 /* -------------------- */
 
 program:
-      includes cdecls EOF          { Program($1, $2) }
+      includes fdecls EOF          { Program($1, $2) }
 
 /* Includes */
 /* -------- */
@@ -72,44 +71,67 @@ include_decl:
 /* --------- */
 
 primitive:
-      INT               { Int }
-    | FLOAT             { Float }
-    | CHAR              { Char }
-    | BOOL              { Bool }
-    | UNIT              { Unit }
+    INT               { Int_t }
+  | FLOAT             { Float_t }
+  | CHAR              { Char_t }
+  | BOOL              { Bool_t }
+  | UNIT              { Unit_t }
 
 type_tag:
-      primitive { $1 }
+    primitive { $1 }
 
+array_type:
+    type_tag LBRACE brackets RBRACE { Arraytype($1, 1) }
+
+/*
 datatype:
       type_tag          { Datatype($1) }
+    | array_type        { $1 }
 
-/* Statements */
-/* ---------- */
+brackets:
+    /* nothing */               { 1 }
+  | brackets RBRACE LBRACE  { $1 + 1 }
+*/
 
-stmts:
-      /* nothing */         { [] }
-    | stmt_list             { List.rev $1 }
-    
-stmt_list:
-      stmt                  { [$1] }
-    | stmt_list stmt        { $2::$1 }
+/* Functions */
+/* --------- */
 
-stmt:
-      expr SEMI                     { Expr($1) }
-    | RETURN SEMI                   { Return(Noexpr) }
-    | RETURN expr SEMI              { Return($2) }
-    | LBRACE stmt_list RBRACE       { Block($2) } 
-    | IF LPAREN expr RPAREN stmt %prec NOELSE   
-                                        { If($3, $5, Block([Expr(Noexpr)])) }
-    | IF LPAREN expr RPAREN stmt ELSE stmt      
-                                        { If($3, $5, $7) }
-    | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt 
-                                        { For($3, $5, $7, $9) }
-    | WHILE LPAREN expr RPAREN stmt     
-                                        { While($3, $5) }
-    | datatype ID SEMI                  { Local($1, $2, Noexpr) }
-    | datatype ID ASSIGN expr SEMI      { Local($1, $2, $4) }
+fdecls:
+    fdecl_list          { List.rev $1 }
+
+fdecl_list:
+    fdecl               { [$1] }
+  | fdecl_list fdecl    { $2::$1 }
+
+fdecl:
+   FUNCTION ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+            fname = FName($2);
+            return_t = $8;
+            formals = $5;
+            body = $10;
+    } }
+
+/* Formals and Actuals */
+/* ------------------- */
+
+formals_opt:
+    /* nothing */               { [] }
+  | formal_list                 { List.rev $1 }
+
+formal_list:
+    formal                      { [$1] }
+  | formal_list COMMA formal    { $3::$1 }
+
+formal:
+    ID COLON datatype           { Formal($3, $1) }
+
+actuals_opt:
+    /* nothing */               { [] }
+  | actuals_list                { List.rev $1 }
+
+actuals_list:
+    expr                        { [$1] }
+  | actuals_list COMMA expr     { $3::$1 }
 
 /* Classes */
 /* ------- */
@@ -138,24 +160,21 @@ cbody:
       /* nothing */ { {
           fields = [];
       } }
+    
+/* Literals */
+/* -------- */
 
+literals:
+      INT_LIT           { IntLit($1) }
+    | FLOAT_LIT         { FloatLit($1) }
+    | TRUE              { BoolLit(true) }
+    | FALSE             { BoolLit(false) }
+    | CHAR_LIT          { CharLit($1) }
+    | STRING_LIT        { StringLit($1) }
+    | ID                { Id($1) }
 
-
-/* Functions */
-/* --------- */
-
-/*
-fdecls:
-                            { [] }
-    | fdecl_list            { List.rev $1 }
-
-fdecl_list:
-      fdecl                 { [$1] }
-    | fdecl_list fdecl      { $2::$1 }
-
-fdecl:
-    DEF ID                  { $2 }
-*/
+/* Expressions */
+/* ----------- */
 
 expr_opt:
       /* nothing */         { Noexpr }
@@ -179,13 +198,31 @@ expr:
     | NOT expr              { Unop(Not, $2) }
     | LPAREN expr RPAREN    { $2 }
 
-literals:
-      INT_LIT           { IntLit($1) }
-    | FLOAT_LIT         { FloatLit($1) }
-    | TRUE              { BoolLit(true) }
-    | FALSE             { BoolLit(false) }
-    | CHAR_LIT          { CharLit($1) }
-    | STRING_LIT        { StringLit($1) }
-    | ID                { Id($1) }
+/* Statements */
+/* ---------- */
+
+stmts:
+    | stmt_list             { List.rev $1 }
+    
+stmt_list:
+      stmt                  { [$1] }
+    | stmt_list stmt        { $2::$1 }
+
+stmt:
+      expr SEMI                     { Expr($1) }
+    | RETURN SEMI                   { Return(Noexpr) }
+    | RETURN expr SEMI              { Return($2) }
+    | LBRACE stmt_list RBRACE       { Block($2) } 
+    | IF LPAREN expr RPAREN stmt %prec NOELSE   
+                                        { If($3, $5, Block([Expr(Noexpr)])) }
+    | IF LPAREN expr RPAREN stmt ELSE stmt      
+                                        { If($3, $5, $7) }
+    | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt 
+                                        { For($3, $5, $7, $9) }
+    | WHILE LPAREN expr RPAREN stmt     
+                                        { While($3, $5) }
+    /* TODO: clarify declaration syntax */
+    | datatype ID SEMI                  { Local($1, $2, Noexpr) }
+    | datatype ID ASSIGN expr SEMI      { Local($1, $2, $4) }
 
 %%

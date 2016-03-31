@@ -76,6 +76,7 @@ rule token = parse
 
     (* Reserved *)
     | "def"		    { DEF }
+    | "function"    { FUNCTION }
     | "class"	    { CLASS }
     | "extends"     { EXTENDS }
     | "#include"    { INCLUDE }

@@ -1,0 +1,3 @@
+function main = (a:int):Unit {
+	return a + 5;
+}

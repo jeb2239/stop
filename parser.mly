@@ -2,7 +2,7 @@
 
 %{ open Ast %}
 
-%token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
+%token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE FOR WHILE
@@ -34,13 +34,15 @@
 %nonassoc NOELSE
 %nonassoc ELSE
 %right ASSIGN
-%left OR
-%left AND
+%left AND OR
 %left EQ NEQ
 %left LT GT LEQ GEQ
 %left PLUS MINUS
-%left TIMES DIVIDE
+%left TIMES DIVIDE MODULO
 %right NOT NEG
+%right RBRACKET
+%left LBRACKET
+%right DOT
 
 %start program
 %type <Ast.program> program
@@ -70,28 +72,30 @@ include_decl:
 /* Datatypes */
 /* --------- */
 
-primitive:
-    INT               { Int_t }
-  | FLOAT             { Float_t }
-  | CHAR              { Char_t }
-  | BOOL              { Bool_t }
-  | UNIT              { Unit_t }
+datatype:
+    type_tag   { Datatype($1) }
+  | array_type { $1 }
 
 type_tag:
-    primitive { $1 }
+    primitive       { $1 }
+  | object_type     { $1 }
+
+primitive:
+    INT             { Int_t }
+  | FLOAT           { Float_t }
+  | CHAR            { Char_t }
+  | BOOL            { Bool_t }
+  | UNIT            { Unit_t }
+
+object_type:
+    TYPE_ID { Object_t($1) }
 
 array_type:
-    type_tag LBRACE brackets RBRACE { Arraytype($1, 1) }
-
-/*
-datatype:
-      type_tag          { Datatype($1) }
-    | array_type        { $1 }
+    type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
 
 brackets:
-    /* nothing */               { 1 }
-  | brackets RBRACE LBRACE  { $1 + 1 }
-*/
+    /* nothing */              { 1 }
+  | brackets RBRACKET LBRACKET { $1 + 1 }
 
 /* Functions */
 /* --------- */
@@ -173,31 +177,6 @@ literals:
     | STRING_LIT        { StringLit($1) }
     | ID                { Id($1) }
 
-/* Expressions */
-/* ----------- */
-
-expr_opt:
-      /* nothing */         { Noexpr }
-    | expr                  { $1 }
-
-expr:
-      literals              { $1 }
-    | expr PLUS     expr    { Binop($1, Add, $3) }
-    | expr MINUS    expr    { Binop($1, Sub, $3) }
-    | expr TIMES    expr    { Binop($1, Mult, $3) }
-    | expr DIVIDE   expr    { Binop($1, Div, $3) }
-    | expr EQ       expr    { Binop($1, Equal, $3) }
-    | expr NEQ      expr    { Binop($1, Neq, $3) }
-    | expr LT       expr    { Binop($1, Less, $3) }
-    | expr LEQ      expr    { Binop($1, Leq, $3) }
-    | expr GT       expr    { Binop($1, Greater, $3) }
-    | expr GEQ      expr    { Binop($1, Geq, $3) }
-    | expr AND      expr    { Binop($1, And, $3) }
-    | expr OR       expr    { Binop($1, Or, $3) }
-    | MINUS expr %prec NEG  { Unop(Neg, $2) } 
-    | NOT expr              { Unop(Not, $2) }
-    | LPAREN expr RPAREN    { $2 }
-
 /* Statements */
 /* ---------- */
 
@@ -224,5 +203,31 @@ stmt:
     /* TODO: clarify declaration syntax */
     | datatype ID SEMI                  { Local($1, $2, Noexpr) }
     | datatype ID ASSIGN expr SEMI      { Local($1, $2, $4) }
+
+/* Expressions */
+/* ----------- */
+
+expr_opt:
+      /* nothing */         { Noexpr }
+    | expr                  { $1 }
+
+expr:
+      literals                      { $1 }
+    | expr PLUS     expr            { Binop($1, Add, $3) }
+    | expr MINUS    expr            { Binop($1, Sub, $3) }
+    | expr TIMES    expr            { Binop($1, Mult, $3) }
+    | expr DIVIDE   expr            { Binop($1, Div, $3) }
+    | expr EQ       expr            { Binop($1, Equal, $3) }
+    | expr NEQ      expr            { Binop($1, Neq, $3) }
+    | expr LT       expr            { Binop($1, Less, $3) }
+    | expr LEQ      expr            { Binop($1, Leq, $3) }
+    | expr GT       expr            { Binop($1, Greater, $3) }
+    | expr GEQ      expr            { Binop($1, Geq, $3) }
+    | expr AND      expr            { Binop($1, And, $3) }
+    | expr OR       expr            { Binop($1, Or, $3) }
+    | MINUS expr %prec NEG          { Unop(Neg, $2) } 
+    | NOT expr                      { Unop(Not, $2) }
+    | LPAREN expr RPAREN            { $2 }
+    | ID LPAREN actuals_opt RPAREN  { Call($1, $3) }
 
 %%

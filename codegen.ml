@@ -12,15 +12,13 @@ http://llvm.moe/ocaml/
      
 *)    
 
-open Ast
-     
 module L = Llvm
 module A = Ast
       
 module StringMap = Map.Make(String)
 
 let translate ast = match ast with
-    Program(includes, functions) -> 
+    A.Program(includes, functions) -> 
     let context     = L.global_context () in 
     let the_module  = L.create_module context "Stop"
     and i32_t       = L.i32_type    context

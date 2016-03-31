@@ -140,30 +140,30 @@ actuals_list:
 /* Classes */
 /* ------- */
 
-cdecls:
-      /* nothing */         { [] }
-    | cdecl_list            { List.rev $1 }
-
-cdecl_list:
-      cdecl                 { [$1] }
-    | cdecl_list cdecl      { $2::$1 }
-
-cdecl:
-      CLASS ID LBRACE cbody RBRACE { {
-            cname = $2;
-            extends = NoParent;
-            cbody = $4;
-      } }
-    | CLASS ID EXTENDS ID LBRACE cbody RBRACE { {
-            cname = $2;
-            extends = Parent($4);
-            cbody = $6;
-      }}
-
-cbody:
-      /* nothing */ { {
-          fields = [];
-      } }
+//cdecls:
+//      /* nothing */         { [] }
+//    | cdecl_list            { List.rev $1 }
+//
+//cdecl_list:
+//      cdecl                 { [$1] }
+//    | cdecl_list cdecl      { $2::$1 }
+//
+//cdecl:
+//      CLASS ID LBRACE cbody RBRACE { {
+//            cname = $2;
+//            extends = NoParent;
+//            cbody = $4;
+//      } }
+//    | CLASS ID EXTENDS ID LBRACE cbody RBRACE { {
+//            cname = $2;
+//            extends = Parent($4);
+//            cbody = $6;
+//      }}
+//
+//cbody:
+//      /* nothing */ { {
+//          fields = [];
+//      } }
     
 /* Literals */
 /* -------- */

@@ -14,7 +14,7 @@ stop.native : ast.ml parser.mly scanner.mll semant.ml codegen.ml
 clean :
 	ocamlbuild -clean
 	rm -rf testall.log *.diff stop scanner.ml parser.ml parser.mli
-	rm -rf *.cmx *.cmi *.cmo *.cmx *.o *.output
+	rm -rf *.cmx *.cmi *.cmo *.cmx *.o *.output *.out *.ll
 
 # More detailed: build using ocamlc/ocamlopt + ocamlfind to locate LLVM
 

@@ -39,6 +39,7 @@ let translate ast = match ast with
       | A.Bool_t ->         i1_t
       | A.Char_t ->         i8_t
       | A.Unit_t ->         void_t
+      (* TODO: Implement find_struct function for Object_t *)
       | A.Object_t(s) ->    L.pointer_type i8_t
     in
 
@@ -100,15 +101,20 @@ let translate ast = match ast with
            the statement's successor *)
         let rec stmt builder = function
             A.Block sl -> List.fold_left stmt builder sl
-          | A.Expr e -> ignore (expr builder e); builder in
+          | A.Expr e -> ignore (expr builder e); builder 
+          | A.Return e -> 
+                ignore (match (ltype_of_datatype fdecl.A.return_t) with
+                    void_t -> L.build_ret_void builder
+                  | _ -> L.build_ret (expr builder e) builder); builder
+        in
 
         (* Build the code for each statement in the function *)
         let builder = stmt builder (A.Block fdecl.A.body) in
 
         (* Add a return if the last block falls off the end *)
-        add_terminal builder (match (atype_of_datatype fdecl.A.return_t) with
-            A.Unit_t -> L.build_ret_void
-          | p -> L.build_ret (L.const_int (ltype_of_prim p) 0))
+        add_terminal builder (match (ltype_of_datatype fdecl.A.return_t) with
+            void_t -> L.build_ret_void
+          | ltype -> L.build_ret (L.const_int ltype 0))
     in
 
     List.iter build_function_body functions;

@@ -1,0 +1,63 @@
+spec Comparable{
+	
+	
+
+
+}
+
+
+
+
+
+
+
+
+class Person = (final height:Int,final name:String){     //<----pattern list , i think this must be 
+														//final if you want to pattern match on it
+	
+	def compare=(final a:Person):Bool{
+
+			a.height < self.height; 
+	}
+}
+
+
+
+def comparethem = (Comparable a, Comparable b):Bool {
+	
+	a.compare(b)
+
+}
+
+var comp = (Comparable a, Comparable b): Bool{
+	
+}
+
+
+def foldRight = (var acc:Function2(int,int):Bool,var alist:int[])
+
+
+foldRight((Comparable a, Comparable b): Bool{
+	
+}, listofints)
+
+
+def string = (final a:char[]){
+
+	
+	def _+_ = (an_int:Int) {
+		//self is in here
+		// we make a new string which is equal to self concatenated with the int string
+
+		//more primitive int to string conversion
+		return 
+	}
+
+}
+ 
+
+match a:Person {
+															
+	case Person(x,"Jonathan") => print("Jonathan weighs"+x+"pounds")
+
+}

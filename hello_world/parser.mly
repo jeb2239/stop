@@ -120,12 +120,15 @@ expr:
   | expr OR     expr { Binop($1, Or,    $3) }
   | MINUS expr %prec NEG { Unop(Neg, $2) }
   | NOT expr         { Unop(Not, $2) }
-  | vdecl             { $1 }
- /* | ID ASSIGN expr   { Assign($1, $3) }*/
+ /* | vdecl             { $1 }*/
+  | expr ASSIGN expr   { Assign($1, $3) }
+ /* | ID ASSIGN expr {Assign($1,$3)}*/
+
+
  /* | ID LPAREN actuals_opt RPAREN { Call($1, $3) }*/ /*if we call a named function*/
   /*| fun_lit            {$1} */
  /* | LPAREN expr RPAREN { $2 }*/
-/*
+
 stmt:
     expr SEMI { Expr $1 }
   | RETURN SEMI { Return Noexpr }
@@ -136,6 +139,9 @@ stmt:
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
      { For($3, $5, $7, $9) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
+  | vdecl {$1}
+  |
+
 
 actuals_opt:
      nothing  { [] }
@@ -144,4 +150,3 @@ actuals_opt:
 actuals_list:
     expr                    { [$1] }
   | actuals_list COMMA expr { $3 :: $1 }
-*/

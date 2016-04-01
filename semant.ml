@@ -11,4 +11,3 @@ module StringMap = Map.Make(String)
 
 let check ast = match ast with
     Program(includes, functions) -> ()
-

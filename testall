@@ -17,6 +17,7 @@ ulimit -t 30
 
 globallog=testall.log
 rm -f $globallog
+rm -f tests/*.ll
 error=0
 globalerror=0
 
@@ -74,7 +75,7 @@ Check() {
 	error=0
 	basename=$(echo $1 | sed 's;.stp$;;' | sed 's;^.*/;;')
 	reffile=$(echo $1 | sed 's;.stp$;;') 
-	basedir="$(dirname "$1")/."
+	basedir="$(dirname "$1")/"
 
 	echo -n "$basename..."
 
@@ -85,7 +86,8 @@ Check() {
 
 	generatedfiles="$generatedfiles ${basename}.ll ${basename}.out" &&
 	Run "$STOP" "<" $1 ">" "${basename}.ll" &&
-	Run "$LLI" "${basename}.ll" ">" "${basename}.out" &&
+	lli "${basename}.ll" > "${basename}.out" &&
+	#Run "lli" "${basename}.ll" ">" "${basename}.out" &&
 	Compare ${basename}.out ${reffile}.out ${basename}.diff
 
 	# Report the status and clean up the generated files

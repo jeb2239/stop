@@ -1,11 +1,9 @@
+# vim: 
 TODO: 
 -----
 
-Integrate among ast.ml, scanner.mll, and parser.mly:
-	Arrays
-	Conditionals & Loops
-	Classes, Methods, & Functions
+Integrate among ast.ml, scanner.mll, parser.mly, codegen.ml, semant.ml:
+	Classes, Methods
 	All features in tests/test-allfeatures1.stp
 
-Testing:
-	Finish regression testing suite	
+Actually have a semantic checking phase

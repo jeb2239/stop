@@ -12,9 +12,11 @@ http://llvm.moe/ocaml/
      
 *)    
 
-module L = Llvm
 module A = Ast
+module L = Llvm
 module U = Utils
+
+module E = Exceptions
       
 module StringMap = Map.Make(String)
 
@@ -22,30 +24,41 @@ let translate ast = match ast with
     A.Program(includes, functions) -> 
     let context     = L.global_context () in 
     let the_module  = L.create_module context "Stop"
+    and i64_t       = L.i64_type    context
     and i32_t       = L.i32_type    context
     and i8_t        = L.i8_type     context
     and i1_t        = L.i1_type     context 
+    and str_t       = L.pointer_type (L.i8_type context)
     and void_t      = L.void_type   context in
 
+    let str_type = A.Arraytype(A.Char_t, 1) in 
+    
     let ltype_of_prim = function
-        A.Int_t ->      i32_t
-      | A.Float_t ->    i32_t
-      | A.Bool_t ->     i1_t
-      | A.Char_t ->     i8_t
-      | A.Unit_t ->     void_t
-      | A.Object_t(s) ->    L.pointer_type i8_t in 
+        A.Int_t ->          i32_t
+      | A.Float_t ->        i32_t
+      | A.Bool_t ->         i1_t
+      | A.Char_t ->         i8_t
+      | A.Unit_t ->         void_t
+      | A.Object_t(s) ->    L.pointer_type i8_t
+    in
+
+    let rec ltype_of_arraytype arraytype = match arraytype with
+        A.Arraytype(p, 1) -> L.pointer_type (ltype_of_prim p)
+      | A.Arraytype(p, i) -> 
+            L.pointer_type (ltype_of_arraytype (A.Arraytype(p, i-1)))
+      | _ -> raise(E.InvalidStructType "Array Pointer Type")
+    in
 
     let ltype_of_datatype = function
         A.Datatype(p) -> ltype_of_prim p
-        (* TODO: figure out wtf to do for Arraytype *)
-      | A.Arraytype(p, i) -> L.pointer_type (ltype_of_prim p) in
-
-    let atype_of_datatype = function
-        A.Datatype(p) -> p 
-      | A.Arraytype(p, i) -> p in
+      | A.Arraytype(p, i) -> ltype_of_arraytype (A.Arraytype(p,i)) in
 
     let ltype_of_formal = function
         A.Formal(data_t, s) -> ltype_of_datatype data_t in
+    
+    let atype_of_datatype = function
+        A.Datatype(p) -> p 
+      | A.Arraytype(p, i) -> p in
 
     (* Declare printf(), which the print built-in function will call *)
     (* printf() is already implemented in LLVM *)

@@ -1,0 +1,10 @@
+/*
+ * test-printf1.stp
+ * ================
+ */
+
+function main = ():int {
+	printf((22 + 20) && 0);
+	printf(1 || 0);
+	return 0;
+}

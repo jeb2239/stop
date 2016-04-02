@@ -32,11 +32,6 @@ let translate ast = match ast with
 
     let str_type = A.Arraytype(A.Char_t, 1) in 
 
-    let string_of_ltype = function
-        i32_t -> "int_t"
-      | void_t -> "void_t"
-    in 
-    
     let ltype_of_prim = function
         A.Int_t ->          i32_t
       | A.Float_t ->        i32_t
@@ -77,7 +72,6 @@ let translate ast = match ast with
             and formal_types =
         Array.of_list (List.map (fun formal -> ltype_of_formal formal) fdecl.A.formals)
             in let ftype = L.function_type (ltype_of_datatype fdecl.A.return_t) formal_types in
-                
             StringMap.add name (L.define_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions in
 
@@ -125,14 +119,14 @@ let translate ast = match ast with
 
         (* Build the code for the given statement; return the builder for
            the statement's successor *)
-        (* TODO: Matching against ltypes doesn't work, need to revise *)
         let rec stmt builder = function
             A.Block sl -> List.fold_left stmt builder sl
           | A.Expr e -> ignore (expr builder e); builder 
           | A.Return e -> 
-                ignore (match (ltype_of_datatype fdecl.A.return_t) with
-                    _ -> L.build_ret (expr builder e) builder
-                  | void_t -> L.build_ret_void builder );
+                ignore (match  fdecl.A.return_t with
+                    Datatype(Unit_t) -> L.build_ret_void builder
+                  | _ -> L.build_ret (expr builder e) builder
+                );
                 builder
         in
 
@@ -140,10 +134,10 @@ let translate ast = match ast with
         let builder = stmt builder (A.Block fdecl.A.body) in
 
         (* Add a return if the last block falls off the end *)
-        (* NOTE: void_t must be matched last otherwise it is matched for any ltype *)
-        add_terminal builder (match (ltype_of_datatype fdecl.A.return_t) with
-            ltype -> L.build_ret (L.const_int ltype 0)
-          | void_t -> L.build_ret_void )
+        add_terminal builder (match fdecl.A.return_t with
+            Datatype(Unit_t) -> L.build_ret_void
+          | data_t -> L.build_ret (L.const_int (ltype_of_datatype data_t) 0)
+        )
     in
 
     List.iter build_function_body functions;

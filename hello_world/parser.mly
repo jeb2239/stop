@@ -58,15 +58,16 @@ literals:
     | TRUE              { BoolLit(true) }
     | FALSE             { BoolLit(false) }
     | ID                { Id($1) }
+    | fun_lit            {$1}
   /*  | fun_lit 			{ $1 }*/
-/*
-fun_lit:
-	LPAREN formal_list RPAREN COLON dtype stmts {FuncLit($2,$5,$6)}
-*/
 
-/*
-formals_opt:
-     nothing { [] }
+fun_lit:
+	LPAREN formal_opt RPAREN COLON dtype stmt {FuncLit($2,$5,$6)}
+
+
+
+formal_opt:
+      { [] }
   | formal_list   { List.rev $1 }
 
 formal_list:
@@ -74,13 +75,13 @@ formal_list:
   | formal_list COMMA ID COLON dtype  { ($5,$3) :: $1 }
 
 types_opt:
-	nothing { [] }
+	 { [] }
 	| type_list {List.rev $1}
 
 type_list:
-	dtype {[$1]}
+	 dtype {[$1]}
 	| type_list COMMA dtype {$1::$3}
-*/
+
 	
 
 dtype:
@@ -89,6 +90,7 @@ dtype:
 	| FLOAT {Float_t}
 	| CHAR {Char_t}
 	| UNIT {Unit_t}
+  | LPAREN types_opt RPAREN ARROW dtype {Fun_t($2,$5)}
 	/*| TYPE_ID   {Name_t($1)}*/
 /*	| fun_type { $1 }*/
 	
@@ -102,6 +104,9 @@ fun_type:
 vdecl:
   VAR ID COLON dtype { Vdec($2,$4) }
 
+expr_opt:
+    /* nothing */ { Noexpr }
+  | expr          { $1 }
 
 
 expr:
@@ -128,7 +133,10 @@ expr:
  /* | ID LPAREN actuals_opt RPAREN { Call($1, $3) }*/ /*if we call a named function*/
   /*| fun_lit            {$1} */
  /* | LPAREN expr RPAREN { $2 }*/
-
+stmt_list:
+    /* nothing */  { [] }
+  | stmt_list stmt { $2 :: $1 }
+  
 stmt:
     expr SEMI { Expr $1 }
   | RETURN SEMI { Return Noexpr }
@@ -140,9 +148,9 @@ stmt:
      { For($3, $5, $7, $9) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
   | vdecl {$1}
-  |
+  
 
-
+/*
 actuals_opt:
      nothing  { [] }
   | actuals_list  { List.rev $1 }
@@ -150,3 +158,4 @@ actuals_opt:
 actuals_list:
     expr                    { [$1] }
   | actuals_list COMMA expr { $3 :: $1 }
+*/

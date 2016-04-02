@@ -13,7 +13,7 @@ type dtype =
   | Char_t 
   | Fun_t of dtype list * dtype
 
-
+type vdec = Vdec of string * dtype
 
 
 (*	
@@ -21,7 +21,7 @@ type dtype =
 	| Functiontype of dtype list * dtype 
 	| Arraytype of dtype * int
 *)
-type vdec = Vdec of string * dtype
+
 (*
 type formal_param = Formal of dtype * string 
 *)
@@ -38,10 +38,10 @@ type expr =
  (*| Vdec of string * dtype  *)
   | Assign of expr * expr
 (* type vdecl =  *)
-
   | FuncLit of  vdec list * dtype * stmt list (*the idea is that this returns a function literal
                                                 (* when someone declares a function they immidialy assign
                                                 it to a name*)*)
+  | Noexpr
 
   and stmt =
     Block of stmt list
@@ -81,9 +81,9 @@ let rec string_of_dtype = function
     | Unit_t -> "Unit"
     | Bool_t -> "Bool"
     | Char_t -> "Char"
-    | Fun_t(args,ret) -> "Fun(" ^ List.fold ~init:"" ~f:(fun x y -> string_of_dtype x ^ "," ^ string_of_dtype y) args ^ ")->" ^ string_of_dtype ret
+    | Fun_t(args,ret) -> "Fun(" ^ (List.fold ~init:"" ~f:(fun x y -> x ^ "," ^ y) (List.map ~f:(string_of_dtype) args)) ^ ")->" ^ string_of_dtype ret
 
-let string_of_vdecl (tid,t) = "var" ^ " " ^ tid^":" ^ string_of_dtype t
+let string_of_vdecl x = match x with Vdec(tid,t) -> "var" ^ " " ^ tid^":" ^ string_of_dtype t
 
 
 let rec string_of_expr = function
@@ -97,7 +97,7 @@ let rec string_of_expr = function
     (* | Vdec(e,dt) -> "var " ^  e ^ ":" ^ string_of_dtype dt ^ ";" *)
     | Assign(id,v) -> string_of_expr id ^ " = " ^ string_of_expr v ^";"
     | FuncLit(vdlist,ret,stmnts) ->
-   "("^ List.fold ~init:"" ~f:(fun x y-> string_of_vdecl x ^","^ string_of_vdecl y) ^ "):"^ string_of_dtype ret ^"\n" ^"{  "
+   "("^ (List.fold ~init:"" ~f:(fun x y-> x ^","^ y) (List.map ~f:(string_of_vdecl) vdlist)) ^ "):"^ string_of_dtype ret ^"\n" ^"{ " ^ (List.fold ~init:"" ~f:(fun x y ->) (List.map ~f:string_of_stmt stmnts) ^""
     (*this needs to be moved, to a string_of_vdecl function but for now..*)
     and string_of_stmt = function
      Block(stmts) ->

@@ -109,15 +109,21 @@ let translate ast = match ast with
                 e1' e2' "tmp" builder
           | A.Call ("printf", e) ->
                 let format_str = match e with
-                    hd :: tl -> hd
+                    [] -> A.Noexpr
+                  | hd :: tl -> hd
                 and args = match e with
-                    hd :: tl -> tl
+                    [] -> []
+                  | hd :: tl -> tl
+                in
+                let first_arg = match args with
+                    [] -> A.Noexpr
+                  | hd :: tl -> hd
                 in
                 let format_lstr = match format_str with
                     A.StringLit(s) -> L.build_global_stringptr s "fmt" builder
                   | _ -> raise E.PrintfFirstArgNotString
                 in
-                L.build_call printf_func [| int_format_str ; (expr builder format_str) |] "printf" builder 
+                L.build_call printf_func [| int_format_str ; (expr builder first_arg) |] "printf" builder 
         in
 
         (* Invoke "f builder" if the current block doesn't already

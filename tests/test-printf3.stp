@@ -4,6 +4,6 @@
  */
 
 function main = ():int {
-	printf(22 + 20);
+	printf("%d\n", 22 + 20);
 	return 0;
 }

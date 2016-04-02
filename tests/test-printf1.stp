@@ -1,9 +1,9 @@
 /*
- * test-printf1.stp
+ * test-printf2.stp
  * ================
  */
 
 function main = ():int {
-	printf(0);
+	printf("%d\n", 0);
 	return 0;
 }

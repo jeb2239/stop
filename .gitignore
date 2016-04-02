@@ -1,3 +1,5 @@
 # ignore .swp files
 *.swp
 *.swo
+_build/
+*.native

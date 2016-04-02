@@ -85,6 +85,10 @@ let translate ast = match ast with
         (* Construct code for an expression; return its value *)
         let rec expr builder = function
             A.IntLit i -> L.const_int i32_t i
+          | A.FloatLit f -> L.const_float i32_t f
+          | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
+          | A.CharLit c -> L.const_int i8_t (Char.code c)
+          | A.StringLit s -> L.build_global_stringptr s "tmp" builder
           | A.Binop (e1, op, e2) ->
                 let e1' = expr builder e1
                 and e2' = expr builder e2 in
@@ -103,9 +107,6 @@ let translate ast = match ast with
                       | A.Geq     -> L.build_icmp L.Icmp.Sge
                     )
                 e1' e2' "tmp" builder
-
-
-
           | A.Call ("printf", [e]) ->
                   L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder 
         in
@@ -124,7 +125,7 @@ let translate ast = match ast with
           | A.Expr e -> ignore (expr builder e); builder 
           | A.Return e -> 
                 ignore (match  fdecl.A.return_t with
-                    Datatype(Unit_t) -> L.build_ret_void builder
+                    A.Datatype(A.Unit_t) -> L.build_ret_void builder
                   | _ -> L.build_ret (expr builder e) builder
                 );
                 builder
@@ -135,7 +136,7 @@ let translate ast = match ast with
 
         (* Add a return if the last block falls off the end *)
         add_terminal builder (match fdecl.A.return_t with
-            Datatype(Unit_t) -> L.build_ret_void
+            A.Datatype(A.Unit_t) -> L.build_ret_void
           | data_t -> L.build_ret (L.const_int (ltype_of_datatype data_t) 0)
         )
     in

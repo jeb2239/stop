@@ -91,6 +91,27 @@ let translate ast = match ast with
         (* Construct code for an expression; return its value *)
         let rec expr builder = function
             A.IntLit i -> L.const_int i32_t i
+          | A.Binop (e1, op, e2) ->
+                let e1' = expr builder e1
+                and e2' = expr builder e2 in
+                    (match op with
+                        A.Add   -> L.build_add
+                      | A.Sub   -> L.build_sub
+                      | A.Mult  -> L.build_mul
+                      | A.Div   -> L.build_sdiv
+                      | A.And   -> L.build_and
+                      | A.Or    -> L.build_or
+                      | A.Equal   -> L.build_icmp L.Icmp.Eq
+                      | A.Neq     -> L.build_icmp L.Icmp.Ne
+                      | A.Less    -> L.build_icmp L.Icmp.Slt
+                      | A.Leq     -> L.build_icmp L.Icmp.Sle
+                      | A.Greater -> L.build_icmp L.Icmp.Sgt
+                      | A.Geq     -> L.build_icmp L.Icmp.Sge
+                    )
+                e1' e2' "tmp" builder
+
+
+
           | A.Call ("printf", [e]) ->
                   L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder 
         in
@@ -104,13 +125,15 @@ let translate ast = match ast with
 
         (* Build the code for the given statement; return the builder for
            the statement's successor *)
+        (* TODO: Matching against ltypes doesn't work, need to revise *)
         let rec stmt builder = function
             A.Block sl -> List.fold_left stmt builder sl
           | A.Expr e -> ignore (expr builder e); builder 
           | A.Return e -> 
                 ignore (match (ltype_of_datatype fdecl.A.return_t) with
-                    void_t -> L.build_ret_void builder
-                  | _ -> L.build_ret (expr builder e) builder); builder
+                    _ -> L.build_ret (expr builder e) builder
+                  | void_t -> L.build_ret_void builder );
+                builder
         in
 
         (* Build the code for each statement in the function *)

@@ -108,6 +108,7 @@ let translate ast = match ast with
                     )
                 e1' e2' "tmp" builder
           | A.Call ("printf", e) ->
+                (* TODO: Fix this cancer or encapsulate in a function *)
                 let format_str = match e with
                     [] -> A.Noexpr
                   | hd :: tl -> hd
@@ -123,7 +124,16 @@ let translate ast = match ast with
                     A.StringLit(s) -> L.build_global_stringptr s "fmt" builder
                   | _ -> raise E.PrintfFirstArgNotString
                 in
-                L.build_call printf_func [| int_format_str ; (expr builder first_arg) |] "printf" builder 
+                let l_format_args_list = List.map (expr builder) args 
+                in
+                let l_full_args_list = [format_lstr] @ l_format_args_list
+                in
+                let l_args_arr = Array.of_list l_full_args_list
+                in
+                L.build_call printf_func l_args_arr "printf" builder
+                (*
+                L.build_call printf_func [| format_lstr ; (expr builder first_arg) |] "printf" builder 
+                *)
         in
 
         (* Invoke "f builder" if the current block doesn't already

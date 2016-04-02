@@ -86,8 +86,8 @@ Check() {
 
 	generatedfiles="$generatedfiles ${basename}.ll ${basename}.out" &&
 	Run "$STOP" "<" $1 ">" "${basename}.ll" &&
-	lli "${basename}.ll" > "${basename}.out" &&
-	#Run "lli" "${basename}.ll" ">" "${basename}.out" &&
+	#lli "${basename}.ll" > "${basename}.out" &&
+	Run "lli" "${basename}.ll" ">" "${basename}.out" &&
 	Compare ${basename}.out ${reffile}.out ${basename}.diff
 
 	# Report the status and clean up the generated files

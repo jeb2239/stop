@@ -3,7 +3,8 @@
  * ================
  */
 
-function main = ():Unit {
+function main = ():int {
 	// printf is __low_level_print__ from test-allfeatures1
-	printf(5);
+	printf(0);
+	return 0;
 }

@@ -24,7 +24,6 @@ let translate ast = match ast with
     A.Program(includes, functions) -> 
     let context     = L.global_context () in 
     let the_module  = L.create_module context "Stop"
-    and i64_t       = L.i64_type    context
     and i32_t       = L.i32_type    context
     and i8_t        = L.i8_type     context
     and i1_t        = L.i1_type     context 
@@ -32,14 +31,19 @@ let translate ast = match ast with
     and void_t      = L.void_type   context in
 
     let str_type = A.Arraytype(A.Char_t, 1) in 
+
+    let string_of_ltype = function
+        i32_t -> "int_t"
+      | void_t -> "void_t"
+    in 
     
     let ltype_of_prim = function
         A.Int_t ->          i32_t
       | A.Float_t ->        i32_t
       | A.Bool_t ->         i1_t
       | A.Char_t ->         i8_t
-      | A.Unit_t ->         void_t
       (* TODO: Implement find_struct function for Object_t *)
+      | A.Unit_t ->         void_t
       | A.Object_t(s) ->    L.pointer_type i8_t
     in
 
@@ -73,6 +77,7 @@ let translate ast = match ast with
             and formal_types =
         Array.of_list (List.map (fun formal -> ltype_of_formal formal) fdecl.A.formals)
             in let ftype = L.function_type (ltype_of_datatype fdecl.A.return_t) formal_types in
+                
             StringMap.add name (L.define_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions in
 
@@ -112,9 +117,10 @@ let translate ast = match ast with
         let builder = stmt builder (A.Block fdecl.A.body) in
 
         (* Add a return if the last block falls off the end *)
+        (* NOTE: void_t must be matched last otherwise it is matched for any ltype *)
         add_terminal builder (match (ltype_of_datatype fdecl.A.return_t) with
-            void_t -> L.build_ret_void
-          | ltype -> L.build_ret (L.const_int ltype 0))
+            ltype -> L.build_ret (L.const_int ltype 0)
+          | void_t -> L.build_ret_void )
     in
 
     List.iter build_function_body functions;

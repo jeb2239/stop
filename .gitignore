@@ -3,3 +3,7 @@
 *.swo
 _build/
 *.native
+*.ll
+*.out
+*.diff
+*.log

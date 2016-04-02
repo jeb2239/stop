@@ -93,22 +93,31 @@ let translate ast = match ast with
                 let e1' = expr builder e1
                 and e2' = expr builder e2 in
                     (match op with
-                        A.Add   -> L.build_add
-                      | A.Sub   -> L.build_sub
-                      | A.Mult  -> L.build_mul
-                      | A.Div   -> L.build_sdiv
-                      | A.And   -> L.build_and
-                      | A.Or    -> L.build_or
-                      | A.Equal   -> L.build_icmp L.Icmp.Eq
-                      | A.Neq     -> L.build_icmp L.Icmp.Ne
-                      | A.Less    -> L.build_icmp L.Icmp.Slt
-                      | A.Leq     -> L.build_icmp L.Icmp.Sle
-                      | A.Greater -> L.build_icmp L.Icmp.Sgt
-                      | A.Geq     -> L.build_icmp L.Icmp.Sge
+                        A.Add       -> L.build_add
+                      | A.Sub       -> L.build_sub
+                      | A.Mult      -> L.build_mul
+                      | A.Div       -> L.build_sdiv
+                      | A.And       -> L.build_and
+                      | A.Or        -> L.build_or
+                      | A.Equal     -> L.build_icmp L.Icmp.Eq
+                      | A.Neq       -> L.build_icmp L.Icmp.Ne
+                      | A.Less      -> L.build_icmp L.Icmp.Slt
+                      | A.Leq       -> L.build_icmp L.Icmp.Sle
+                      | A.Greater   -> L.build_icmp L.Icmp.Sgt
+                      | A.Geq       -> L.build_icmp L.Icmp.Sge
                     )
                 e1' e2' "tmp" builder
-          | A.Call ("printf", [e]) ->
-                  L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder 
+          | A.Call ("printf", e) ->
+                let format_str = match e with
+                    hd :: tl -> hd
+                and args = match e with
+                    hd :: tl -> tl
+                in
+                let format_lstr = match format_str with
+                    A.StringLit(s) -> L.build_global_stringptr s "fmt" builder
+                  | _ -> raise E.PrintfFirstArgNotString
+                in
+                L.build_call printf_func [| int_format_str ; (expr builder format_str) |] "printf" builder 
         in
 
         (* Invoke "f builder" if the current block doesn't already

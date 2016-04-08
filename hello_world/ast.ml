@@ -13,7 +13,7 @@ type dtype =
   | Char_t 
   | Fun_t of dtype list * dtype
 
-type vdec = Vdec of string * dtype
+ type param = Param of string * dtype  
 
 
 (*	
@@ -38,7 +38,7 @@ type expr =
  (*| Vdec of string * dtype  *)
   | Assign of expr * expr
 (* type vdecl =  *)
-  | FuncLit of  vdec list * dtype * stmt list (*the idea is that this returns a function literal
+  | FuncLit of  param list * dtype * stmt list (*the idea is that this returns a function literal
                                                 (* when someone declares a function they immidialy assign
                                                 it to a name*)*)
   | Noexpr
@@ -50,6 +50,7 @@ type expr =
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | While of expr * stmt
+  | Vdec of string * dtype
 
 
 
@@ -83,7 +84,7 @@ let rec string_of_dtype = function
     | Char_t -> "Char"
     | Fun_t(args,ret) -> "Fun(" ^ (List.fold ~init:"" ~f:(fun x y -> x ^ "," ^ y) (List.map ~f:(string_of_dtype) args)) ^ ")->" ^ string_of_dtype ret
 
-let string_of_vdecl x = match x with Vdec(tid,t) -> "var" ^ " " ^ tid^":" ^ string_of_dtype t
+(* let string_of_param x = match x with Param(tid,t) ->  *)
 
 
 let rec string_of_expr = function
@@ -96,12 +97,11 @@ let rec string_of_expr = function
     | Unop(o,e) -> string_of_uop o ^ " " ^ string_of_expr e ^ ";"
     (* | Vdec(e,dt) -> "var " ^  e ^ ":" ^ string_of_dtype dt ^ ";" *)
     | Assign(id,v) -> string_of_expr id ^ " = " ^ string_of_expr v ^";"
-    | FuncLit(vdlist,ret,stmnts) ->
-   "("^ (List.fold ~init:"" ~f:(fun x y-> x ^","^ y) (List.map ~f:(string_of_vdecl) vdlist)) ^ "):"^ string_of_dtype ret ^"\n" ^"{ " ^ (List.fold ~init:"" ~f:(fun x y ->) (List.map ~f:string_of_stmt stmnts) ^""
+    | _ -> "we got an fdecl"
     (*this needs to be moved, to a string_of_vdecl function but for now..*)
     and string_of_stmt = function
      Block(stmts) ->
-      "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
+      "{\n" ^ (String.concat ~sep:" " (List.map ~f:string_of_stmt stmts)) ^ "}\n"
     | Expr(expr) -> string_of_expr expr ^ ";\n";
     | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
     | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
@@ -111,7 +111,7 @@ let rec string_of_expr = function
       "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
       string_of_expr e3  ^ ") " ^ string_of_stmt s
     | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-    | Vdec(e,dt)-> string_of_vdecl (e,dt)
+    | Vdec(e,dt)-> "var" ^ " " ^ e^":" ^ string_of_dtype dt
 
 (*let rec string_of_dtype = function
 	Int_t -> "Int"
@@ -157,4 +157,4 @@ let rec string_of_expr = function
 *)
 
 
-type program = Program of expr list
+type program = Program of stmt list

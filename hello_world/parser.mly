@@ -42,8 +42,8 @@
 %left TIMES DIVIDE
 %right NOT NEG
 
-%start expr
-%type <Ast.expr> expr
+%start stmt
+%type <Ast.stmt> stmt
 
 
 %%
@@ -62,7 +62,7 @@ literals:
   /*  | fun_lit 			{ $1 }*/
 
 fun_lit:
-	LPAREN formal_opt RPAREN COLON dtype stmt {FuncLit($2,$5,$6)}
+	LPAREN formal_opt RPAREN COLON dtype stmt_list {FuncLit($2,$5,$6)}
 
 
 
@@ -71,8 +71,8 @@ formal_opt:
   | formal_list   { List.rev $1 }
 
 formal_list:
-    ID COLON dtype                   { [($3,$1)] }
-  | formal_list COMMA ID COLON dtype  { ($5,$3) :: $1 }
+    ID COLON dtype                   { [Param($1,$3)] }
+  | formal_list COMMA ID COLON dtype  { Param($3,$5) :: $1 }
 
 types_opt:
 	 { [] }
@@ -80,7 +80,7 @@ types_opt:
 
 type_list:
 	 dtype {[$1]}
-	| type_list COMMA dtype {$1::$3}
+	| type_list COMMA dtype {$3::$1}
 
 	
 
@@ -90,15 +90,15 @@ dtype:
 	| FLOAT {Float_t}
 	| CHAR {Char_t}
 	| UNIT {Unit_t}
-  | LPAREN types_opt RPAREN ARROW dtype {Fun_t($2,$5)}
+  | FUN LPAREN types_opt RPAREN ARROW dtype {Fun_t($3,$6)}
 	/*| TYPE_ID   {Name_t($1)}*/
-/*	| fun_type { $1 }*/
+/*	| fun_type { $1 }
 	
-/*
+
 fun_type:
 	FUN LPAREN type_opt RPAREN ARROW dtype { Functiontype($3,$6) }
-*/
 
+*/
 
 
 vdecl:
@@ -138,7 +138,7 @@ stmt_list:
   | stmt_list stmt { $2 :: $1 }
   
 stmt:
-    expr SEMI { Expr $1 }
+    expr SEMI { Expr($1) }
   | RETURN SEMI { Return Noexpr }
   | RETURN expr SEMI { Return $2 }
   | LBRACE stmt_list RBRACE { Block(List.rev $2) }

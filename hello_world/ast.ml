@@ -13,7 +13,7 @@ type dtype =
   | Char_t 
   | Fun_t of dtype list * dtype
 
- type param = Param of string * dtype  
+ type param = Param of string * dtype
 
 
 (*	
@@ -51,6 +51,8 @@ type expr =
   | For of expr * expr * expr * stmt
   | While of expr * stmt
   | Vdec of string * dtype
+  | Static_init of string * dtype * expr
+
 
 
 
@@ -84,7 +86,7 @@ let rec string_of_dtype = function
     | Char_t -> "Char"
     | Fun_t(args,ret) -> "Fun(" ^ (List.fold ~init:"" ~f:(fun x y -> x ^ "," ^ y) (List.map ~f:(string_of_dtype) args)) ^ ")->" ^ string_of_dtype ret
 
-(* let string_of_param x = match x with Param(tid,t) ->  *)
+let string_of_param x = match x with Param(tid,t) ->  tid ^ ":" ^ string_of_dtype t
 
 
 let rec string_of_expr = function
@@ -97,8 +99,9 @@ let rec string_of_expr = function
     | Unop(o,e) -> string_of_uop o ^ " " ^ string_of_expr e ^ ";"
     (* | Vdec(e,dt) -> "var " ^  e ^ ":" ^ string_of_dtype dt ^ ";" *)
     | Assign(id,v) -> string_of_expr id ^ " = " ^ string_of_expr v ^";"
-    | _ -> "we got an fdecl"
+    | FuncLit(a,b,c)-> (List.fold ~init:"" ~f:(fun x y -> x^","^y) (List.map ~f:string_of_param a)) ^ (string_of_dtype b) ^  (String.concat ~sep:"\n" (List.map ~f:string_of_stmt c))
     (*this needs to be moved, to a string_of_vdecl function but for now..*)
+    | Noexpr -> ""
     and string_of_stmt = function
      Block(stmts) ->
       "{\n" ^ (String.concat ~sep:" " (List.map ~f:string_of_stmt stmts)) ^ "}\n"
@@ -112,6 +115,7 @@ let rec string_of_expr = function
       string_of_expr e3  ^ ") " ^ string_of_stmt s
     | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
     | Vdec(e,dt)-> "var" ^ " " ^ e^":" ^ string_of_dtype dt
+    | Static_init(a,b,c) -> a ^" "^ string_of_dtype b ^ " "^string_of_expr c
 
 (*let rec string_of_dtype = function
 	Int_t -> "Int"

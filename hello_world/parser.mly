@@ -128,7 +128,8 @@ expr:
   | NOT expr         { Unop(Not, $2) }
  /* | vdecl             { $1 }*/
   | expr ASSIGN expr   { Assign($1, $3) }
- /* | ID ASSIGN expr {Assign($1,$3)}*/
+ /* |
+  | ID ASSIGN expr {Assign($1,$3)}*/
 
 
  /* | ID LPAREN actuals_opt RPAREN { Call($1, $3) }*/ /*if we call a named function*/
@@ -149,6 +150,7 @@ stmt:
      { For($3, $5, $7, $9) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
   | vdecl {$1}
+  | VAR ID COLON dtype ASSIGN expr SEMI { Static_init($2,$4,$6) }
   
 
 /*

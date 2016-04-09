@@ -1,4 +1,5 @@
-%{ open Ast %}
+%{ open Ast
+open Core.Std %}
 
 
 
@@ -62,7 +63,7 @@ literals:
   /*  | fun_lit 			{ $1 }*/
 
 fun_lit:
-	LPAREN formal_opt RPAREN COLON dtype stmt_list {FuncLit($2,$5,$6)}
+	ANON LPAREN formal_opt RPAREN COLON dtype LBRACE stmt_list RBRACE {print_endline "Function Literal"; FuncLit($3,$6,$8)}
 
 
 

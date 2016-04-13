@@ -3,7 +3,7 @@ open Core.Std %}
 
 
 
-%token SEMI LPAREN RPAREN LBRACE RBRACE LSQUARE RSQUARE COMMA COLON
+%token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO DOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE ELSEIF FOR WHILE
@@ -63,7 +63,8 @@ literals:
   /*  | fun_lit 			{ $1 }*/
 
 fun_lit:
-	ANON LPAREN formal_opt RPAREN COLON dtype LBRACE stmt_list RBRACE {print_endline "Function Literal"; FuncLit($3,$6,$8)}
+	ANON LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE {print_endline "Function Literal"; FuncLit($3,$6,$8)}
+
 
 
 
@@ -72,41 +73,74 @@ formal_opt:
   | formal_list   { List.rev $1 }
 
 formal_list:
-    ID COLON dtype                   { [Param($1,$3)] }
-  | formal_list COMMA ID COLON dtype  { Param($3,$5) :: $1 }
+    ID COLON datatype                   { [Formal($1,$3)] }
+  | formal_list COMMA ID COLON datatype  { Formal($3,$5) :: $1 }
+
+actuals_opt:
+    /* nothing */ { [] }
+  | actuals_list  { List.rev $1 }
+
+actuals_list:
+    expr                    { [$1] }
+  | actuals_list COMMA expr { $3 :: $1 }
 
 types_opt:
 	 { [] }
 	| type_list {List.rev $1}
 
 type_list:
-	 dtype {[$1]}
-	| type_list COMMA dtype {$3::$1}
+	 datatype {[$1]}
+	| type_list COMMA datatype {$3::$1}
 
 	
+datatype:
+    type_tag   { $1 }
+ /* | array_type { $1 }*/
 
-dtype:
+
+type_tag:
+    primitive       { Datatype($1)}
+ /* | object_type     { Datatype($1) }*/
+  | fun_type        { $1 }
+
+primitive:
+    INT             { Int_t }
+  | FLOAT           { Float_t }
+  | CHAR            { Char_t }
+  | BOOL            { Bool_t }
+  | UNIT            { Unit_t }
+
+/*object_type:
+    TYPE_ID { Object_t($1) }*/
+/*array_type:
+    type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }*/
+
+brackets:
+               { 1 }
+  | brackets RBRACKET LBRACKET { $1 + 1 }
+
+/*
 	INT {Int_t}
 	| BOOL {Bool_t}
 	| FLOAT {Float_t}
 	| CHAR {Char_t}
 	| UNIT {Unit_t}
-  | FUN LPAREN types_opt RPAREN ARROW dtype {Fun_t($3,$6)}
+  | FUN LPAREN types_opt RPAREN ARROW dtype {Functiontype($3,$6)}*/
 	/*| TYPE_ID   {Name_t($1)}*/
-/*	| fun_type { $1 }
+	
 	
 
 fun_type:
-	FUN LPAREN type_opt RPAREN ARROW dtype { Functiontype($3,$6) }
-
-*/
+	FUN LPAREN types_opt RPAREN ARROW datatype { Functiontype($3,$6) }
 
 
+
+/*
 vdecl:
   VAR ID COLON dtype { Vdec($2,$4) }
-
+*/
 expr_opt:
-    /* nothing */ { Noexpr }
+    { Noexpr }
   | expr          { $1 }
 
 
@@ -126,8 +160,10 @@ expr:
   | expr OR     expr { Binop($1, Or,    $3) }
   | MINUS expr %prec NEG { Unop(Neg, $2) }
   | NOT expr         { Unop(Not, $2) }
+  | LPAREN expr RPAREN            { $2 }
  /* | vdecl             { $1 }*/
   | expr ASSIGN expr   { Assign($1, $3) }
+
  /* |
   | ID ASSIGN expr {Assign($1,$3)}*/
 
@@ -136,7 +172,7 @@ expr:
   /*| fun_lit            {$1} */
  /* | LPAREN expr RPAREN { $2 }*/
 stmt_list:
-    /* nothing */  { [] }
+       { [] }
   | stmt_list stmt { $2 :: $1 }
   
 stmt:
@@ -149,9 +185,11 @@ stmt:
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
      { For($3, $5, $7, $9) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
-  | vdecl {$1}
-  | VAR ID COLON dtype ASSIGN expr SEMI { Static_init($2,$4,$6) }
+  | VAR ID COLON datatype SEMI {Static_init($2,$4,Noexpr)}
+  | VAR ID COLON datatype ASSIGN expr SEMI { Static_init($2,$4,$6) }
   
+  
+
 
 /*
 actuals_opt:

@@ -1,0 +1,84 @@
+
+##### Testing test-allfeatures1
+./stop.native < tests/test-allfeatures1.stp > test-allfeatures1.ll
+Uncaught exception:
+  
+  Parsing.Parse_error
+
+Raised at file "parsing.ml", line 136, characters 14-25
+Called from file "parsing.ml", line 162, characters 4-28
+Re-raised at file "parsing.ml", line 181, characters 14-17
+Called from file "parser.ml", line 887, characters 4-44
+##### FAILED
+
+##### Testing test-expr1
+./stop.native < tests/test-expr1.stp > test-expr1.ll
+Uncaught exception:
+  
+  Parsing.Parse_error
+
+Raised at file "parsing.ml", line 136, characters 14-25
+Called from file "parsing.ml", line 162, characters 4-28
+Re-raised at file "parsing.ml", line 181, characters 14-17
+Called from file "parser.ml", line 887, characters 4-44
+##### FAILED
+
+##### Testing test-helloworld
+./stop.native < tests/test-helloworld.stp > test-helloworld.ll
+Uncaught exception:
+  
+  Parsing.Parse_error
+
+Raised at file "parsing.ml", line 136, characters 14-25
+Called from file "parsing.ml", line 162, characters 4-28
+Re-raised at file "parsing.ml", line 181, characters 14-17
+Called from file "parser.ml", line 887, characters 4-44
+##### FAILED
+
+##### Testing test-printf1
+./stop.native < tests/test-printf1.stp > test-printf1.ll
+Uncaught exception:
+  
+  Parsing.Parse_error
+
+Raised at file "parsing.ml", line 136, characters 14-25
+Called from file "parsing.ml", line 162, characters 4-28
+Re-raised at file "parsing.ml", line 181, characters 14-17
+Called from file "parser.ml", line 887, characters 4-44
+##### FAILED
+
+##### Testing test-printf2
+./stop.native < tests/test-printf2.stp > test-printf2.ll
+Uncaught exception:
+  
+  Parsing.Parse_error
+
+Raised at file "parsing.ml", line 136, characters 14-25
+Called from file "parsing.ml", line 162, characters 4-28
+Re-raised at file "parsing.ml", line 181, characters 14-17
+Called from file "parser.ml", line 887, characters 4-44
+##### FAILED
+
+##### Testing test-printf3
+./stop.native < tests/test-printf3.stp > test-printf3.ll
+Uncaught exception:
+  
+  Parsing.Parse_error
+
+Raised at file "parsing.ml", line 136, characters 14-25
+Called from file "parsing.ml", line 162, characters 4-28
+Re-raised at file "parsing.ml", line 181, characters 14-17
+Called from file "parser.ml", line 887, characters 4-44
+##### FAILED
+
+##### Testing test-printf4
+./stop.native < tests/test-printf4.stp > test-printf4.ll
+Uncaught exception:
+  
+  Parsing.Parse_error
+
+Raised at file "parsing.ml", line 136, characters 14-25
+Called from file "parsing.ml", line 162, characters 4-28
+Re-raised at file "parsing.ml", line 181, characters 14-17
+Called from file "parser.ml", line 887, characters 4-44
+##### FAILED

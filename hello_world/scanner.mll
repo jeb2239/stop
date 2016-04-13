@@ -21,8 +21,8 @@ rule token = parse
 	| ')'       { RPAREN }
     | '{'       { LBRACE }
     | '}'       { RBRACE }
-    | '['		{ LSQUARE }
-    | ']'		{ RSQUARE }
+    | '['		{ LBRACKET }
+    | ']'		{ RBRACKET }
     | ':'       { COLON }
     | ';'       { SEMI }
     | ','       { COMMA }

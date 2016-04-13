@@ -5,15 +5,21 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
 
 type uop = Neg | Not
 
-type dtype = 
+type primitive = 
     Int_t 
   | Float_t 
   | Unit_t 
   | Bool_t 
   | Char_t 
-  | Fun_t of dtype list * dtype
+  | Object_t of string
 
- type param = Param of string * dtype
+
+type datatype = Datatype of primitive 
+            | Arraytype of primitive *int 
+            | Functiontype of datatype list * datatype
+
+type formal = Formal of  string* datatype
+
 
 
 (*	
@@ -38,7 +44,8 @@ type expr =
  (*| Vdec of string * dtype  *)
   | Assign of expr * expr
 (* type vdecl =  *)
-  | FuncLit of  param list * dtype * stmt list (*the idea is that this returns a function literal
+  | Call of string * expr list
+  | FuncLit of  formal list * datatype * stmt list (*the idea is that this returns a function literal
                                                 (* when someone declares a function they immidialy assign
                                                 it to a name*)*)
   | Noexpr
@@ -50,8 +57,7 @@ type expr =
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | While of expr * stmt
-  | Vdec of string * dtype
-  | Static_init of string * dtype * expr
+  | Static_init of string * datatype * expr
 
 
 
@@ -76,17 +82,27 @@ let string_of_uop = function
     Neg -> "-"
   | Not -> "!"
 
- 
-let rec string_of_dtype = function
+let rec print_brackets = function
+    1 -> "[]"
+   | i -> "[]" ^ print_brackets (i-1)
+
+let string_of_primitive = function
     Int_t -> "Int"
     | Float_t -> "Float"
     | Unit_t -> "Unit"
     | Bool_t -> "Bool"
     | Char_t -> "Char"
-    | Fun_t(args,ret) -> "Fun(" ^ (List.fold ~init:"" ~f:(fun x y -> x ^ "," ^ y) (List.map ~f:(string_of_dtype) args)) ^ ")->" ^ string_of_dtype ret
+    | Object_t(s) -> "class" ^ s
+ 
+let rec string_of_datatype = function
+    Datatype(p) -> string_of_primitive p
+    | Arraytype(p,i) -> string_of_primitive p ^ print_brackets i
+    | Functiontype(args,ret) ->
+     "Fun(" ^ (List.fold ~init:"" ~f:(fun x y -> x ^ "," ^ y) 
+      (List.map ~f:(string_of_datatype) args)) ^ ")->" ^ string_of_datatype ret
 
-let string_of_param x = match x with Param(tid,t) ->  tid ^ ":" ^ string_of_dtype t
-
+let string_of_formal = function
+    Formal( s,data_t) -> s ^ ":" ^ string_of_datatype data_t 
 
 let rec string_of_expr = function
      IntLit(i) -> string_of_int i
@@ -98,7 +114,10 @@ let rec string_of_expr = function
     | Unop(o,e) -> string_of_uop o ^ " " ^ string_of_expr e ^ ";"
     (* | Vdec(e,dt) -> "var " ^  e ^ ":" ^ string_of_dtype dt ^ ";" *)
     | Assign(id,v) -> string_of_expr id ^ " = " ^ string_of_expr v ^";"
-    | FuncLit(a,b,c)-> (List.fold ~init:"" ~f:(fun x y -> x^","^y) (List.map ~f:string_of_param a)) ^ (string_of_dtype b) ^  (String.concat ~sep:"\n" (List.map ~f:string_of_stmt c))
+    | FuncLit(a,b,c)-> 
+    (List.fold ~init:"" ~f:(fun x y -> x^","^y) 
+      (List.map ~f:string_of_formal a)) ^ (string_of_datatype b) ^  
+    (String.concat ~sep:"\n" (List.map ~f:string_of_stmt c))
     (*this needs to be moved, to a string_of_vdecl function but for now..*)
     | Noexpr -> ""
     and string_of_stmt = function
@@ -113,8 +132,8 @@ let rec string_of_expr = function
       "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
       string_of_expr e3  ^ ") " ^ string_of_stmt s
     | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-    | Vdec(e,dt)-> "var" ^ " " ^ e^":" ^ string_of_dtype dt
-    | Static_init(a,b,c) -> a ^" "^ string_of_dtype b ^ " "^string_of_expr c
+    (* | Vdec(e,dt)-> "var" ^ " " ^ e^":" ^ string_of_dtype dt *)
+    | Static_init(a,b,c) -> a ^" "^ string_of_datatype b ^ " "^string_of_expr c
 
 (*let rec string_of_dtype = function
 	Int_t -> "Int"
@@ -161,3 +180,7 @@ let rec string_of_expr = function
 
 
 type program = Program of stmt list
+
+let string_of_program prog = string_of_stmt prog
+
+        

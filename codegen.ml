@@ -89,6 +89,7 @@ let translate ast = match ast with
           | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
           | A.CharLit c -> L.const_int i8_t (Char.code c)
           | A.StringLit s -> L.build_global_stringptr s "tmp" builder
+          | A.Id s -> raise E.NotImplemented
           | A.Binop (e1, op, e2) ->
                 let e1' = expr builder e1
                 and e2' = expr builder e2 in
@@ -104,9 +105,14 @@ let translate ast = match ast with
                       | A.Less      -> L.build_icmp L.Icmp.Slt
                       | A.Leq       -> L.build_icmp L.Icmp.Sle
                       | A.Greater   -> L.build_icmp L.Icmp.Sgt
-                      | A.Geq       -> L.build_icmp L.Icmp.Sge
-                    )
+                      | A.Geq       -> L.build_icmp L.Icmp.Sge)
                 e1' e2' "tmp" builder
+          | A.Unop(op, e) ->
+                  let e' = expr builder e in
+                    (match op with
+                        A.Neg       -> L.build_neg
+                      | A.Not       -> L.build_not)
+                    e' "tmp" builder
           | A.Call ("printf", e) ->
                 (* TODO: Fix this cancer or encapsulate in a function *)
                 let format_str = match e with
@@ -134,6 +140,7 @@ let translate ast = match ast with
                 (*
                 L.build_call printf_func [| format_lstr ; (expr builder first_arg) |] "printf" builder 
                 *)
+          | A.Noexpr -> L.const_int i32_t 0
         in
 
         (* Invoke "f builder" if the current block doesn't already

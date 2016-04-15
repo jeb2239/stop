@@ -90,31 +90,36 @@ let translate ast = match ast with
           | A.CharLit c -> L.const_int i8_t (Char.code c)
           | A.StringLit s -> L.build_global_stringptr s "tmp" builder
           | A.Id s -> raise E.NotImplemented
-          | A.Binop (e1, op, e2) ->
-                let e1' = expr builder e1
-                and e2' = expr builder e2 in
-                    (match op with
-                        A.Add       -> L.build_add
-                      | A.Sub       -> L.build_sub
-                      | A.Mult      -> L.build_mul
-                      | A.Div       -> L.build_sdiv
-                      | A.And       -> L.build_and
-                      | A.Or        -> L.build_or
-                      | A.Equal     -> L.build_icmp L.Icmp.Eq
-                      | A.Neq       -> L.build_icmp L.Icmp.Ne
-                      | A.Less      -> L.build_icmp L.Icmp.Slt
-                      | A.Leq       -> L.build_icmp L.Icmp.Sle
-                      | A.Greater   -> L.build_icmp L.Icmp.Sgt
-                      | A.Geq       -> L.build_icmp L.Icmp.Sge)
-                e1' e2' "tmp" builder
-          | A.Unop(op, e) ->
-                  let e' = expr builder e in
-                    (match op with
-                        A.Neg       -> L.build_neg
-                      | A.Not       -> L.build_not)
-                    e' "tmp" builder
+          | A.Binop (e1, op, e2) -> build_binop e1 op e2
+          | A.Unop(op, e) -> build_unop op e
           | A.Call ("printf", e) -> build_printf e
           | A.Noexpr -> L.const_int i32_t 0
+
+        and build_binop e1 op e2 =
+            let e1' = expr builder e1
+            and e2' = expr builder e2 in
+                (match op with
+                    A.Add       -> L.build_add
+                  | A.Sub       -> L.build_sub
+                  | A.Mult      -> L.build_mul
+                  | A.Div       -> L.build_sdiv
+                  | A.And       -> L.build_and
+                  | A.Or        -> L.build_or
+                  | A.Equal     -> L.build_icmp L.Icmp.Eq
+                  | A.Neq       -> L.build_icmp L.Icmp.Ne
+                  | A.Less      -> L.build_icmp L.Icmp.Slt
+                  | A.Leq       -> L.build_icmp L.Icmp.Sle
+                  | A.Greater   -> L.build_icmp L.Icmp.Sgt
+                  | A.Geq       -> L.build_icmp L.Icmp.Sge)
+            e1' e2' "tmp" builder
+
+        and build_unop op e =
+            let e' = expr builder e in
+                (match op with
+                    A.Neg       -> L.build_neg
+                  | A.Not       -> L.build_not)
+                e' "tmp" builder
+
         and build_printf e =
             let format_str = match e with
                 [] -> A.Noexpr

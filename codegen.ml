@@ -113,34 +113,31 @@ let translate ast = match ast with
                         A.Neg       -> L.build_neg
                       | A.Not       -> L.build_not)
                     e' "tmp" builder
-          | A.Call ("printf", e) ->
-                (* TODO: Fix this cancer or encapsulate in a function *)
-                let format_str = match e with
-                    [] -> A.Noexpr
-                  | hd :: tl -> hd
-                and args = match e with
-                    [] -> []
-                  | hd :: tl -> tl
-                in
-                let first_arg = match args with
-                    [] -> A.Noexpr
-                  | hd :: tl -> hd
-                in
-                let format_lstr = match format_str with
-                    A.StringLit(s) -> L.build_global_stringptr s "fmt" builder
-                  | _ -> raise E.PrintfFirstArgNotString
-                in
-                let l_format_args_list = List.map (expr builder) args 
-                in
-                let l_full_args_list = [format_lstr] @ l_format_args_list
-                in
-                let l_args_arr = Array.of_list l_full_args_list
-                in
-                L.build_call printf_func l_args_arr "printf" builder
-                (*
-                L.build_call printf_func [| format_lstr ; (expr builder first_arg) |] "printf" builder 
-                *)
+          | A.Call ("printf", e) -> build_printf e
           | A.Noexpr -> L.const_int i32_t 0
+        and build_printf e =
+            let format_str = match e with
+                [] -> A.Noexpr
+              | hd :: tl -> hd
+            and args = match e with
+                [] -> []
+              | hd :: tl -> tl
+            in
+            let first_arg = match args with
+                [] -> A.Noexpr
+              | hd :: tl -> hd
+            in
+            let format_lstr = match format_str with
+                A.StringLit(s) -> L.build_global_stringptr s "fmt" builder
+              | _ -> raise E.PrintfFirstArgNotString
+            in
+            let l_format_args_list = List.map (expr builder) args 
+            in
+            let l_full_args_list = [format_lstr] @ l_format_args_list
+            in
+            let l_args_arr = Array.of_list l_full_args_list
+            in
+            L.build_call printf_func l_args_arr "printf" builder
         in
 
         (* Invoke "f builder" if the current block doesn't already

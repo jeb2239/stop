@@ -7,11 +7,12 @@
 
 %token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
-%token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
+%token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR 
 %token IF ELSE FOR WHILE
 %token RETURN VOID 
 %token FINAL
 %token INCLUDE
+%token EOF
 %token DOT
 %token FUNCTION CLASS METHOD
 %token ARROW FATARROW
@@ -58,7 +59,7 @@
 /* -------------------- */
 
 program:
-      includes fdecls EOF          { Program($1, $2) }
+      includes stmt_list cdecls EOF          { Program($1, $2,$3) }
 
 /* Includes */
 /* -------- */
@@ -74,6 +75,65 @@ include_list:
 include_decl:
     INCLUDE STRING_LIT      { Include($2) }
 
+
+
+/* Classes */
+/* ------- */
+
+
+cdecls:
+  cdecl_list {List.rev $1 }
+
+cdecl_list:
+    cdecl             { [$1] }
+  | cdecl_list cdecl  { $2::$1 }
+
+cdecl:
+    CLASS TYPE_ID LBRACE cbody RBRACE { {
+      cname = $2;
+      cbody = $4;
+    } }
+
+cbody:
+    /* nothing */ { { 
+      fields = [];
+      constructors = [];
+      methods = [];
+    } }
+  |   cbody field { { 
+      fields = $2 :: $1.fields;
+      constructors = $1.constructors;
+      methods = $1.methods;
+    } }
+  |   cbody constructor { { 
+      fields = $1.fields;
+      constructors = $2 :: $1.constructors;
+      methods = $1.methods;
+    } }
+  |   cbody method_dec { { 
+      fields = $1.fields;
+      constructors = $1.constructors;
+      methods = $2 :: $1.methods;
+    } }
+
+field:
+  VAR ID COLON datatype SEMI {Field($2,$4)}
+
+method_dec:
+  METHOD ID ASSIGN LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE SEMI { Method($2,$5,$8,$10)}
+
+constructor:
+  PATTERN ASSIGN LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE SEMI {Constructor($4,$7,$9)}
+
+formal_opt:
+      { [] }
+  | formal_list   { List.rev $1 }
+
+formal_list:
+    ID COLON datatype                   { [Formal($1,$3)] }
+  | formal_list COMMA ID COLON datatype  { Formal($3,$5) :: $1 }
+
+
 /* Datatypes */
 /* --------- */
 
@@ -84,6 +144,7 @@ datatype:
 
 type_tag:
     primitive       { $1 }
+  | object_type     { $1 }
 
 primitive:
     INT             { Int_t }
@@ -93,7 +154,7 @@ primitive:
   | UNIT            { Unit_t }
 
 object_type:
-    TYPE_ID { Objecttype($1) }
+    TYPE_ID { Object_t($1) }
 
 array_type:
     type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
@@ -142,36 +203,8 @@ actuals_list:
     expr                        { [$1] }
   | actuals_list COMMA expr     { $3::$1 }
 
-/* Classes */
-/* ------- */
 
-//cdecls:
-//      /* nothing */         { [] }
-//    | cdecl_list            { List.rev $1 }
-//
-//cdecl_list:
-//      cdecl                 { [$1] }
-//    | cdecl_list cdecl      { $2::$1 }
-//
-//cdecl:
-//      CLASS ID LBRACE cbody RBRACE { {
-//            cname = $2;
-//            extends = NoParent;
-//            cbody = $4;
-//      } }
-//    | CLASS ID EXTENDS ID LBRACE cbody RBRACE { {
-//            cname = $2;
-//            extends = Parent($4);
-//            cbody = $6;
-//      }}
-//
-//cbody:
-//      /* nothing */ { {
-//          fields = [];
-//      } }
-    
-/* Literals */
-/* -------- */
+
 
 literals:
       INT_LIT           { IntLit($1) }

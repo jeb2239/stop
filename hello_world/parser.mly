@@ -168,6 +168,10 @@ brackets:
                { 1 }
   | brackets RBRACKET LBRACKET { $1 + 1 }
 
+bracket_args:
+    LBRACKET expr            { [$2] }
+  |   bracket_args RBRACKET LBRACKET expr { $4 :: $1 }
+
 /*
 	INT {Int_t}
 	| BOOL {Bool_t}
@@ -211,7 +215,10 @@ expr:
   | MINUS expr %prec NEG { Unop(Neg, $2) }
   | NOT expr         { Unop(Not, $2) }
   | LPAREN expr RPAREN            { $2 }
+  | TYPE_ID LPAREN actuals_opt RPAREN {Objectcreate($1,$3)}
+  | type_tag bracket_args RBRACKET {Arraycreate($1,List.rev $2)}
  /* | vdecl             { $1 }*/
+  | expr bracket_args RBRACKET      { Arrayaccess($1, List.rev $2) }
   | expr ASSIGN expr   { Assign($1, $3) }
 
 

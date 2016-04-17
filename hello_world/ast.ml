@@ -47,9 +47,12 @@ type expr =
   | Assign of expr * expr
 (* type vdecl =  *)
   | Call of string * expr list
+  | Objectcreate of string * expr list
   | FuncLit of  formal list * datatype * stmt list (*the idea is that this returns a function literal
                                                 (* when someone declares a function they immidialy assign
                                                 it to a name*)*)
+  | Arraycreate of datatype * expr list   
+  | Arrayaccess of expr * expr list                                          
   | Noexpr
 
   and stmt =

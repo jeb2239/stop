@@ -10,6 +10,13 @@
 *.cmxs
 *.cmxa
 *.out
+*.log
+*.data
+_tags
+*.bc
+*.ll
+
+
 
 # ocamlbuild working directory
 _build/

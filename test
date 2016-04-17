@@ -1,2 +1,37 @@
+#!/bin/bash
+# vim: filetype=sh
 
-./stop.native -a < tests/test-$1.stp
+# =============================== #
+# Testing Script for Parser Tests
+# =============================== #
+
+STOP="./stop.native"
+TEST_FOLDER="tests"
+
+# Set time limit for all operations
+ulimit -t 30
+
+globalerror=0
+
+# Usage informaition
+Usage() {
+	echo "Usage: test [filename]"
+	echo "[filename] is <name> in ${TEST_FOLDER}/parse-<name>.stp"
+	echo "e.g. Running ${TEST_FOLDER}/parse-comments1.stp:"
+	echo "$ ./test comments1"
+	exit 1
+}
+
+while getopts h[help] opt 
+do
+	case $opt in
+		h) # Help
+			Usage
+			;;
+	esac
+done
+
+# Remove options, leave arguments
+shift $((OPTIND - 1))
+
+$STOP -a < ${TEST_FOLDER}/parse-$1.stp

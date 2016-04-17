@@ -21,8 +21,8 @@ rule token = parse
 	| ')'       { RPAREN }
     | '{'       { LBRACE }
     | '}'       { RBRACE }
-    | '['		{ LSQUARE }
-    | ']'		{ RSQUARE }
+    | '['		{ LBRACKET }
+    | ']'		{ RBRACKET }
     | ':'       { COLON }
     | ';'       { SEMI }
     | ','       { COMMA }
@@ -59,8 +59,9 @@ rule token = parse
     | "for"     { FOR }
     | "while"   { WHILE }
     | "return"  { RETURN }
-
+    | "->"      { ARROW }
     (* Reserved *)
+    | "method"      {METHOD}
     | "spec"        { SPEC }
     | "def"		    { DEF }
     | "class"	    { CLASS }
@@ -71,7 +72,7 @@ rule token = parse
     | '@'   {ANON}
     | "pattern" {PATTERN}
     | "function"     {FUNCTION}
-    | "fun"         {FUN}
+    | "Fun"         {FUN}
 
     (* PRIMITIVES *)
     | "Int"     { INT }

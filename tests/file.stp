@@ -1,0 +1,12 @@
+class Hello {
+
+	pattern = (greeting:String):Hello {
+
+		return 0;
+	};
+
+	method sayhello = ():Unit {
+		return 0;
+	};
+	
+}

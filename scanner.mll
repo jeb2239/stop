@@ -44,6 +44,7 @@ rule token = parse
     | ':'       { COLON }
     | ';'       { SEMI }
     | ','       { COMMA }
+    | '.'       { DOT }
 
     (* Operators *)
 	| '+'       { PLUS }
@@ -63,9 +64,13 @@ rule token = parse
     | "||"      { OR }
     | "!"       { NOT }
 
-    (* Modifiers *)
-    | "final"   { FINAL } 
-    | "type"    { TYPE }
+    (* Misc *)
+    | "->"          { ARROW }
+    | "=>"          { FATARROW }
+    | "pub"         { PUB }
+    | "priv"        { PRIV}
+    | '@'           { ANON }
+    | "pattern"     { PATTERN }
 
     (* Conditionals *)
     | "if"      { IF }
@@ -76,17 +81,23 @@ rule token = parse
 
     (* Reserved *)
     | "def"		    { DEF }
+    | "var"         { VAR }
+    | "type"        { TYPE }
+    | "final"       { FINAL } 
+    | "this"        { THIS }
     | "function"    { FUNCTION }
     | "class"	    { CLASS }
+    | "method"      { METHOD }
     | "extends"     { EXTENDS }
     | "#include"    { INCLUDE }
 
     (* PRIMITIVES *)
-    | "int"     { INT }
-    | "float"   { FLOAT }
-    | "bool"    { BOOL }
-    | "char"    { CHAR }
+    | "Int"     { INT }
+    | "Float"   { FLOAT }
+    | "Bool"    { BOOL }
+    | "Char"    { CHAR }
     | "Unit"    { UNIT }
+    | "Fun"     { FUN }
 
     (* PRIMITIVE LITERALS *)
     | "true"    { TRUE }

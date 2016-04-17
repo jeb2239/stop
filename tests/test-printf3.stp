@@ -3,7 +3,7 @@
  * ================
  */
 
-function main = ():int {
+function main = ():Int {
 	printf("%d, %d\n", 22 + 20, 13);
 	return 0;
 }

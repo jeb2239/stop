@@ -11,14 +11,18 @@
 %token FINAL
 %token INCLUDE
 %token EOF
-%token FUNCTION
+%token DOT
+%token FUNCTION CLASS METHOD
+%token ARROW FATARROW
+%token PUB PRIV ANON
+%token PATTERN
 
 /* Primitive Types */
 
-%token INT FLOAT BOOL CHAR UNIT
-%token TYPE 
+%token INT FLOAT BOOL CHAR FUN UNIT
+%token TYPE VAR THIS
 
-%token DEF CLASS EXTENDS 
+%token DEF EXTENDS 
 %token EOF
 
 /* Primitives */

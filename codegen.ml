@@ -39,7 +39,6 @@ let translate ast = match ast with
       | A.Char_t ->         i8_t
       (* TODO: Implement find_struct function for Object_t *)
       | A.Unit_t ->         void_t
-      | A.Object_t(s) ->    L.pointer_type i8_t
     in
 
     let rec ltype_of_arraytype arraytype = match arraytype with

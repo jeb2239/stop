@@ -4,9 +4,14 @@ open Core.Std
 type op = Add | Sub | Mult | Div | And | Or |
           Equal | Neq | Less | Leq | Greater | Geq 
 type uop = Neg | Not
-type primitive = Int_t | Float_t | Bool_t | Char_t | Unit_t | Object_t of string
+type primitive = Int_t | Float_t | Bool_t | Char_t | Unit_t 
+
 (* i.e. Arraytype (a, 2) <=> a[][]; (a, 3) <=> a[][][] *)
-type datatype = Datatype of primitive | Arraytype of primitive * int
+type datatype = 
+    Datatype of primitive 
+  | Arraytype of primitive * int
+  | Objecttype of string
+
 type fname = FName of string
 type formal = Formal of datatype * string
 
@@ -91,7 +96,6 @@ let string_of_primitive = function
   | Bool_t -> "bool"
   | Char_t -> "char"
   | Unit_t -> "Unit"
-  | Object_t(s) -> "class" ^ s
 
 let rec print_brackets = function
     1 -> "[]"
@@ -100,6 +104,7 @@ let rec print_brackets = function
 let string_of_datatype = function
     Datatype(p) -> string_of_primitive p
   | Arraytype(p, i) -> string_of_primitive p ^ print_brackets i
+  | Objecttype(s) -> "class" ^ s
 
 (* type fname = FName of string *)
 let string_of_fname = function

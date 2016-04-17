@@ -1,7 +1,9 @@
 /* Ocamlyacc Parser for Stop */
 
-%{ open Ast
-  open Core.Std %}
+%{ 
+    open Ast
+    open Core.Std 
+%}
 
 %token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
@@ -10,7 +12,6 @@
 %token RETURN VOID 
 %token FINAL
 %token INCLUDE
-%token EOF
 %token DOT
 %token FUNCTION CLASS METHOD
 %token ARROW FATARROW
@@ -21,7 +22,6 @@
 
 %token INT FLOAT BOOL CHAR FUN UNIT
 %token TYPE VAR THIS
-
 %token DEF EXTENDS 
 %token EOF
 
@@ -78,12 +78,12 @@ include_decl:
 /* --------- */
 
 datatype:
-    type_tag   { Datatype($1) }
-  | array_type { $1 }
+    type_tag        { Datatype($1) }
+  | array_type      { $1 }
+  | object_type     { $1 }
 
 type_tag:
     primitive       { $1 }
-  | object_type     { $1 }
 
 primitive:
     INT             { Int_t }
@@ -93,7 +93,7 @@ primitive:
   | UNIT            { Unit_t }
 
 object_type:
-    TYPE_ID { Object_t($1) }
+    TYPE_ID { Objecttype($1) }
 
 array_type:
     type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }

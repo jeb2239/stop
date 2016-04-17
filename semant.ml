@@ -1,6 +1,7 @@
 (* Semantic checking for the MicroC compiler *)
 
 open Ast
+open Core.Std
 
 module StringMap = Map.Make(String)
 

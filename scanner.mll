@@ -1,6 +1,6 @@
 (* Ocamllex scanner for Stop Language *)
 
-{ 
+{   open Core.Std
     open Parser 
     let lineno = ref 1
     let depth = ref 0

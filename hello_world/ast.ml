@@ -61,10 +61,14 @@ type expr =
   | While of expr * stmt
   | Static_init of string * datatype * expr
 
+
+type method_dec = Method of  string * formal list * datatype * stmt list | Constructor of formal list * datatype * stmt list
+
 type cbody = {
 
   fields : field list;
-  constructors : field list;
+  constructors : method_dec list;
+  methods : method_dec list;
   
 }
 
@@ -202,8 +206,8 @@ let rec string_of_expr = function
 *)
 
 
-type program = Program of stmt list
+type program = Program of stmt list * class_decl list
 
-let string_of_program = function Program(stmts) -> String.concat ~sep:"" (List.map ~f:string_of_stmt stmts)
+let string_of_program = function Program(stmts,clas) -> String.concat ~sep:"" (List.map ~f:string_of_stmt stmts)
 
         

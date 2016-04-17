@@ -61,6 +61,7 @@ rule token = parse
     | "return"  { RETURN }
     | "->"      { ARROW }
     (* Reserved *)
+    | "method"      {METHOD}
     | "spec"        { SPEC }
     | "def"		    { DEF }
     | "class"	    { CLASS }

@@ -8,7 +8,7 @@ open Core.Std %}
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE ELSEIF FOR WHILE
 %token RETURN VOID SPEC PUB PRIV
-%token FINAL VAR ANON PATTERN FUN 
+%token FINAL VAR ANON PATTERN FUN METHOD
 %token INCLUDE
 %token EOF
 %token FUNCTION ARROW
@@ -50,7 +50,7 @@ open Core.Std %}
 %%
 
 program:
-	stmt_list EOF {Program($1)}
+	stmt_list cdecls EOF {Program($1,$2)}
 
 
 cdecls:
@@ -61,7 +61,7 @@ cdecl_list:
   | cdecl_list cdecl  { $2::$1 }
 
 cdecl:
-    CLASS ID LBRACE cbody RBRACE { {
+    CLASS TYPE_ID LBRACE cbody RBRACE { {
       cname = $2;
       cbody = $4;
     } }
@@ -76,14 +76,27 @@ cbody:
   |   cbody field { { 
       fields = $2 :: $1.fields;
       constructors = $1.constructors;
-      
+      methods = $1.methods;
     } }
   |   cbody constructor { { 
       fields = $1.fields;
       constructors = $2 :: $1.constructors;
-      
+      methods = $1.methods;
     } }
-  
+  |   cbody method_dec { { 
+      fields = $1.fields;
+      constructors = $1.constructors;
+      methods = $2 :: $1.methods;
+    } }
+
+field:
+  VAR ID COLON datatype SEMI {Field($2,$4)}
+
+method_dec:
+  METHOD ID ASSIGN LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE SEMI { Method($2,$5,$8,$10)}
+
+constructor:
+  PATTERN ASSIGN LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE SEMI {Constructor($4,$7,$9)}
 
 
 literals:

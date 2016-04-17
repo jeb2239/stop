@@ -1,3 +1,0 @@
-var main:Fun(Int)->Unit = @(ahfdff:Int):Unit {
-	return ahfdsf + 5;
-};

@@ -1,4 +1,0 @@
-#include "stop.stp"
-#include "ssh.stp"
-
-class test-includes1 { }

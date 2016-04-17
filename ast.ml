@@ -121,12 +121,12 @@ let rec string_of_expr = function
         string_of_expr e1 ^ " " ^ string_of_op op ^ " " ^ string_of_expr e2
   | Unop(op, e1) ->
         string_of_uop op ^ " " ^ string_of_expr e1
-  | Call(s, e_list) -> s ^ "(" ^ String.concat ", " (List.map string_of_expr e_list) ^ ")"
+  | Call(s, e_list) -> s ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_expr e_list) ^ ")"
   | Noexpr -> ""
   
 let rec string_of_stmt = function
     Block(stmts) ->
-        "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
+        "{\n" ^ String.concat ~sep:"" (List.map ~f:string_of_stmt stmts) ^ "}\n"
   | Expr(expr) -> string_of_expr expr ^ ";\n"
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
   | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
@@ -150,13 +150,13 @@ let string_of_cdecl cdecl = match cdecl.extends with
 
 let string_of_fdecl fdecl =
     "function" ^ " " ^ string_of_fname fdecl.fname ^ " = (" ^
-    String.concat ", " (List.map string_of_formal fdecl.formals) ^
+    String.concat ~sep:", " (List.map ~f:string_of_formal fdecl.formals) ^
     "):" ^ string_of_datatype fdecl.return_t ^ "{\n" ^ 
-    String.concat "" (List.map string_of_stmt fdecl.body) ^
+    String.concat ~sep:"" (List.map ~f:string_of_stmt fdecl.body) ^
     "}\n"
 
 let string_of_program = function
     Program(includes, fdecls) -> 
-        String.concat "" (List.map string_of_include includes) ^ "\n" ^
-        String.concat "" (List.map string_of_fdecl fdecls) ^ "\n"
+        String.concat ~sep:"" (List.map ~f:string_of_include includes) ^ "\n" ^
+        String.concat ~sep:"" (List.map ~f:string_of_fdecl fdecls) ^ "\n"
 

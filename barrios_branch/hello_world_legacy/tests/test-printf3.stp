@@ -1,0 +1,9 @@
+/*
+ * test-printf3.stp
+ * ================
+ */
+
+function main = ():int {
+	printf("%d, %d\n", 22 + 20, 13);
+	return 0;
+}

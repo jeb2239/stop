@@ -1,0 +1,8 @@
+/*
+ * test-printf1.stp
+ * ================
+ */
+
+function main = ():int {
+	printf("%d\n", 0);
+}

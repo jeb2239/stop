@@ -1,0 +1,9 @@
+/*
+ * test-printf4.stp
+ * ================
+ */
+
+function main = ():int {
+	printf("%d\n", 18);
+	return 0;
+}

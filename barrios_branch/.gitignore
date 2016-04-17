@@ -1,0 +1,30 @@
+# ignore .swp files
+*.swp
+*.annot
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+*.out
+*.log
+*.data
+_tags
+*.bc
+*.ll
+
+
+
+# ocamlbuild working directory
+_build/
+
+# ocamlbuild targets
+*.byte
+*.native
+
+# oasis generated files
+setup.data
+setup.log

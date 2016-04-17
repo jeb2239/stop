@@ -12,13 +12,17 @@ http://llvm.moe/ocaml/
      
 *)    
 
+open Core.Std
+
 module A = Ast
 module L = Llvm
 module U = Utils
 
 module E = Exceptions
+
+
       
-module StringMap = Map.Make(String)
+module StringMap = String.Table.create ()
 
 let translate ast = match ast with
     A.Program(includes, functions) -> 

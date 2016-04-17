@@ -1,6 +1,7 @@
 /* Ocamlyacc Parser for Stop */
 
-%{ open Ast %}
+%{ open Ast
+  open Core.Std %}
 
 %token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA COLON
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO

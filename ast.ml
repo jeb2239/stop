@@ -1,4 +1,5 @@
 (* Abstract Syntax Tree and functions for printing it *)
+open Core.Std
 
 type op = Add | Sub | Mult | Div | And | Or |
           Equal | Neq | Less | Leq | Greater | Geq 

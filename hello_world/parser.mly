@@ -43,14 +43,14 @@ open Core.Std %}
 %left TIMES DIVIDE
 %right NOT NEG
 
-%start stmt
-%type <Ast.stmt> stmt
+%start program
+%type <Ast.program> program
 
 
 %%
 
-/*program:
-	stmt_list EOF {Program($1)}*/
+program:
+	stmt_list EOF {Program($1)}
 
 
 literals:
@@ -95,12 +95,12 @@ type_list:
 	
 datatype:
     type_tag   { $1 }
- /* | array_type { $1 }*/
+   | array_type { $1 }
 
 
 type_tag:
     primitive       { Datatype($1)}
- /* | object_type     { Datatype($1) }*/
+  | object_type     { $1 }
   | fun_type        { $1 }
 
 primitive:
@@ -109,11 +109,11 @@ primitive:
   | CHAR            { Char_t }
   | BOOL            { Bool_t }
   | UNIT            { Unit_t }
-
-/*object_type:
-    TYPE_ID { Object_t($1) }*/
-/*array_type:
-    type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }*/
+ 
+object_type:
+    TYPE_ID { Objecttype($1) }
+array_type:
+    type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
 
 brackets:
                { 1 }
@@ -127,8 +127,9 @@ brackets:
 	| UNIT {Unit_t}
   | FUN LPAREN types_opt RPAREN ARROW dtype {Functiontype($3,$6)}*/
 	/*| TYPE_ID   {Name_t($1)}*/
+
 	
-	
+
 
 fun_type:
 	FUN LPAREN types_opt RPAREN ARROW datatype { Functiontype($3,$6) }

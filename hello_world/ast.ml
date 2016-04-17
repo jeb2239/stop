@@ -11,12 +11,13 @@ type primitive =
   | Unit_t 
   | Bool_t 
   | Char_t 
-  | Object_t of string
+   
 
 
 type datatype = Datatype of primitive 
-            | Arraytype of primitive *int 
+            | Arraytype of datatype *int 
             | Functiontype of datatype list * datatype
+            | Objecttype of string
 
 type formal = Formal of  string* datatype
 
@@ -92,14 +93,15 @@ let string_of_primitive = function
     | Unit_t -> "Unit"
     | Bool_t -> "Bool"
     | Char_t -> "Char"
-    | Object_t(s) -> "class" ^ s
+    (* | Object_t(s) -> "class" ^ s *)
  
 let rec string_of_datatype = function
     Datatype(p) -> string_of_primitive p
-    | Arraytype(p,i) -> string_of_primitive p ^ print_brackets i
+    | Arraytype(p,i) -> string_of_datatype p ^ print_brackets i
     | Functiontype(args,ret) ->
      "Fun(" ^ (List.fold ~init:"" ~f:(fun x y -> x ^ "," ^ y) 
       (List.map ~f:(string_of_datatype) args)) ^ ")->" ^ string_of_datatype ret
+    | Objecttype(s) -> "class " ^ s
 
 let string_of_formal = function
     Formal( s,data_t) -> s ^ ":" ^ string_of_datatype data_t 
@@ -181,6 +183,6 @@ let rec string_of_expr = function
 
 type program = Program of stmt list
 
-let string_of_program prog = string_of_stmt prog
+let string_of_program = function Program(stmts) -> String.concat ~sep:"" (List.map ~f:string_of_stmt stmts)
 
         

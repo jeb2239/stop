@@ -833,7 +833,7 @@ let codegen_struct s =
 		let struct_t = Hashtbl.find struct_types s.scname in
 	let type_list = List.map (function Field(_, d, _) -> get_type d) s.sfields in
 	let name_list = List.map (function Field(_, _, s) -> s) s.sfields in
-
+	
 	(* Add key field to all structs *)
 	let type_list = i32_t :: type_list in
 	let name_list = ".key" :: name_list in

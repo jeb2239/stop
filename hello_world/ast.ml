@@ -124,9 +124,9 @@ let rec string_of_datatype = function
     Datatype(p) -> string_of_primitive p
     | Arraytype(p,i) -> string_of_datatype p ^ print_brackets i
     | Functiontype(args,ret) ->
-     "Fun(" ^ (List.fold ~init:"" ~f:(fun x y -> x ^ "," ^ y) 
-      (List.map ~f:(string_of_datatype) args)) ^ ")->" ^ string_of_datatype ret
-    | Objecttype(s) -> "class " ^ s
+     "Fun(" ^ (String.concat ~sep:","
+      (List.map ~f:(string_of_datatype) args)) ^")->" ^ string_of_datatype ret
+    | Objecttype(s) ->  s 
 
 let string_of_formal = function
     Formal( s,data_t) -> s ^ ":" ^ string_of_datatype data_t 
@@ -137,14 +137,14 @@ let rec string_of_expr = function
     | Id(r) -> r
     | BoolLit(true) -> "true"
     | BoolLit(false) -> "false"
-    | Binop(e1,o,e2) -> string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2 ^ ";"
-    | Unop(o,e) -> string_of_uop o ^ " " ^ string_of_expr e ^ ";"
+    | Binop(e1,o,e2) -> string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2 
+    | Unop(o,e) -> string_of_uop o ^ string_of_expr e 
     (* | Vdec(e,dt) -> "var " ^  e ^ ":" ^ string_of_dtype dt ^ ";" *)
     | Assign(id,v) -> string_of_expr id ^ " = " ^ string_of_expr v ^";"
     | FuncLit(a,b,c)-> 
-    (List.fold ~init:"" ~f:(fun x y -> x^","^y) 
-      (List.map ~f:string_of_formal a)) ^ (string_of_datatype b) ^  
-    (String.concat ~sep:"\n" (List.map ~f:string_of_stmt c))
+    (String.concat ~sep:","  
+      (List.map ~f:string_of_formal a)) ^ (string_of_datatype b) ^  (string_of_stmt (Block c))
+    (* (String.concat ~sep:"" (List.map ~f:string_of_stmt c)) *)
     (*this needs to be moved, to a string_of_vdecl function but for now..*)
     | Noexpr -> ""
     and string_of_stmt = function
@@ -161,6 +161,19 @@ let rec string_of_expr = function
     | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
     (* | Vdec(e,dt)-> "var" ^ " " ^ e^":" ^ string_of_dtype dt *)
     | Static_init(a,b,c) -> a ^" "^ string_of_datatype b ^ " "^string_of_expr c
+
+let string_of_field = function Field(str,dt) -> "var " ^ str ^":" ^ string_of_datatype dt ^";\n"
+
+let map_and_concat fn sep item = String.concat ~sep:sep (List.map ~f:fn item)
+
+let string_of_method_dec = function
+  Method(name,forms,dt,stmts) -> "method "^name^"=("^ (map_and_concat string_of_formal "," forms) ^":"^ string_of_datatype dt ^ string_of_stmt (Block stmts) 
+  |Constructor(pattern,dt1,stmts1) -> "pattern =("^ String.concat ~sep:"," (List.map ~f:string_of_formal pattern) ^"):"^
+                                      string_of_datatype dt1 ^ string_of_stmt (Block stmts1)
+
+let rec string_of_cdecl cdec = "class " ^ cdec.cname ^ "{\n" ^ String.concat (List.map ~f:string_of_field cdec.cbody.fields)^"\n"
+                                ^ map_and_concat string_of_method_dec "\n" cdec.cbody.constructors ^ map_and_concat string_of_method_dec "\n" cdec.cbody.methods
+                                 ^ "\n}"
 
 (*let rec string_of_dtype = function
 	Int_t -> "Int"
@@ -208,6 +221,6 @@ let rec string_of_expr = function
 
 type program = Program of stmt list * class_decl list
 
-let string_of_program = function Program(stmts,clas) -> String.concat ~sep:"" (List.map ~f:string_of_stmt stmts)
+let string_of_program = function Program(stmts,clas) -> map_and_concat string_of_cdecl "\n" clas ^"\n" ^String.concat ~sep:"\n" (List.map ~f:string_of_stmt stmts)
 
         

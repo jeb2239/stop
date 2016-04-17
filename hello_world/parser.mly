@@ -53,6 +53,39 @@ program:
 	stmt_list EOF {Program($1)}
 
 
+cdecls:
+    cdecl_list    { List.rev $1 }
+
+cdecl_list:
+    cdecl             { [$1] }
+  | cdecl_list cdecl  { $2::$1 }
+
+cdecl:
+    CLASS ID LBRACE cbody RBRACE { {
+      cname = $2;
+      cbody = $4;
+    } }
+  
+
+cbody:
+    /* nothing */ { { 
+      fields = [];
+      constructors = [];
+      methods = [];
+    } }
+  |   cbody field { { 
+      fields = $2 :: $1.fields;
+      constructors = $1.constructors;
+      
+    } }
+  |   cbody constructor { { 
+      fields = $1.fields;
+      constructors = $2 :: $1.constructors;
+      
+    } }
+  
+
+
 literals:
       INT_LIT           { IntLit($1) }
     | FLOAT_LIT         { FloatLit($1) }
@@ -61,11 +94,14 @@ literals:
     | ID                { Id($1) }
     | fun_lit            {$1}
   /*  | fun_lit 			{ $1 }*/
+/*
+fun_lit:
+	ANON fun_body
+
+*/
 
 fun_lit:
-	ANON LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE {print_endline "Function Literal"; FuncLit($3,$6,$8)}
-
-
+  LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE {FuncLit($2,$5,$7)}
 
 
 formal_opt:
@@ -165,6 +201,7 @@ expr:
  /* | vdecl             { $1 }*/
   | expr ASSIGN expr   { Assign($1, $3) }
 
+
  /* |
   | ID ASSIGN expr {Assign($1,$3)}*/
 
@@ -188,7 +225,8 @@ stmt:
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
   | VAR ID COLON datatype SEMI {Static_init($2,$4,Noexpr)}
   | VAR ID COLON datatype ASSIGN expr SEMI { Static_init($2,$4,$6) }
-  
+  | FUNCTION ID ASSIGN fun_lit SEMI {Static_init($2,(type_of_lit $4),$4)}
+
   
 
 

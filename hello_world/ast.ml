@@ -20,6 +20,7 @@ type datatype = Datatype of primitive
             | Objecttype of string
 
 type formal = Formal of  string* datatype
+type field = Field of string* datatype
 
 
 
@@ -60,8 +61,28 @@ type expr =
   | While of expr * stmt
   | Static_init of string * datatype * expr
 
+type cbody = {
+
+  fields : field list;
+  constructors : field list;
+  
+}
+
+type class_decl = {
+  cname : string;
+  (* extends : extends; *)
+  cbody: cbody;
+}
+
+let rec type_list_of_formal formal_lis = List.map ~f:(function Formal(a,b) -> b) formal_lis
 
 
+
+let type_of_lit = function 
+  IntLit(_) -> Datatype(Int_t)
+  |BoolLit(_) -> Datatype(Bool_t)
+  (* |CharLit (_) -> Datatype(Char_t) *)
+  |FuncLit (flist,dt,_) -> Functiontype((type_list_of_formal flist),dt)
 
 
 

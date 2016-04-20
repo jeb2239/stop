@@ -39,7 +39,7 @@ let translate ast = match ast with
       | A.Char_t ->         i8_t
       (* TODO: Implement find_struct function for Object_t *)
       | A.Unit_t ->         void_t
-      | A.Object_t(s) ->    L.pointer_type i8_t
+     (* | A.Object_t(s) ->    L.pointer_type i8_t*)
     in
 
     let rec ltype_of_arraytype arraytype = match arraytype with
@@ -66,15 +66,15 @@ let translate ast = match ast with
     let printf_func = L.declare_function "printf" printf_t the_module in
 
     (* Define each function (arguments and return type) so we can call it *)
-    let function_decls =
-        let function_decl m fdecl =
+    let function_decls=
+        let rec function_decl m fdecl =
             let name = U.string_of_fname fdecl.A.fname
             and formal_types =
-        Array.of_list (List.map (fun formal -> ltype_of_formal formal) fdecl.A.formals)
+        Array.of_list (List.map ~f:(fun formal -> ltype_of_formal formal) fdecl.A.formals)
             in let ftype = L.function_type (ltype_of_datatype fdecl.A.return_t) formal_types in
             StringMap.add name (L.define_function name ftype the_module, fdecl) m in
-    List.fold_left function_decl StringMap.empty functions in
-
+    List.fold_left function_decl StringMap.empty functions 
+  in
     (* Fill in the body of the given function *)
     let build_function_body fdecl =
         let (the_function, _) = StringMap.find (U.string_of_fname fdecl.A.fname) function_decls in

@@ -11,4 +11,4 @@ module StringMap = Map.Make(String)
 (* Check each global variable, then check each function *)
 
 let check ast = match ast with
-    Program(includes, functions) -> ()
+    Program(includes, functions , classes) -> ()

@@ -9,13 +9,14 @@ type primitive = Int_t | Float_t | Bool_t | Char_t | Unit_t
 (* i.e. Arraytype (a, 2) <=> a[][]; (a, 3) <=> a[][][] *)
 type datatype = 
     Datatype of primitive 
-  | Arraytype of primitive * int
+  | Arraytype of datatype * int
   | Objecttype of string
 
 type fname = FName of string
 type formal = Formal of datatype * string
 
 type expr = 
+   
     IntLit of int
   | FloatLit of float
   | BoolLit of bool
@@ -53,21 +54,24 @@ type fdecl = {
 (* ------- *)
 
 type extends = NoParent | Parent of string
+type method_dec = Method of  string * formal list * datatype * stmt list | Constructor of formal list * datatype * stmt list
 
 type cbody = {
     fields : field list;
+    constructors : method_dec list;
+    methods : method_dec list;
 }
 
 type class_decl = {
     cname : string;
-    extends : extends;
+    (*extends : extends;*)
     cbody: cbody;
 }
 
 (* Program Definition *)
 (* ------------------ *)
 
-type program =  Program of include_stmt list * fdecl list
+type program =  Program of include_stmt list * stmt list * class_decl list
 
 (* Pretty-printing Functions *)
 (* ------------------------- *)
@@ -101,9 +105,9 @@ let rec print_brackets = function
     1 -> "[]"
   | i -> "[]" ^ print_brackets (i - 1)
 
-let string_of_datatype = function
+let rec string_of_datatype = function
     Datatype(p) -> string_of_primitive p
-  | Arraytype(p, i) -> string_of_primitive p ^ print_brackets i
+  | Arraytype(p, i) -> string_of_datatype p ^ print_brackets i
   | Objecttype(s) -> "class" ^ s
 
 (* type fname = FName of string *)
@@ -115,7 +119,8 @@ let string_of_formal = function
     Formal(data_t, s) -> s ^ ":" ^ string_of_datatype data_t 
 
 let rec string_of_expr = function
-    IntLit(i) -> string_of_int i
+   
+  |  IntLit(i) -> string_of_int i
   | FloatLit(f) -> string_of_float f
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
@@ -147,11 +152,11 @@ let rec string_of_stmt = function
 let string_of_include = function
     Include(s) -> "#include \"" ^ s ^ "\"\n"
 
-let string_of_cdecl cdecl = match cdecl.extends with
-    NoParent ->
+let string_of_cdecl cdecl =(* match cdecl.extends with*)
+    (* NoParent -> *)
         "class " ^ cdecl.cname ^ " { }\n"
-    | Parent(s) ->
-        "class " ^ cdecl.cname ^ " extends " ^ s ^ " { }\n"
+    (* | Parent(s) -> *)
+        (* "class " ^ cdecl.cname ^ " extends " ^ s ^ " { }\n" *)
 
 let string_of_fdecl fdecl =
     "function" ^ " " ^ string_of_fname fdecl.fname ^ " = (" ^
@@ -161,7 +166,8 @@ let string_of_fdecl fdecl =
     "}\n"
 
 let string_of_program = function
-    Program(includes, fdecls) -> 
+    Program(includes, fdecls,cdecls) -> 
         String.concat ~sep:"" (List.map ~f:string_of_include includes) ^ "\n" ^
-        String.concat ~sep:"" (List.map ~f:string_of_fdecl fdecls) ^ "\n"
+        String.concat ~sep:"" (List.map ~f:string_of_stmt fdecls) ^ "\n" ^
+        String.concat ~sep:"" (List.map ~f:string_of_cdecl cdecls)
 

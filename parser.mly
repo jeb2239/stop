@@ -65,7 +65,7 @@ program:
 /* -------- */
 
 includes: 
-      /* nothing */         { [] }
+      /* nothing */         { print_string "include"; [] }
     | include_list          { List.rev $1 }
 
 include_list:
@@ -82,7 +82,8 @@ include_decl:
 
 
 cdecls:
-  cdecl_list {List.rev $1 }
+    {[]}
+ | cdecl_list {List.rev $1 }
 
 cdecl_list:
     cdecl             { [$1] }
@@ -93,6 +94,7 @@ cdecl:
       cname = $2;
       cbody = $4;
     } }
+
 
 cbody:
     /* nothing */ { { 
@@ -117,7 +119,7 @@ cbody:
     } }
 
 field:
-  VAR ID COLON datatype SEMI {Field($2,$4)}
+  VAR ID COLON datatype SEMI {Field($4,$2)}
 
 method_dec:
   METHOD ID ASSIGN LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE SEMI { Method($2,$5,$8,$10)}
@@ -130,21 +132,22 @@ formal_opt:
   | formal_list   { List.rev $1 }
 
 formal_list:
-    ID COLON datatype                   { [Formal($1,$3)] }
-  | formal_list COMMA ID COLON datatype  { Formal($3,$5) :: $1 }
+    ID COLON datatype                   { [Formal($3,$1)] }
+  | formal_list COMMA ID COLON datatype  { Formal($5,$3) :: $1 }
 
 
 /* Datatypes */
 /* --------- */
 
 datatype:
-    type_tag        { Datatype($1) }
-  | array_type      { $1 }
-  | object_type     { $1 }
+    type_tag   { $1 }
+   | array_type { $1 }
+
 
 type_tag:
-    primitive       { $1 }
+    primitive       { Datatype($1)}
   | object_type     { $1 }
+
 
 primitive:
     INT             { Int_t }
@@ -152,10 +155,9 @@ primitive:
   | CHAR            { Char_t }
   | BOOL            { Bool_t }
   | UNIT            { Unit_t }
-
+ 
 object_type:
-    TYPE_ID { Object_t($1) }
-
+    TYPE_ID { Objecttype($1) }
 array_type:
     type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
 

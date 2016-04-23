@@ -12,7 +12,6 @@
 %token RETURN VOID 
 %token FINAL
 %token INCLUDE
-%token EOF
 %token DOT
 %token FUNCTION CLASS METHOD
 %token ARROW FATARROW
@@ -59,7 +58,7 @@
 /* -------------------- */
 
 program:
-      includes stmt_list cdecls EOF          { Program($1, $2,$3) }
+      includes stmts cdecls EOF          { Program($1, $2,$3) }
 
 /* Includes */
 /* -------- */
@@ -127,13 +126,7 @@ method_dec:
 constructor:
   PATTERN ASSIGN LPAREN formal_opt RPAREN COLON datatype LBRACE stmt_list RBRACE SEMI {Constructor($4,$7,$9)}
 
-formal_opt:
-      { [] }
-  | formal_list   { List.rev $1 }
 
-formal_list:
-    ID COLON datatype                   { [Formal($3,$1)] }
-  | formal_list COMMA ID COLON datatype  { Formal($5,$3) :: $1 }
 
 
 /* Datatypes */
@@ -176,7 +169,7 @@ fdecl_list:
   | fdecl_list fdecl    { $2::$1 }
 
 fdecl:
-   FUNCTION ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+   FUNCTION ID ASSIGN LPAREN formal_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
             fname = FName($2);
             return_t = $8;
             formals = $5;
@@ -186,13 +179,13 @@ fdecl:
 /* Formals and Actuals */
 /* ------------------- */
 
-formals_opt:
-    /* nothing */               { [] }
-  | formal_list                 { List.rev $1 }
+formal_opt:
+      { [] }
+  | formal_list   { List.rev $1 }
 
 formal_list:
-    formal                      { [$1] }
-  | formal_list COMMA formal    { $3::$1 }
+    ID COLON datatype                   { [Formal($3,$1)] }
+  | formal_list COMMA ID COLON datatype  { Formal($5,$3) :: $1 }
 
 formal:
     ID COLON datatype           { Formal($3, $1) }

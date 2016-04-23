@@ -5,7 +5,7 @@
 # Easiest way to build: using ocamlbuild, which in turn uses ocamlfind
 
 stop:
-	corebuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
+	corebuild -use-menhir -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
 		stop.native
 
 # "make clean" removes all generated files

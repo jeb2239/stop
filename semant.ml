@@ -1,6 +1,7 @@
 (* Semantic checking for the MicroC compiler *)
 
 open Ast
+open Core.Std
 
 module StringMap = Map.Make(String)
 
@@ -10,4 +11,4 @@ module StringMap = Map.Make(String)
 (* Check each global variable, then check each function *)
 
 let check ast = match ast with
-    Program(includes, functions) -> ()
+    Program(includes, specs, classes, functions) -> ()

@@ -1,35 +1,39 @@
 /* Ocamlyacc Parser for Stop */
 
-%{ open Ast %}
+%{ 
+    open Ast
+    open Core.Std 
+%}
 
-%token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA COLON
+%token DOT COMMA SEMI COLON LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE FOR WHILE
-%token RETURN VOID 
+%token ARROW FATARROW
+%token RETURN
 %token FINAL
 %token INCLUDE
+%token PUBLIC PRIVATE ANON
+%token FUNCTION SPEC CLASS METHOD
+%token MATCH CASE 
+%token TYPE VAR THIS
+%token DEF EXTENDS 
 %token EOF
-%token FUNCTION
 
 /* Primitive Types */
 
-%token INT FLOAT BOOL CHAR UNIT
-%token TYPE 
+%token INT FLOAT BOOL CHAR FUN UNIT
+%token <string> TYPE_ID
 
-%token DEF CLASS EXTENDS 
-%token EOF
+/* Literals */
 
-/* Primitives */
-
-%token <bool> BOOL_LIT
 %token <int> INT_LIT
 %token <float> FLOAT_LIT
 %token <char> CHAR_LIT
 %token <string> STRING_LIT
-
 %token <string> ID
-%token <string> TYPE_ID
+
+/* Precedence Rules */
 
 %nonassoc NOELSE
 %nonassoc ELSE
@@ -53,32 +57,98 @@
 /* -------------------- */
 
 program:
-      includes fdecls EOF          { Program($1, $2) }
+    constituents EOF { Program(List.rev $1.includes, List.rev $1.specs, 
+                                List.rev $1.cdecls, List.rev $1.fdecls) } 
+
+constituents:
+    { { 
+        includes = [];
+        specs = [];
+        cdecls = [];
+        fdecls = [];
+    } }
+  | constituents include_stmt { {
+        includes = $2 :: $1.includes;
+        specs = $1.specs; 
+        cdecls = $1.cdecls; 
+        fdecls = $1.fdecls; 
+    } }
+  | constituents sdecl { {
+        includes = $1.includes;
+        specs = $2 :: $1.specs; 
+        cdecls = $1.cdecls; 
+        fdecls = $1.fdecls; 
+    } }
+  | constituents cdecl { {
+        includes = $1.includes;
+        specs = $1.specs; 
+        cdecls = $2 :: $1.cdecls; 
+        fdecls = $1.fdecls; 
+    } }
+  | constituents fdecl { {
+        includes = $1.includes;
+        specs = $1.specs; 
+        cdecls = $1.cdecls; 
+        fdecls = $2 :: $1.fdecls; 
+    } }
 
 /* Includes */
 /* -------- */
 
-includes: 
-      /* nothing */         { [] }
-    | include_list          { List.rev $1 }
+include_stmt:
+    INCLUDE STRING_LIT          { Include($2) }
 
-include_list:
-      include_decl                  { [$1] }
-    | include_list include_decl     { $2::$1 }
+/* Functions */
+/* --------- */
 
-include_decl:
-    INCLUDE STRING_LIT      { Include($2) }
+fdecl:
+    FUNCTION ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+            fname = $2;
+            return_t = $8;
+            formals = $5;
+            body = $10;
+    } }
+
+/* Specs */
+/* ----- */
+
+sdecl:
+    SPEC TYPE_ID LBRACE RBRACE { { 
+            sname = $2;
+    } }
+
+/* Classes */
+/* ------- */
+
+cdecl:
+    CLASS TYPE_ID LBRACE cbody RBRACE { {
+        cname = $2;
+        extends = NoParent;
+        cbody = $4;
+    } }
+
+cbody:
+    /* nothing */ { {
+        fields = [];
+    } }
+  | cbody field { {
+        fields = $2 :: $1.fields
+    } }
 
 /* Datatypes */
 /* --------- */
 
 datatype:
-    type_tag   { Datatype($1) }
-  | array_type { $1 }
+    type_tag        { Datatype($1) }
+  | array_type      { $1 }
+  | function_type   { $1 }
 
 type_tag:
     primitive       { $1 }
   | object_type     { $1 }
+
+
+/* AST Datatype */
 
 primitive:
     INT             { Int_t }
@@ -88,7 +158,9 @@ primitive:
   | UNIT            { Unit_t }
 
 object_type:
-    TYPE_ID { Object_t($1) }
+    TYPE_ID { Objecttype($1) }
+
+/* AST Arraytype */
 
 array_type:
     type_tag LBRACKET brackets RBRACKET { Arraytype($1, $3) }
@@ -97,26 +169,33 @@ brackets:
     /* nothing */              { 1 }
   | brackets RBRACKET LBRACKET { $1 + 1 }
 
-/* Functions */
-/* --------- */
+/* AST Functiontype */
 
-fdecls:
-    fdecl_list          { List.rev $1 }
+function_type:
+    FUN LPAREN formal_dtypes_opt RPAREN ARROW datatype    { Functiontype($3, $6) }
 
-fdecl_list:
-    fdecl               { [$1] }
-  | fdecl_list fdecl    { $2::$1 }
+/* Fields */
+/* ------ */
 
-fdecl:
-   FUNCTION ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
-            fname = FName($2);
-            return_t = $8;
-            formals = $5;
-            body = $10;
-    } }
-
+field:
+    scope VAR ID COLON datatype SEMI { Field($1, $3, $5) }
+      
 /* Formals and Actuals */
 /* ------------------- */
+
+/* Formal Datatypes -- Nameless for Function Types */
+formal_dtypes_opt:
+    /* nothing */               { [] }
+  | formal_dtypes_list          { List.rev $1 }
+
+formal_dtypes_list:
+    formal_dtype                            { [$1] }
+  | formal_dtypes_list COMMA formal_dtype   { $3::$1 }
+
+/* Formals -- Names & Datatypes for Functions */
+
+formal_dtype:
+    datatype       { $1 }
 
 formals_opt:
     /* nothing */               { [] }
@@ -127,7 +206,9 @@ formal_list:
   | formal_list COMMA formal    { $3::$1 }
 
 formal:
-    ID COLON datatype           { Formal($3, $1) }
+    ID COLON datatype           { Formal($1, $3) }
+
+/* Actuals -- Exprs evaluated for Function Calls */
 
 actuals_opt:
     /* nothing */               { [] }
@@ -137,34 +218,14 @@ actuals_list:
     expr                        { [$1] }
   | actuals_list COMMA expr     { $3::$1 }
 
-/* Classes */
-/* ------- */
+/* Scope */
+/* ----- */
 
-//cdecls:
-//      /* nothing */         { [] }
-//    | cdecl_list            { List.rev $1 }
-//
-//cdecl_list:
-//      cdecl                 { [$1] }
-//    | cdecl_list cdecl      { $2::$1 }
-//
-//cdecl:
-//      CLASS ID LBRACE cbody RBRACE { {
-//            cname = $2;
-//            extends = NoParent;
-//            cbody = $4;
-//      } }
-//    | CLASS ID EXTENDS ID LBRACE cbody RBRACE { {
-//            cname = $2;
-//            extends = Parent($4);
-//            cbody = $6;
-//      }}
-//
-//cbody:
-//      /* nothing */ { {
-//          fields = [];
-//      } }
-    
+scope:
+    /* nothing */       { Public }
+  | PUBLIC              { Public }
+  | PRIVATE             { Private }
+
 /* Literals */
 /* -------- */
 
@@ -175,7 +236,19 @@ literals:
     | FALSE             { BoolLit(false) }
     | CHAR_LIT          { CharLit($1) }
     | STRING_LIT        { StringLit($1) }
+    | function_literal  { $1 }
     | ID                { Id($1) }
+    | THIS              { This }
+
+function_literal:
+    ANON LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { 
+        FunctionLit({
+            fname = "@";
+            return_t = $6;
+            formals = $3;
+            body = $8;
+        }) 
+    }
 
 /* Statements */
 /* ---------- */
@@ -188,21 +261,24 @@ stmt_list:
     | stmt_list stmt        { $2::$1 }
 
 stmt:
-      expr SEMI                     { Expr($1) }
-    | RETURN SEMI                   { Return(Noexpr) }
-    | RETURN expr SEMI              { Return($2) }
-    | LBRACE stmt_list RBRACE       { Block($2) } 
+      expr SEMI                                 { Expr($1) }
+    | RETURN SEMI                               { Return(Noexpr) }
+    | RETURN expr SEMI                          { Return($2) }
+    | LBRACE stmt_list RBRACE                   { Block($2) } 
     | IF LPAREN expr RPAREN stmt %prec NOELSE   
-                                        { If($3, $5, Block([Expr(Noexpr)])) }
+        { If($3, $5, Block([Expr(Noexpr)])) }
+
     | IF LPAREN expr RPAREN stmt ELSE stmt      
-                                        { If($3, $5, $7) }
+        { If($3, $5, $7) }
+
     | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt 
-                                        { For($3, $5, $7, $9) }
+        { For($3, $5, $7, $9) }
+        
     | WHILE LPAREN expr RPAREN stmt     
-                                        { While($3, $5) }
-    /* TODO: clarify declaration syntax */
-    | datatype ID SEMI                  { Local($1, $2, Noexpr) }
-    | datatype ID ASSIGN expr SEMI      { Local($1, $2, $4) }
+        { While($3, $5) }
+
+    | VAR ID COLON datatype SEMI                { Local($2, $4, Noexpr) }
+    | VAR ID COLON datatype ASSIGN expr SEMI    { Local($2, $4, $6) }
 
 /* Expressions */
 /* ----------- */
@@ -217,6 +293,7 @@ expr:
     | expr MINUS    expr            { Binop($1, Sub, $3) }
     | expr TIMES    expr            { Binop($1, Mult, $3) }
     | expr DIVIDE   expr            { Binop($1, Div, $3) }
+    | expr MODULO   expr            { Binop($1, Modulo, $3) }
     | expr EQ       expr            { Binop($1, Equal, $3) }
     | expr NEQ      expr            { Binop($1, Neq, $3) }
     | expr LT       expr            { Binop($1, Less, $3) }
@@ -225,6 +302,7 @@ expr:
     | expr GEQ      expr            { Binop($1, Geq, $3) }
     | expr AND      expr            { Binop($1, And, $3) }
     | expr OR       expr            { Binop($1, Or, $3) }
+    | expr ASSIGN   expr            { Assign($1, $3) }
     | MINUS expr %prec NEG          { Unop(Neg, $2) } 
     | NOT expr                      { Unop(Not, $2) }
     | LPAREN expr RPAREN            { $2 }

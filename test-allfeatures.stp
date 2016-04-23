@@ -5,16 +5,14 @@
  */
 
 spec CanPrint {
-	//type is the type in question
-	impl type.toString():String || type:String;
 }
 
 function print = (a:CanPrint):Unit{
 	printf(a.toString());
-	return;
 }
 
 class Person {
+	/*
 	pub var weight:Int;
 
 	//this has to be done if we want to access these in our methods
@@ -35,43 +33,28 @@ class Person {
 		//this we will need to case out why this is valid 
 		"(" + weight + ", " + name + ")"; 
 	}
+	*/
 }
 
 function pattern_matching = (a:Person):String {
-	match(a){ 
-
-		//these returns should not be necessary
-		case Person(x,"James") => { return "Hello!"; } 
-
-		case Person(x,y) => { return y; }
-
-	} 
-	//this is the last expression, really for loops and all should just be expressions which 
-	//return unit
 }
 
-function MAIN = (args:String[]):Unit {
+function main = (args:String[]):Unit {
 	// Let a be a person object 
-	var a:Person = Person(100,"James");
+	//var a:Person = Person(100,"James");
 
 	//use of anon function, captures 
 	//will be given a fake name but
 	//when assigned we replace that name with "IamAfunction". 
 	//(this is kinda fuzzy)
-
-	var fun1:Fun(Int)->Int;
-	var fun2:Fun(Int)->Int = @(c:Int):Int{ c * a.weight };
-
-	fun1 = fun2;
-
-	var fun3 = @(b:Int):Int { b * a.weight };
+	//var iamAfunction:Fun(Int)->Int = @(c:Int):Int{ c * a.weight };
 
 	// prints out "Hello!", eager evaluation
 	// the spec is invoked to check if type String is is either a String
 	// or implements the toString method, this happens at compile time,
 	// we need to reach into a and get its type in order to check the 
 	// spec against it
-	print(pattern_matching(a)); 
+	//print(pattern_matching(a)); 
 
 	// prints out "(100, James)", in order to be added to a string you need to implement the 
 	// still working out the type changing which is going on here with the Int + String	
@@ -84,8 +67,5 @@ function MAIN = (args:String[]):Unit {
 	//		}
 	//
 	//  }
-	print(a); 	  
-
-	print(iamAfunction(3)); //prints out 300
 	return 0;
 }

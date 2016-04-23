@@ -15,13 +15,12 @@ http://llvm.moe/ocaml/
 module A = Ast
 module L = Llvm
 module U = Utils
-
 module E = Exceptions
       
 module StringMap = Map.Make(String)
 
 let translate ast = match ast with
-    A.Program(includes, functions) -> 
+    A.Program(includess, specs, classes, functions) -> 
     let context     = L.global_context () in 
     let the_module  = L.create_module context "Stop"
     and i32_t       = L.i32_type    context
@@ -39,7 +38,6 @@ let translate ast = match ast with
       | A.Char_t ->         i8_t
       (* TODO: Implement find_struct function for Object_t *)
       | A.Unit_t ->         void_t
-      | A.Object_t(s) ->    L.pointer_type i8_t
     in
 
     let rec ltype_of_arraytype arraytype = match arraytype with
@@ -68,7 +66,7 @@ let translate ast = match ast with
     (* Define each function (arguments and return type) so we can call it *)
     let function_decls =
         let function_decl m fdecl =
-            let name = U.string_of_fname fdecl.A.fname
+            let name = fdecl.A.fname
             and formal_types =
         Array.of_list (List.map (fun formal -> ltype_of_formal formal) fdecl.A.formals)
             in let ftype = L.function_type (ltype_of_datatype fdecl.A.return_t) formal_types in
@@ -77,7 +75,7 @@ let translate ast = match ast with
 
     (* Fill in the body of the given function *)
     let build_function_body fdecl =
-        let (the_function, _) = StringMap.find (U.string_of_fname fdecl.A.fname) function_decls in
+        let (the_function, _) = StringMap.find fdecl.A.fname function_decls in
         let builder = L.builder_at_end context (L.entry_block the_function) in
 
         let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in

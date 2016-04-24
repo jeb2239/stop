@@ -94,9 +94,12 @@ rule token = parse
     | "final"       { FINAL } 
     | "this"        { THIS }
     | "extends"     { EXTENDS }
-    | "#include"    { INCLUDE }
     | "match"       { MATCH }
     | "case"        { CASE }
+
+    (* Processor Directives *)
+    | "#include"    { INCLUDE }
+    | "#module"    { MODULE }
 
     (* TYPES *)
     | "Fun"     { FUN }

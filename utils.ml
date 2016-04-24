@@ -9,32 +9,6 @@ open Core.Std
 
 module E = Exceptions
 
-(* Add tabs after each line *)
-let str_to_list s =
-    let rec loop i l = 
-        if i < 0 then l else loop (i - 1) (s.[i] :: l) in
-    loop (String.length s - 1) []
-
-let list_to_str l =
-    let rec loop = function 
-        s :: tail   -> Char.to_string s ^ (loop tail)
-      | []          -> ""
-    in 
-    loop l
-
-let add_tabs s =
-    let s_as_l = str_to_list s in
-    let rec loop = function
-        c :: tail -> 
-            if c = '\n' then
-                c :: '\t' :: loop tail
-            else 
-                c :: loop tail
-      | [] -> []
-    in
-    let s_as_l = loop s_as_l in
-    list_to_str s_as_l
-
 (* Tokens *)
 (* ------ *)
 
@@ -73,6 +47,7 @@ let string_of_token = function
   | RETURN          -> "RETURN"
   | FINAL           -> "FINAL"
   | INCLUDE         -> "INCLUDE"
+  | MODULE          -> "MODULE"
   | DOT             -> "DOT"
   | FUNCTION        -> "FUNCTION"
   | SPEC            -> "SPEC"
@@ -105,9 +80,22 @@ let string_of_token = function
   | TYPE_ID(_)      -> "TYPE_ID"
 
 let rec token_list_to_string = function
-        token :: tail -> string_of_token token ^ " " ^
-                            token_list_to_string tail
+        (token, _) :: tail -> 
+            string_of_token token ^ " " ^
+            token_list_to_string tail
       | [] -> "\n"
+
+(* Parsing Error Functions *)
+(* ----------------------- *)
+
+let error_string_of_file filename =
+    if filename = "" 
+    then "Stdin"
+    else "File \"" ^ filename ^ "\""
+
+let error_string_of_cnum cnum token =
+    string_of_int cnum ^ "~" 
+    ^ string_of_int (cnum + String.length (string_of_token token))
 
 (* Pretty-printing Functions *)
 (* ------------------------- *)
@@ -118,11 +106,11 @@ let string_of_op = function
   | Mult -> "*"
   | Div -> "/"
   | Modulo -> "%"
-  | Equal -> "=="
+  | Ast.Equal -> "=="
   | Neq -> "!="
-  | Less -> "<"
+  | Ast.Less -> "<"
   | Leq -> "<="
-  | Greater -> ">"
+  | Ast.Greater -> ">"
   | Geq -> ">="
   | And -> "&&"
   | Or -> "||"
@@ -150,10 +138,7 @@ let rec string_of_datatype = function
         "Fun(" ^
         String.concat ~sep:"," (List.map ~f:string_of_datatype formal_dtypes) ^ ")->" ^
         string_of_datatype rtype
-
-(* type fname = FName of string *)
-let string_of_fname = function
-    s -> s
+  | Any -> "Any"
 
 let string_of_scope = function
     Public -> "public"
@@ -162,17 +147,28 @@ let string_of_scope = function
 (* type formal = Formal of datatype * string *)
 let string_of_formal = function
     Formal(s, data_t) -> s ^ ":" ^ string_of_datatype data_t 
+  | Many(data_t) -> "Many :" ^ string_of_datatype data_t
 
 let string_of_field = function
     Field(scope, s, data_t) -> 
         "\t" ^ string_of_scope scope ^ " " ^ s ^ ":" 
         ^ string_of_datatype data_t ^ ";\n"
+  
+(* Take a function that returns a string and make it tab the string *)
+let prepend_tab f = fun s -> "\t" ^ f s
 
-let rec string_of_fdecl fdecl =
-    "function" ^ " " ^ string_of_fname fdecl.fname ^ " = (" ^
-    String.concat ~sep:", " (List.map ~f:string_of_formal fdecl.formals) ^
-    "):" ^ string_of_datatype fdecl.return_t ^ "{\n" ^ 
-    String.concat ~sep:"" (List.map ~f:string_of_stmt fdecl.body) ^
+let rec string_of_method m =
+    "\t" ^ string_of_scope m.scope ^ " def " ^ m.fname ^ " = (" ^
+    String.concat ~sep:", " (List.map ~f:string_of_formal m.formals) ^
+    "):" ^ string_of_datatype m.return_t ^ "{\n" ^ 
+    String.concat ~sep:"" (List.map ~f:(prepend_tab string_of_stmt) m.body) ^
+    "\t}\n"
+
+and string_of_fdecl f =
+    "function" ^ " " ^ f.fname ^ " = (" ^
+    String.concat ~sep:", " (List.map ~f:string_of_formal f.formals) ^
+    "):" ^ string_of_datatype f.return_t ^ "{\n" ^ 
+    String.concat ~sep:"" (List.map ~f:string_of_stmt f.body) ^
     "}\n"
 
 and string_of_expr = function
@@ -183,12 +179,11 @@ and string_of_expr = function
   | CharLit(c) -> String.make 1 c
   | StringLit(s) -> "\"" ^ s ^ "\""
   | FunctionLit(f) ->
-        let stmts_as_string = String.concat ~sep:"" (List.map ~f:string_of_stmt f.body) in
-        string_of_fname f.fname ^ "(" ^ 
+        f.fname ^ "(" ^ 
         String.concat ~sep:", " (List.map ~f:string_of_formal f.formals) ^ "):" ^
         string_of_datatype f.return_t ^ "{\n" ^ 
-        add_tabs stmts_as_string ^ 
-        "}"
+        String.concat ~sep:"" (List.map ~f:(prepend_tab string_of_stmt) f.body) ^
+        "\t}"
   | Id(i) -> i
   | Binop(e1, op, e2) ->
         string_of_expr e1 ^ " " ^ string_of_op op ^ " " ^ string_of_expr e2
@@ -196,6 +191,7 @@ and string_of_expr = function
   | Unop(op, e1) ->
         string_of_uop op ^ " " ^ string_of_expr e1
   | Call(s, e_list) -> s ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_expr e_list) ^ ")"
+  | ObjAccess(e1, e2) -> string_of_expr e1 ^ "." ^ string_of_expr e2
   | This -> "this"
   | Noexpr -> ""
   
@@ -203,7 +199,7 @@ and string_of_stmt = function
     Block(stmts) -> 
         "{\n" ^ String.concat ~sep:"" (List.map ~f:string_of_stmt stmts) ^ "}\n"
   | _ as stmt -> 
-        "\t" ^ string_of_stmt_helper stmt 
+        prepend_tab string_of_stmt_helper stmt 
 
 and string_of_stmt_helper = function
     Block(_) -> raise (E.UtilsError("Encountered Block in string_of_stmt helper"))
@@ -229,10 +225,12 @@ let string_of_cdecl cdecl = match cdecl.extends with
     NoParent ->
         "class " ^ cdecl.cname ^ " {\n" ^
         String.concat ~sep:"" (List.map ~f:string_of_field cdecl.cbody.fields) ^
+        String.concat ~sep:"" (List.map ~f:string_of_method cdecl.cbody.methods) ^
         "}\n"
     | Parent(s) ->
         "class " ^ cdecl.cname ^ " extends " ^ s ^ " {\n" ^
         String.concat ~sep:"" (List.map ~f:string_of_field cdecl.cbody.fields) ^
+        String.concat ~sep:"" (List.map ~f:string_of_method cdecl.cbody.methods) ^
         "}\n"
 
 let string_of_program = function

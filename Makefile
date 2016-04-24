@@ -4,8 +4,10 @@
 
 # Easiest way to build: using ocamlbuild, which in turn uses ocamlfind
 
+# See http://caml.inria.fr/pub/docs/manual-ocaml/comp.html for suppressed errors
+# 44 & 45 In particular suppressed -- no errors, constantly filled up warning reports
 stop:
-	corebuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
+	corebuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4-44-45 \
 		stop.native
 
 # "make clean" removes all generated files

@@ -12,13 +12,17 @@
 %token ARROW FATARROW
 %token RETURN
 %token FINAL
-%token INCLUDE
 %token PUBLIC PRIVATE ANON
 %token FUNCTION SPEC CLASS METHOD
 %token MATCH CASE 
 %token TYPE VAR THIS
 %token DEF EXTENDS 
 %token EOF
+
+/* Processor Directives */
+
+%token INCLUDE
+%token MODULE
 
 /* Primitive Types */
 
@@ -103,10 +107,13 @@ include_stmt:
 
 fdecl:
     FUNCTION ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+            scope = Public;
             fname = $2;
             return_t = $8;
             formals = $5;
             body = $10;
+            overrides = false;
+            root_cname = None;
     } }
 
 /* Specs */
@@ -130,9 +137,26 @@ cdecl:
 cbody:
     /* nothing */ { {
         fields = [];
+        methods = [];
     } }
   | cbody field { {
-        fields = $2 :: $1.fields
+        fields = $2 :: $1.fields;
+        methods = $1.methods;
+    } }
+  | cbody cfdecl { {
+        fields = $1.fields;
+        methods = $2 :: $1.methods;
+    } }
+
+cfdecl:
+    scope DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+            scope = $1;
+            fname = $3;
+            return_t = $9;
+            formals = $6;
+            body = $11;
+            overrides = false;
+            root_cname = None;
     } }
 
 /* Datatypes */
@@ -243,10 +267,13 @@ literals:
 function_literal:
     ANON LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { 
         FunctionLit({
+            scope = Private;
             fname = "@";
             return_t = $6;
             formals = $3;
             body = $8;
+            overrides = false;
+            root_cname = None;
         }) 
     }
 
@@ -278,6 +305,7 @@ stmt:
         { While($3, $5) }
 
     | VAR ID COLON datatype SEMI                { Local($2, $4, Noexpr) }
+    | VAR ID ASSIGN expr SEMI                   { Local($2, Any, $4) }
     | VAR ID COLON datatype ASSIGN expr SEMI    { Local($2, $4, $6) }
 
 /* Expressions */
@@ -288,24 +316,25 @@ expr_opt:
     | expr                  { $1 }
 
 expr:
-      literals                      { $1 }
-    | expr PLUS     expr            { Binop($1, Add, $3) }
-    | expr MINUS    expr            { Binop($1, Sub, $3) }
-    | expr TIMES    expr            { Binop($1, Mult, $3) }
-    | expr DIVIDE   expr            { Binop($1, Div, $3) }
-    | expr MODULO   expr            { Binop($1, Modulo, $3) }
-    | expr EQ       expr            { Binop($1, Equal, $3) }
-    | expr NEQ      expr            { Binop($1, Neq, $3) }
-    | expr LT       expr            { Binop($1, Less, $3) }
-    | expr LEQ      expr            { Binop($1, Leq, $3) }
-    | expr GT       expr            { Binop($1, Greater, $3) }
-    | expr GEQ      expr            { Binop($1, Geq, $3) }
-    | expr AND      expr            { Binop($1, And, $3) }
-    | expr OR       expr            { Binop($1, Or, $3) }
-    | expr ASSIGN   expr            { Assign($1, $3) }
-    | MINUS expr %prec NEG          { Unop(Neg, $2) } 
-    | NOT expr                      { Unop(Not, $2) }
-    | LPAREN expr RPAREN            { $2 }
-    | ID LPAREN actuals_opt RPAREN  { Call($1, $3) }
+      literals                          { $1 }
+    | expr PLUS     expr                { Binop($1, Add, $3) }
+    | expr MINUS    expr                { Binop($1, Sub, $3) }
+    | expr TIMES    expr                { Binop($1, Mult, $3) }
+    | expr DIVIDE   expr                { Binop($1, Div, $3) }
+    | expr MODULO   expr                { Binop($1, Modulo, $3) }
+    | expr EQ       expr                { Binop($1, Equal, $3) }
+    | expr NEQ      expr                { Binop($1, Neq, $3) }
+    | expr LT       expr                { Binop($1, Less, $3) }
+    | expr LEQ      expr                { Binop($1, Leq, $3) }
+    | expr GT       expr                { Binop($1, Greater, $3) }
+    | expr GEQ      expr                { Binop($1, Geq, $3) }
+    | expr AND      expr                { Binop($1, And, $3) }
+    | expr OR       expr                { Binop($1, Or, $3) }
+    | expr ASSIGN   expr                { Assign($1, $3) }
+    | expr DOT      expr                { ObjAccess($1, $3) }
+    | MINUS expr %prec NEG              { Unop(Neg, $2) } 
+    | NOT expr                          { Unop(Not, $2) }
+    | LPAREN expr RPAREN                { $2 }
+    | ID LPAREN actuals_opt RPAREN      { Call($1, $3) }
 
 %%

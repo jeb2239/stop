@@ -11,6 +11,15 @@ exception IllegalCharacter of string * string * int
 exception MissingEOF
 
 (* Semant Exceptions *)
+exception DuplicateField of string
+exception DuplicateClassName of string
+
+exception DuplicateLocal of string
+exception DuplicateFunctionName of string
+exception FunctionNameReserved of string
+
+exception MissingMainFunction
+exception MultipleMainFunctions
 
 (* Utils Exceptions *)
 exception UtilsError of string

@@ -1,5 +1,4 @@
 (* Stop Abstract Syntax Tree *)
-open Core.Std
 
 type op = Add | Sub | Mult | Div | Modulo | And | Or |
           Equal | Neq | Less | Leq | Greater | Geq 
@@ -12,10 +11,13 @@ type extends = NoParent | Parent of string
 (* --------- *)
 
 type fdecl = {
+    scope : scope;
     fname : string;
     return_t : datatype;
     formals : formal list;
     body : stmt list;
+    overrides : bool;
+    root_cname : string option;
 }
 
 (* Specs *)
@@ -30,6 +32,7 @@ and spec = {
 
 and cbody = {
     fields : field list;
+    methods : fdecl list;
 }
 
 and cdecl = {
@@ -41,12 +44,15 @@ and cdecl = {
 (* Datatypes, Formals, & Fields *)
 (* i.e. Arraytype (a, 2) <=> a[][]; (a, 3) <=> a[][][] *)
 
+(* Any : used for type of functions that take any datatype e.g. Llvm cast *)
 and datatype = 
     Datatype of primitive 
   | Arraytype of primitive * int
   | Functiontype of datatype list * datatype
+  | Any 
 
-and formal = Formal of string * datatype
+(* Many : used for type of variable length functions e.g. Llvm printf *)
+and formal = Formal of string * datatype | Many of datatype
 
 and field = Field of scope * string * datatype
 
@@ -65,6 +71,7 @@ and expr =
   | Assign of expr * expr
   | Unop of uop * expr
   | Call of string * expr list
+  | ObjAccess of expr * expr
   | This
   | Noexpr
 

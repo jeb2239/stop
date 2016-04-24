@@ -1,47 +1,65 @@
 (* Stop Compiler Top Level *)
 
+(* Attributions: *)
+    (* Professor Stephen A. Edwards, MicroC Compiler *)
+        (* http://www.cs.columbia.edu/~sedwards/ *)
+    (* David Watkins, Dice Compiler *)
+    (* Jeff Lee, C Language Yacc Grammar *)
+        (* https://www.lysator.liu.se/c/ANSI-C-grammar-y.html#translation-unit *)
+
 open Core.Std 
 
+module A = Analysis
+module C = Codegen
 module E = Exceptions
-module L = Llvm
 module G = Generator
+module L = Llvm
 module P = Parser
 module S = Scanner
-module A = Analysis
+module U = Utils
 
-type action = Tokens | Print | Ast | Sast | Compile_to_stdout | Compile_to_file | Help
+(* Compile <src> <destination> *)
+type action = Tokens | Print | Ast | Sast 
+            | CompileStdinStdout| CompileStdinFile
+            | CompileFileStdout | CompileFileFile 
+            | Help
 
 let get_action = function
     "-t"    -> Tokens
   | "-p"    -> Print
   | "-a"    -> Ast
   | "-s"    -> Sast
-  | "-l"    -> Compile_to_stdout
-  | "-c"    -> Compile_to_file
+  | "-css"  -> CompileStdinStdout
+  | "-csf"  -> CompileStdinFile
+  | "-cfs"  -> CompileFileStdout
+  | "-cff"  -> CompileFileFile
   | "-h"    -> Help
   | _ as s  -> raise (E.InvalidOption s)
 
 let check_single_argument = function
-        "-h"    -> Help, ""
-    |   "-tendl"
-    |   "-t"
-    |   "-p"
-    |   "-ast"
-    |   "-sast"
-    |   "-c"
-    |   "-f"    -> raise (Exceptions.NoFileArgument)
-    |   _ as s  -> Compile_to_file, s
+      "-h"      -> (Help, "")
+    | "-tendl"
+    | "-t"
+    | "-p"
+    | "-ast"
+    | "-sast"
+    | "-c"
+    | "-cfs"    -> raise (E.NoFileArgument)
+    | "-cff"
+    | _ as s  -> (CompileFileFile, s)
 
 let help_string = (
       "Usage: stop [-option] <source file>\n" ^
-        "-option: (defaults to \"-c\")\n" ^
+        "-option: (defaults to \"-css\")\n" ^
         "\t-t: Print tokens\n" ^
         "\t-p: Prints AST as program\n" ^
         "\t-a: Prints AST as json\n" ^
         "\t-s: Prints SAST as json\n" ^
-        "\t-l: Compiles source to stdout\n" ^
-        "\t-c: Compiles source to file (<filename>.<ext> -> <filename>.ll)\n" ^
-        "\t-h: Print help\n" 
+        "\t-css: Compiles stdin to stdout \n" ^
+        "\t-csf: Compiles stdin to file\n" ^
+        "\t-cfs: Compiles file to stdout (<filename>.<ext>)\n" ^
+        "\t-cff: Compiles file to file (<filename>.<ext> -> <filename>.ll)\n" ^
+        "\t-h: Print help\n"
     )
 
 let stop_name filename =
@@ -55,7 +73,7 @@ let _ =
         (* Get the Appropriate Action *)
         let (action, filename) = 
             if Array.length Sys.argv = 1 then
-                Help, ""
+                CompileStdinStdout, ""
             else if Array.length Sys.argv = 2 then
                 check_single_argument (Sys.argv.(1))
             else if Array.length Sys.argv = 3 then
@@ -63,26 +81,39 @@ let _ =
             else raise E.InvalidArgc (Array.length Sys.argv)
         in 
 
-        (* Iterative Application of each Compiler "Stage" *)
-        let file_in = open_in filename in 
-        let lexbuf = Lexing.from_channel file_in in
-        let token_list = G.build_token_list filename lexbuf in
-        let ast = G.build_ast filename token_list in
+        (* Iterative Application of each Compilation Phase *)
+        (* Each phase is defined as a function which is only called when needed *)
+        let file_in () = if filename = "" then stdin else open_in filename in 
+        let lexbuf () = Lexing.from_channel (file_in ()) in
+        let token_list () = G.build_token_list filename (lexbuf ()) in
+        let ast () = G.build_ast filename (token_list ()) in
+        let sast () = A.analyze filename (ast ()) in
+        let llm () = C.codegen_sast (sast ()) in
 
         (* Respond Appropriately to Action *)
         match action with
-            Tokens              -> print_string (Utils.token_list_to_string token_list)
-          | Print               -> print_string (Utils.string_of_program ast)
+            Tokens              -> print_string (U.token_list_to_string (token_list ()))
+          | Print               -> print_string (U.string_of_program (ast()))
           | Ast                 -> print_string "Not Implemented\n"
           | Sast                -> print_string "Not Implemented\n"
-          | Compile_to_stdout   -> print_string "Not Implemented\n"
-          | Compile_to_file     -> print_string "Not Implemented\n"
+          | CompileStdinStdout  -> L.dump_module (llm ())
+          | CompileStdinFile    -> print_string "Not Implemented\n"
+          | CompileFileStdout   -> L.dump_module (llm ())
+          | CompileFileFile     -> print_string (U.string_of_program (ast ()))
           | Help                -> print_string help_string
     with 
         (* Deal with Exceptions *)
         E.IllegalCharacter(file, c, ln) -> 
-            print_string ("Illegal character '" ^ c ^ "' in line " ^ 
-                            string_of_int ln ^ " of " ^ file ^ "\n")
+            print_string 
+                ("Illegal character '" ^ c ^ "' in line "
+                ^ string_of_int ln ^ " of " ^ file ^ "\n")
+      | Parsing.Parse_error ->
+            print_string
+                ("Syntax Error:\n"
+                ^ U.error_string_of_file !G.filename_ref
+                ^ ", line " ^ string_of_int !G.lineno_ref
+                ^ ", characters " ^ U.error_string_of_cnum !G.cnum_ref !G.last_token_ref
+                ^ ", Token " ^ U.string_of_token !G.last_token_ref ^ "\n")
       | _ as e -> raise e
 
 (*

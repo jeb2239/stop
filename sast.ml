@@ -26,15 +26,16 @@ type sstmt =
   | SWhile of sexpr * sstmt 
   | SLocal of datatype * string * expr
 
-type func_type = User | Reserved
+type fgroup = User | Reserved
 
 type sfdecl = {
     sfname : string;
     sreturn_t : datatype;
     sformals : formal list;
-    sbody : stmt list;
-    func_type : func_type;
+    sbody : sstmt list;
+    fgroup : fgroup;
     overrides : bool;
+    source : string;
 }
 
 type scdecl = {

@@ -270,20 +270,19 @@ and string_of_sexpr = function
   (* |   SArrayAccess(e, el, _)    -> (string_of_sexpr e) ^ (string_of_bracket_sexpr el) *)
   (* |   SObjectCreate(s, el, _)   -> "new " ^ s ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")" *)
   (* |   SDelete(e)          -> "delete (" ^ (string_of_sexpr e) ^ ")" *)
-;;
-
+(* 
 let string_of_local_expr = function
     Noexpr -> ""
   |   e      -> " = " ^ string_of_expr e
-
+ *)
 (* Print statements *)
 
 
-let string_of_local_sexpr = function
+and string_of_local_sexpr = function
     SNoexpr   -> ""
   |   e         -> " = " ^ string_of_sexpr e
 
-let rec string_of_sstmt indent =
+and string_of_sstmt indent =
   let indent_string = String.make indent '\t' in
   let get_stmt_string = function 
 
@@ -321,6 +320,24 @@ let rec string_of_sstmt indent =
     |   SLocal(d, s, e)       -> indent_string ^ string_of_datatype d ^ " " ^ s ^ string_of_local_sexpr e ^ ";\n"
   in get_stmt_string
   
+and string_of_sfdecl sfdecl = 
+      "function" ^ " " ^ sfdecl.sfname ^ " = (" ^
+      String.concat ~sep:", " (List.map ~f:string_of_formal sfdecl.sformals) ^
+      "):" ^ string_of_datatype sfdecl.sreturn_t ^ "{\n" ^ 
+      string_of_sstmt 0 (SBlock(sfdecl.sbody)) ^
+      "}\n"
+and string_of_scdecl scdecl =
+     
+        "class " ^ scdecl.scname ^ " {\n" ^
+        String.concat ~sep:"" (List.map ~f:string_of_field scdecl.sfields) ^
+        String.concat ~sep:"" (List.map ~f:string_of_sfdecl scdecl.sfdecls) ^
+        "}\n"
+    
+and string_of_main main =
+    match main with 
+    Some(sfdecl) -> string_of_sfdecl sfdecl
+    |None -> ""
+
 
 
 
@@ -331,9 +348,9 @@ let rec string_of_sstmt indent =
 
 
 let string_of_sprogram sprogram =
-    String.concat ~sep:"\n" (List.map ~f:string_of_scdecl sprogram.scdecl) ^ "\n" ^
-    String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.sfdecl) ^ "\n" ^
-    String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.main) ^ "\n" ^
+    String.concat ~sep:"\n" (List.map ~f:string_of_scdecl sprogram.classes) ^ "\n" ^
+    String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.fdecls) ^ "\n" ^
+    string_of_main sprogram.main ^ "\n" ^
     String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.reserved)
 
 

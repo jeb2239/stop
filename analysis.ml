@@ -2,17 +2,18 @@
 
 open Ast
 open Sast
+open Core.Std
 
 module G = Generator
 module U = Utils
 module E = Exceptions
 
-module StringMap = Map.Make(String)
-module StringSet = Set.Make(String)
+module StringMap = String.Map
+module StringSet = String.Set
 
 (* General String of List Function *)
 let string_of_list string_of_item l = 
-    "[" ^ String.concat ", " (List.map string_of_item l) ^ "]"
+    "[" ^ String.concat ~sep:", " (List.map string_of_item l) ^ "]"
 
 (* Record which contains information re: Classes *)
 type class_map = {
@@ -184,55 +185,56 @@ and convert_stmt_list_to_sstmt_list sl env =
 
 (* Generate a String Map of all classes to be used for semantic checking *)
 let build_class_maps reserved cdecls =
-    let reserved_map = List.fold_left (fun m f -> StringMap.add f.sfname f m) StringMap.empty reserved
+    let reserved_map = List.fold_left ~init:StringMap.empty  ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f )  reserved
     in
     (* Check each constituent of a class: fields, member functions, constructors *)
     let helper m (cdecl : Ast.cdecl) =
         (* Check Fields *)
         let check_fields = (fun m -> (function Field(scope, s, data_t) -> 
-            if (StringMap.mem (s) m) then raise (E.DuplicateField(s))
-            else (StringMap.add s (Field(scope, s, data_t)) m)))
+            if (StringMap.mem m (s) ) then raise (E.DuplicateField(s))
+            else (StringMap.add m ~key:s ~data:(Field(scope, s, data_t)) )))
         in
         (* Check Methods *)
         let method_name = get_method_name cdecl.cname in
         let check_methods m fdecl =
-            if (StringMap.mem (method_name fdecl) m) 
+            if (StringMap.mem m (method_name fdecl)) 
                 then raise (E.DuplicateFunctionName(method_name fdecl))
-            else if (StringMap.mem fdecl.fname reserved_map)
+            else if (StringMap.mem reserved_map fdecl.fname )
                 then raise (E.FunctionNameReserved(fdecl.fname))
-            else (StringMap.add (method_name fdecl) fdecl m)
+            else (StringMap.add m ~key:(method_name fdecl) ~data:fdecl )
         in
         (* TODO: Check Constructors *)
-        if (StringMap.mem cdecl.cname m) then raise (E.DuplicateClassName(cdecl.cname))
+        if (StringMap.mem m cdecl.cname) then raise (E.DuplicateClassName(cdecl.cname))
         (* Add the class object to the map *)
-        else StringMap.add cdecl.cname ({
-            field_map = List.fold_left check_fields StringMap.empty cdecl.cbody.fields;
-            method_map = List.fold_left check_methods StringMap.empty cdecl.cbody.methods;
+        else StringMap.add m ~key:cdecl.cname ~data:({
+            field_map = List.fold_left ~init:StringMap.empty ~f:check_fields cdecl.cbody.fields;
+            method_map = List.fold_left ~init:StringMap.empty ~f:check_methods  cdecl.cbody.methods;
             reserved_map = reserved_map;
             cdecl = cdecl
-        }) m
+        }) 
     in
-    List.fold_left helper StringMap.empty cdecls
+    List.fold_left ~init:StringMap.empty ~f:helper  cdecls
+
 
 (* Generate List of all functions to be used for semantic checking *)
 let build_function_maps reserved fdecls =
-    let reserved_map = List.fold_left (fun m f -> StringMap.add f.sfname f m) StringMap.empty reserved
+    let reserved_map = List.fold_left ~init:StringMap.empty ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f ) reserved
     in
     (* Check each function *)
     let check_functions m fdecl =
-        if (StringMap.mem (fdecl.fname) m) 
+        if (StringMap.mem m (fdecl.fname)) 
             then raise (E.DuplicateFunctionName(fdecl.fname))
-        else if (StringMap.mem fdecl.fname reserved_map)
+        else if (StringMap.mem reserved_map fdecl.fname )
             then raise (E.FunctionNameReserved(fdecl.fname))
-        else (StringMap.add (fdecl.fname) fdecl m)
+        else (StringMap.add m ~key:(fdecl.fname) ~data:fdecl )
     in
-    List.fold_left check_functions StringMap.empty fdecls
+    List.fold_left ~init:StringMap.empty ~f:check_functions fdecls
 
 (* Convert a method to a semantically checked function *)
 (* Name = <root_class>.<fname> *)
 (* Prepend instance of class to function parameters *)
 let convert_method_to_sfdecl reserved class_maps cname fdecl =
-    let class_map = StringMap.find cname class_maps
+    let class_map = StringMap.find_exn class_maps cname 
     in
     let root_cname = match fdecl.root_cname with
         Some(c) -> c
@@ -246,10 +248,10 @@ let convert_method_to_sfdecl reserved class_maps cname fdecl =
             Ast.Formal("this", Datatype(Object_t(cname)))
     in
     let env_param_helper m formal = match formal with
-        Formal(s, data_t) -> (StringMap.add s formal m)
+        Formal(s, data_t) -> (StringMap.add m ~key:s ~data:formal )
       | _ -> m
     in
-    let env_params = List.fold_left env_param_helper StringMap.empty (class_formal :: fdecl.formals) in
+    let env_params = List.fold_left ~init:StringMap.empty ~f:env_param_helper  (class_formal :: fdecl.formals) in
     let env = {
         env_name        = cname;
         env_fname       = None;
@@ -288,10 +290,10 @@ let convert_method_to_sfdecl reserved class_maps cname fdecl =
 (* Convert a function to a semantically checked function *)
 let convert_fdecl_to_sfdecl reserved fdecl =
     let env_param_helper m formal = match formal with
-        Formal(s, data_t) -> (StringMap.add s formal m)
+        Formal(s, data_t) -> (StringMap.add m ~key:s ~data:formal )
       | _ -> m
     in
-    let env_params = List.fold_left env_param_helper StringMap.empty fdecl.formals in
+    let env_params = List.fold_left ~init:StringMap.empty ~f:env_param_helper  fdecl.formals in
     let env = {
         env_name        = fdecl.fname;
         env_fname       = None;
@@ -353,7 +355,7 @@ let convert_ast_to_sast reserved
         (fun f -> match f.sfname with s -> s = "main") 
     in
     let get_main fdecls =
-        let mains = (List.find_all is_main fdecls)
+        let mains = (List.filter ~f:is_main fdecls)
         in
         if List.length mains < 1 then
             raise E.MissingMainFunction
@@ -363,16 +365,16 @@ let convert_ast_to_sast reserved
             List.hd mains
     in
     let remove_main fdecls =
-        List.filter (fun f -> not (is_main f)) fdecls
+        List.filter ~f:(fun f -> not (is_main f)) fdecls
     in
     (* Buid up a list of scdecls and sfdecls *)
 
     (* TODO: Find default constructor *)
     let handle_cdecl cdecl =
-        let class_map = StringMap.find cdecl.cname class_maps in
-        let sfdecls = List.fold_left 
-            (fun l f -> (convert_method_to_sfdecl reserved class_maps cdecl.cname f) :: l) 
-            [] cdecl.cbody.methods 
+        let class_map = StringMap.find_exn class_maps cdecl.cname  in
+        let sfdecls = List.fold_left ~init:[]
+            ~f:(fun l f -> (convert_method_to_sfdecl reserved class_maps cdecl.cname f) :: l) 
+             cdecl.cbody.methods 
         in
         let sfdecls = remove_main sfdecls 
         in
@@ -384,10 +386,10 @@ let convert_ast_to_sast reserved
         let scdecl = handle_cdecl c in
         (fst scdecl :: fst t, snd scdecl @ snd t)
     in
-    let (scdecl_list, sfdecl_list) = List.fold_left iter_cdecls ([], []) cdecls
+    let (scdecl_list, sfdecl_list) = List.fold_left ~init:([], []) ~f:iter_cdecls  cdecls
     in
     (* Append non-method fdecls to the tuple *)
-    let sfdecls = List.fold_left (fun l f -> (convert_fdecl_to_sfdecl reserved f) :: l) [] fdecls
+    let sfdecls = List.fold_left ~init:[] ~f:(fun l f -> (convert_fdecl_to_sfdecl reserved f) :: l)  fdecls
     in
     let (scdecl_list, sfdecl_list) = (scdecl_list, sfdecls @ sfdecl_list)
     in

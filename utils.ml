@@ -5,6 +5,7 @@
 
 open Ast
 open Parser
+open Sast
 open Core.Std
 
 module E = Exceptions
@@ -239,3 +240,7 @@ let string_of_program = function
         String.concat ~sep:"\n" (List.map ~f:string_of_spec specs) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_cdecl cdecls) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_fdecl fdecls)
+
+
+let string_of_sprogram sast =  "hello"
+

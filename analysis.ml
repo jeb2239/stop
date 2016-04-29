@@ -13,7 +13,7 @@ module StringSet = Set.Make(String)
 (* HashMap which contains information re: Classes *)
 type class_map = {
     field_map       : Ast.field StringMap.t;
-    method_map      : Ast.fdecl StringMap.t;
+    method_map      : Ast.fdecl  StringMap.t;
     (* constructor_map : Ast.fdecl StringMap.t; *)
     reserved_map    : Sast.sfdecl StringMap.t;
     cdecl           : Ast.cdecl;
@@ -142,7 +142,7 @@ and convert_stmt_list_to_sstmt_list sl env =
 
 (* Generate a String Map of all classes to be used for semantic checking *)
 let build_class_maps reserved cdecls =
-    let reserved_map = List.fold_left (fun m f -> StringMap.add f.sfname f m) StringMap.empty reserved
+    let reserved_map = List.fold_left  (fun m f -> StringMap.add f.sfname f m) StringMap.empty reserved
     in
     (* Check each constituent of a class: fields, member functions, constructors *)
     let helper m (cdecl : Ast.cdecl) =
@@ -325,9 +325,9 @@ let analyze filename ast = match ast with
         (* Add built-in functions from LLVM *)
         let reserved = add_reserved_functions 
         in
-
+        
         (* Generate Function, Spec, Class Maps for lookup in checking functions *)
-        let class_maps = build_class_maps reserved cdecls 
+        let class_maps = build_class_maps reserved cdecls
         in
         (*
         let function_maps = build_function_maps reserved fdecls

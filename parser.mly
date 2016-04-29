@@ -122,6 +122,7 @@ fdecl:
 sdecl:
     SPEC TYPE_ID LBRACE RBRACE { { 
             sname = $2;
+            
     } }
 
 /* Classes */

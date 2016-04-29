@@ -307,12 +307,13 @@ let convert_ast_to_sast reserved class_maps (cdecls:Ast.cdecl list) =
     let (scdecl_list, sfdecl_list) = List.fold_left ~init:([], []) ~f:iter_cdecls cdecls in
     let main = get_main sfdecl_list
     in
+    
     let fdecls = remove_main sfdecl_list
     in
     {
         classes     = scdecl_list;
         fdecls      = fdecls;
-        main        = main;
+        main        =  main;
         reserved    = reserved;
     }
 

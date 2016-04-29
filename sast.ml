@@ -15,6 +15,7 @@ type sexpr =
   | SBinop of sexpr * op * sexpr * datatype
   | SUnop of uop * sexpr * datatype
   | SCall of string * sexpr list * datatype * int
+  | SObjAccess of sexpr * sexpr * datatype
   | SNoexpr
 
 type sstmt =
@@ -35,7 +36,8 @@ type sfdecl = {
     sbody : sstmt list;
     fgroup : fgroup;
     overrides : bool;
-    source : string;
+    source : string option;
+    sftype : datatype;
 }
 
 type scdecl = {

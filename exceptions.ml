@@ -21,6 +21,8 @@ exception FunctionNameReserved of string
 exception MissingMainFunction
 exception MultipleMainFunctions
 
+exception ReturnTypeMismatch of string * string * string option
+
 (* Utils Exceptions *)
 exception UtilsError of string
 

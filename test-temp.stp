@@ -1,0 +1,13 @@
+class Test {
+	public def main = ():Int {
+		return 0;
+	}
+}
+
+function a = ():Int { 
+	return 0;
+}
+
+function main = ():Int { 
+	return 0;
+}

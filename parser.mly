@@ -122,7 +122,6 @@ fdecl:
 sdecl:
     SPEC TYPE_ID LBRACE RBRACE { { 
             sname = $2;
-            
     } }
 
 /* Classes */
@@ -183,7 +182,7 @@ primitive:
   | UNIT            { Unit_t }
 
 object_type:
-    TYPE_ID { Objecttype($1) }
+    TYPE_ID { Object_t($1) }
 
 /* AST Arraytype */
 

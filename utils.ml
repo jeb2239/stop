@@ -5,7 +5,6 @@
 
 open Ast
 open Parser
-open Sast
 open Core.Std
 
 module E = Exceptions
@@ -126,7 +125,7 @@ let string_of_primitive = function
   | Bool_t -> "Bool"
   | Char_t -> "Char"
   | Unit_t -> "Unit"
-  | Objecttype(s) -> "~Class " ^ s ^ "~"
+  | Object_t(s) -> "~Class " ^ s ^ "~"
 
 let rec print_brackets = function
     1 -> "[]"
@@ -240,7 +239,3 @@ let string_of_program = function
         String.concat ~sep:"\n" (List.map ~f:string_of_spec specs) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_cdecl cdecls) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_fdecl fdecls)
-
-
-let string_of_sprogram sast =  "hello"
-

@@ -3,7 +3,7 @@
 type op = Add | Sub | Mult | Div | Modulo | And | Or |
           Equal | Neq | Less | Leq | Greater | Geq 
 type uop = Neg | Not
-type primitive = Int_t | Float_t | Bool_t | Char_t | Unit_t | Objecttype of string
+type primitive = Int_t | Float_t | Bool_t | Char_t | Unit_t | Object_t of string
 type scope = Private | Public
 type extends = NoParent | Parent of string
 

@@ -17,7 +17,7 @@ module L = Llvm
 module P = Parser
 module S = Scanner
 module U = Utils
- 
+
 (* Compile <src> <destination> *)
 type action = Tokens | Print | Ast | Sast 
             | CompileStdinStdout| CompileStdinFile
@@ -46,7 +46,7 @@ let check_single_argument = function
     | "-c"
     | "-cfs"    -> raise (E.NoFileArgument)
     | "-cff"
-    | _ as s  -> (CompileFileFile, s)
+    | _ as s  -> (CompileFileStdout, s)
 
 let help_string = (
       "Usage: stop [-option] <source file>\n" ^
@@ -95,13 +95,12 @@ let _ =
             Tokens              -> print_string (U.token_list_to_string (token_list ()))
           | Print               -> print_string (U.string_of_program (ast()))
           | Ast                 -> print_string "Not Implemented\n"
-          | Sast                -> print_string (U.string_of_sprogram (sast()))(*print_string "Not Implemented\n"*)
+          | Sast                -> print_string "Not Implemented\n"
           | CompileStdinStdout  -> L.dump_module (llm ())
           | CompileStdinFile    -> print_string "Not Implemented\n"
           | CompileFileStdout   -> L.dump_module (llm ())
           | CompileFileFile     -> print_string (U.string_of_program (ast ()))
           | Help                -> print_string help_string
-
     with 
         (* Deal with Exceptions *)
         E.IllegalCharacter(file, c, ln) -> 

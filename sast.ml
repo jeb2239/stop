@@ -25,7 +25,7 @@ type sstmt =
   | SIf of sexpr * sstmt * sstmt
   | SFor of sexpr * sexpr * sexpr * sstmt 
   | SWhile of sexpr * sstmt 
-  | SLocal of datatype * string * sexpr
+  | SLocal of datatype * string * expr
 
 type fgroup = User | Reserved
 
@@ -49,6 +49,6 @@ type scdecl = {
 type sprogram = {
     classes : scdecl list;
     fdecls : sfdecl list;
-    main : sfdecl option;
+    main : sfdecl;
     reserved : sfdecl list;
 }

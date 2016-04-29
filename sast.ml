@@ -25,7 +25,7 @@ type sstmt =
   | SIf of sexpr * sstmt * sstmt
   | SFor of sexpr * sexpr * sexpr * sstmt 
   | SWhile of sexpr * sstmt 
-  | SLocal of datatype * string * expr
+  | SLocal of datatype * string * sexpr
 
 type fgroup = User | Reserved
 

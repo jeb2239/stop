@@ -96,10 +96,10 @@ let _ =
           | Print               -> print_string (U.string_of_program (ast()))
           | Ast                 -> print_string "Not Implemented\n"
           | Sast                -> print_string "Not Implemented\n"
-          | CompileStdinStdout  -> L.dump_module (llm ())
-          | CompileStdinFile    -> print_string "Not Implemented\n"
-          | CompileFileStdout   -> L.dump_module (llm ())
-          | CompileFileFile     -> print_string (U.string_of_program (ast ()))
+          | CompileStdinStdout
+          | CompileFileStdout   -> print_string (L.string_of_llmodule (llm ()))
+          | CompileStdinFile
+          | CompileFileFile     -> L.print_module (stop_name filename) (llm ())
           | Help                -> print_string help_string
     with 
         (* Deal with Exceptions *)

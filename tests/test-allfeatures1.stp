@@ -16,6 +16,8 @@ function print = (a:CanPrint):Unit{
 
 class Person {
 	pub var weight:Int;
+	pub var other_function:Fun(Int)->Int = @(a:Int):Int {
+
 
 	//this has to be done if we want to access these in our methods
 	pub var name:String; 
@@ -60,7 +62,10 @@ function MAIN = (args:String[]):Unit {
 	//(this is kinda fuzzy)
 
 	var fun1:Fun(Int)->Int;
-	var fun2:Fun(Int)->Int = @(c:Int):Int{ c * a.weight };
+	var fun2:Fun(Int)->Int = @(c:Int):Int{ 
+		var fun3:Fun( = @
+		c * a.weight 
+	};
 
 	fun1 = fun2;
 

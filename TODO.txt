@@ -1,9 +1,0 @@
-# vim: 
-TODO: 
------
-
-Integrate among ast.ml, scanner.mll, parser.mly, codegen.ml, semant.ml:
-	Classes, Methods
-	All features in tests/test-allfeatures1.stp
-
-Actually have a semantic checking phase

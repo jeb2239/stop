@@ -1,19 +1,25 @@
 #include "ex.stp"
 
+function main = ():Int { 
+	1;
+}
 
+/*
 spec Test {}
 
-function main = ():Int {
+function a = ():Int {
 	printf("Hello, World!");
 	var a:Int;
 	var result:Int = foo(bar(2));
 	var fun1:Fun(Int)->Int;
-	var fun2:Fun(Int)->Int = @(c:Int):Int{ return c; };
+	var fun2:Fun(String, Bool, Fun(String)->Int)->Int = @(c:Int):Int{ return c; };
 	var fun3:Fun(Int)->Int = @(c:Int):Int{ return c; };
 
 	fun1 = fun2;
-	//var fun3 = @(Int)->Int { return 5; };
-
+	
+	var s1:Shape;
+	s1.w;
+	var a = 1;
 	a = result;
 	return 0;
 }
@@ -24,6 +30,10 @@ class Shape {
 	var w:Int;
 	var h:Int;
 	var data:String[];
+
+	public def main = ():Int {
+		return 0;
+	}
 }
 
 function foo = (a:Int):Int {
@@ -33,3 +43,4 @@ function foo = (a:Int):Int {
 function bar = (a:Int):Int {
 	return a + 10;
 }
+*/

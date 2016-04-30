@@ -11,6 +11,7 @@
 # Compile and check the error of each expected-to-fail test
 
 STOP="./stop.native"
+TEST_FOLDER="tests"
 LLI="lli"
 
 ulimit -t 30
@@ -133,7 +134,11 @@ CheckFail() {
 	fi
 }
 
-while getopts k[keep intermediate files]h[help] opt
+# Begin Script #
+# ============ #
+
+# Respond appropriately to supplied options
+while getopts kh opt 
 do
 	case $opt in
 	k) # Keep intermediate files
@@ -145,15 +150,25 @@ do
 	esac
 done
 
-shift $((OPTIND - 1)) # Remove options, leave arguments
+# Remove options, leave arguments
+shift $((OPTIND - 1)) 
 
-if [ $# -ge 1 ]
-then
-	files="tests/$@"
-else 
-	files="tests/test-*.stp tests/fail-*.stp"
+# Exit script if there is no stop.native executable
+if [ ! -f ${STOP} ]; then
+	echo "${STOP} not found" 1>&2
+	exit 1
 fi
 
+# If the user supplies files, test only those files; 
+# Otherwise, test all test files
+if [ $# -ge 1 ]
+then
+	files="${TEST_FODLER}/$@"
+else 
+	files="${TEST_FOLDER}/test-*.stp ${TEST_FOLDER}/fail-*.stp"
+fi
+
+# Test the chosen files
 for file in $files
 do
 	case $file in

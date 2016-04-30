@@ -282,7 +282,6 @@ and check_return e env =
                 (U.string_of_datatype data_t, 
                 U.string_of_datatype env.env_return_t, 
                 env.env_fname))
-            
 
 and parse_stmt env = function
     Block sl                -> check_sblock sl env

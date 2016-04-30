@@ -262,7 +262,7 @@ and string_of_sexpr = function
   | SCharLit(c)        -> Char.escaped c
   | SId(s, _)         -> s
   | SBinop(e1, o, e2, _)    -> (string_of_sexpr e1) ^ " " ^ (string_of_op o) ^ " " ^ (string_of_sexpr e2)
-  (* | SAssign(e1, e2, _)      -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) *)
+  | SAssign(e1, e2, _)      -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) 
   | SNoexpr           -> ""
   | SObjAccess(e1, e2, _)   -> (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2)
   | SCall(f, el, _, _)      -> f ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"

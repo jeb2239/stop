@@ -10,6 +10,10 @@ stop:
 	corebuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4-44-45 \
 		stop.native
 
+byte:
+	corebuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4-44-45 \
+		stop.byte
+
 # "make clean" removes all generated files
 
 .PHONY : clean

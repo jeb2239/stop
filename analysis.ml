@@ -147,6 +147,7 @@ let get_type_from_sexpr = function
   | SBinop(_, _, _, data_t)     -> data_t
   | SUnop(_, _, data_t)         -> data_t
   | SCall(_, _, data_t, _)      -> data_t
+  | SAssign(_,_,data_t)            -> data_t
   | SObjAccess(_, _, data_t)    -> data_t
   | SNoexpr                     -> Datatype(Unit_t)
 

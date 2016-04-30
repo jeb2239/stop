@@ -16,6 +16,7 @@ type sexpr =
   | SUnop of uop * sexpr * datatype
   | SCall of string * sexpr list * datatype * int
   | SObjAccess of sexpr * sexpr * datatype
+  | SAssign of sexpr * sexpr * datatype
   | SNoexpr
 
 type sstmt =

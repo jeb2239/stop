@@ -67,7 +67,7 @@ and find_struct name =
     try
         Hashtbl.find_exn struct_types name
     with
-        Not_found -> raise (E.InvalidStructType name)
+        Not_found -> raise (E.InvalidStructType(name))
 
 and get_type (data_t:datatype) = match data_t with
     Datatype(Int_t) -> i32_t
@@ -86,11 +86,10 @@ let lookup_llfunction_exn fname = match (L.lookup_function fname the_module) wit
 (* Generate Code for Binop *)
 let rec handle_binop e1 op e2 data_t llbuilder = 
     (* Get the types of e1 and e2 *)
-    let type1 = A.get_type_from_sexpr e1 in
-    let type2 = A.get_type_from_sexpr e2 in
+    let type1 = A.sexpr_to_type e1 in
+    let type2 = A.sexpr_to_type e2 in
 
     (* Generate llvalues from e1 and e2 *)
-
     let e1 = codegen_sexpr e1 llbuilder in
     let e2 = codegen_sexpr e2 llbuilder in
 
@@ -129,6 +128,8 @@ let rec handle_binop e1 op e2 data_t llbuilder =
           | Geq     -> L.build_fcmp L.Fcmp.Oge e1 e2 "flt_sgetmp" llbuilder
           | _       -> raise Exceptions.FloatOpNotSupported
     in
+
+    (* TODO: Handle Casting *)
 
     (* Use Integer Arithmetic for Ints, Chars, and Bools *)
     (* Use Floating-Point Arithmetic for Floats *)
@@ -171,8 +172,8 @@ and codegen_return data_t sexpr llbuilder = match sexpr with
 and codegen_stmt llbuilder = function
     SBlock sl               -> List.hd_exn (List.map sl ~f:(codegen_stmt llbuilder))
   | SReturn(se, data_t)     -> codegen_return data_t se llbuilder
+  | SExpr(se, data_t)        -> codegen_sexpr se llbuilder
 (*
-  | SExpr(e, d)             -> codegen_sexpr llbuilder e
   | SIf(e, s1, s2)          -> codegen_if_stmt e s1 s2 llbuilder
   | SFor(e1, e2, e3, s)     -> codegen_for e1 e2 e3 s llbuilder
   | SWhile(e, s)            -> codegen_while e s llbuilder
@@ -331,17 +332,15 @@ let codegen_main main =
     (* Check to make sure we return; add a return statement if not *)
     let last_bb = match (L.block_end (lookup_llfunction_exn "main")) with
         L.After(block) -> block
-      | L.At_start(f) -> raise E.UnexpectedMatchCase
+      | L.At_start(_) -> raise (E.FunctionWithoutBasicBlock("main"))
     in
-    let last_instr = match (L.instr_end last_bb) with
-        L.After(instr) -> instr
-      | L.At_start(block) -> raise E.UnexpectedMatchCase
-    in
-    let op = L.instr_opcode last_instr
-    in
-    match op with
-        L.Opcode.Ret -> ()
-      | _ -> ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()
+    match (L.instr_end last_bb) with
+        L.After(instr) ->
+            let op = L.instr_opcode instr in
+            if op = L.Opcode.Ret 
+            then ()
+            else ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()
+      | L.At_start(_) -> ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()
 
 let codegen_sast sast =
     (* Declare the various LLVM Reserved Functions *)

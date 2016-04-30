@@ -12,8 +12,9 @@ type sexpr =
   | SCharLit of char
   | SStringLit of string
   | SId of string * datatype
-  | SBinop of sexpr * op * sexpr * datatype
   | SUnop of uop * sexpr * datatype
+  | SBinop of sexpr * op * sexpr * datatype
+  | SAssign of sexpr * sexpr * datatype
   | SCall of string * sexpr list * datatype * int
   | SObjAccess of sexpr * sexpr * datatype
   | SNoexpr

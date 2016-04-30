@@ -4,9 +4,9 @@ open Core.Std
 open Ast
 open Sast
 
+module E = Exceptions
 module G = Generator
 module U = Utils
-module E = Exceptions
 
 module StringMap = Map.Make(String)
 module StringSet = Set.Make(String)
@@ -24,12 +24,12 @@ type class_map = {
     cdecl           : Ast.cdecl;
 }
 
-(* Analysis Environment for functions *)
+(* Analysis Environment *)
 type env = {
-    env_name        : string;
-    env_fname       : string option;
-    env_class_maps  : class_map StringMap.t option;
+    env_cname       : string option;
     env_cmap        : class_map option;
+    env_class_maps  : class_map StringMap.t option;
+    env_fname       : string option;
     env_locals      : datatype StringMap.t;
     env_parameters  : Ast.formal StringMap.t;
     env_return_t    : datatype;
@@ -38,12 +38,12 @@ type env = {
     env_reserved    : sfdecl list;
 }
 
-let update_env_name env env_name =
+let update_env_cname env env_cname =
 {
-    env_class_maps  = env.env_class_maps;
-    env_name        = env_name;
-    env_fname       = env.env_fname;
+    env_cname       = env_cname;
     env_cmap        = env.env_cmap;
+    env_class_maps  = env.env_class_maps;
+    env_fname       = env.env_fname;
     env_locals      = env.env_locals;
     env_parameters  = env.env_parameters;
     env_return_t    = env.env_return_t;
@@ -54,10 +54,10 @@ let update_env_name env env_name =
 
 let update_call_stack env in_for in_while =
 {
-    env_class_maps  = env.env_class_maps;
-    env_name        = env.env_name;
-    env_fname       = env.env_fname;
+    env_cname       = env.env_cname;
     env_cmap        = env.env_cmap;
+    env_class_maps  = env.env_class_maps;
+    env_fname       = env.env_fname;
     env_locals      = env.env_locals;
     env_parameters  = env.env_parameters;
     env_return_t    = env.env_return_t;
@@ -85,59 +85,164 @@ let add_reserved_functions =
             sftype      = Functiontype([], Datatype(Unit_t))
         }
     in
-    let i32_t = Datatype(Int_t) in
-    let void_t = Datatype(Unit_t) in
-    let str_t = Arraytype(Char_t, 1) in
-    let formal_of s data_t = Formal(s, data_t) in
+    let i32_t = Datatype(Int_t)
+    in
+    let void_t = Datatype(Unit_t)
+    in
+    let str_t = Arraytype(Char_t, 1)
+    in
+    let f s data_t = Formal(s, data_t) 
+    in
     let reserved = [
-        reserved_stub "printf" (void_t) 
-            ([Many(Any)]);
-
-        reserved_stub "malloc" (str_t)  
-            ([formal_of "size" i32_t ]);
-
-        reserved_stub "cast" (Any) 
-            ([formal_of "in" Any]);
-
-        reserved_stub "sizeof" (i32_t)
-            ([formal_of "in" Any]);
-
-        reserved_stub "open" (i32_t)
-            ([formal_of "path" str_t; formal_of "flags" i32_t]);
-
-        reserved_stub "close" (i32_t)  
-            ([formal_of "fd" i32_t]);
-
-        reserved_stub "read" (i32_t)  
-            ([formal_of "fd" i32_t; formal_of "buf" str_t; formal_of "nbyte" i32_t]);
-
-        reserved_stub "write" (i32_t)  
-            ([formal_of "fd" i32_t; formal_of "buf" str_t; formal_of "nbyte" i32_t]);
-
-        reserved_stub "lseek" (i32_t)  
-            ([formal_of "fd" i32_t; formal_of "offset" i32_t; formal_of "whence" i32_t]);
-
-        reserved_stub "exit" (void_t) 
-            ([formal_of "status" i32_t]);
-
-        reserved_stub "getchar" (i32_t)  
-            ([]);
-
-        reserved_stub "input" (str_t)
-            ([]);
+        reserved_stub "printf" void_t [Many(Any)];
+        reserved_stub "malloc" str_t  [f "size" i32_t ];
+        reserved_stub "cast" Any [f "in" Any];
+        reserved_stub "sizeof" i32_t [f "in" Any];
+        reserved_stub "open" i32_t [f "path" str_t; f "flags" i32_t];
+        reserved_stub "close" i32_t [f "fd" i32_t];
+        reserved_stub "read" i32_t [f "fd" i32_t; f "buf" str_t; f "nbyte" i32_t];
+        reserved_stub "write" i32_t [f "fd" i32_t; f "buf" str_t; f "nbyte" i32_t];
+        reserved_stub "lseek" i32_t [f "fd" i32_t; f "offset" i32_t; f "whence" i32_t];
+        reserved_stub "exit" (void_t) ([f "status" i32_t]);
+        reserved_stub "getchar" (i32_t) ([]);
+        reserved_stub "input" (str_t) ([]);
     ] in
     reserved
 
-(* TODO: Add all match cases for stmts, exprs *)
-let expr_to_sexpr e env = match e with
-    IntLit i        -> (SIntLit(i), env)
-  | FloatLit b      -> (SFloatLit(b), env)
-  | BoolLit b       -> (SBoolLit(b), env)
-  | CharLit c       -> (SCharLit(c), env)
-  | StringLit s     -> (SStringLit(s), env)
-  (* | Id s            -> (SID(s, get_ID_type env s), env) *)
+(* TODO: Resolve Dice floating point equality comment *)
 
-let get_type_from_sexpr = function
+(* Return Datatype for Binops with an Equality Operator (=, !=) *)
+let rec get_equality_binop_type se1 op se2 =
+    let type1 = sexpr_to_type se1 in
+    let type2 = sexpr_to_type se2 in
+    match (type1, type2) with
+        (Datatype(Char_t), Datatype(Int_t))
+      | (Datatype(Int_t), Datatype(Char_t)) ->
+              SBinop(se1, op, se2, Datatype(Bool_t))
+      | _ ->
+              if type1 = type2
+              then SBinop(se1, op, se2, Datatype(Bool_t))
+              else raise E.InvalidBinaryOperation
+
+(* Return Datatype for Binops with a Logical Operator (&&, ||) *)
+and get_logical_binop_type se1 op se2 =
+    let type1 = sexpr_to_type se1 in
+    let type2 = sexpr_to_type se2 in
+    match (type1, type2) with
+        (Datatype(Bool_t), Datatype(Bool_t)) ->
+            SBinop(se1, op, se2, Datatype(Bool_t))
+      | _ -> raise E.InvalidBinaryOperation
+
+(* Return Datatype for Binops with a Comparison Operator (<, <=, >, >=) *)
+and get_comparison_binop_type se1 op se2 =
+    let type1 = sexpr_to_type se1 in
+    let type2 = sexpr_to_type se2 in
+    let numerics = Set.of_list [Datatype(Int_t); Datatype(Float_t); Datatype(Char_t)]
+        ~comparator: Comparator.Poly.comparator
+    in
+    if Set.mem numerics type1 && Set.mem numerics type2 
+    then SBinop(se1, op, se2, Datatype(Bool_t))
+    else raise E.InvalidBinaryOperation
+
+(* TODO: Handle casting *)
+
+(* Return Datatype for Binops with an Arithemetic Operator (+, *, -, /, %) *)
+and get_arithmetic_binop_type se1 op se2 = 
+    let type1 = sexpr_to_type se1 in
+    let type2 = sexpr_to_type se2 in
+    match (type1, type2) with
+        (Datatype(Int_t), Datatype(Int_t))  -> SBinop(se1, op, se2, Datatype(Int_t))
+      | _ -> raise E.InvalidBinaryOperation
+
+(* Return Datatype for ID *)
+and get_Id_type s env =
+    try StringMap.find_exn env.env_locals s
+    with | Not_found ->
+        try match (StringMap.find_exn env.env_parameters s) with
+            Formal(_, data_t) -> data_t 
+          | Many(data_t) -> data_t
+        with | Not_found -> raise (E.UndefinedID s)
+        
+and get_this_type env = match env.env_cname with
+    Some(cname) -> Datatype(Object_t(cname))
+  | None -> raise E.ThisUsedOutsideClass
+
+and check_unop op e env =
+    let check_num_unop op data_t = match op with
+        Neg -> data_t
+      | _ -> raise E.InvalidUnaryOperation
+    in
+    let check_bool_unop op = match op with
+        Not -> Datatype(Bool_t)
+      | _ -> raise E.InvalidUnaryOperation
+    in
+    let (se, env) = expr_to_sexpr e env in
+    let data_t = sexpr_to_type se in
+    match data_t with
+        Datatype(Int_t)
+      | Datatype(Float_t)
+      | Datatype(Char_t) -> SUnop(op, se, check_num_unop op data_t)
+      | Datatype(Bool_t) -> SUnop(op, se, check_bool_unop op)
+      | _ -> raise E.InvalidUnaryOperation
+
+and check_binop e1 op e2 env =
+    (* NOTE: may want to keep returned env *)
+    let (se1, _) = expr_to_sexpr e1 env in
+    let (se2, _) = expr_to_sexpr e2 env in
+    match op with
+        Equal
+      | Neq -> get_equality_binop_type se1 op se2 
+      | And
+      | Or -> get_logical_binop_type se1 op se2 
+      | Less
+      | Leq
+      | Greater
+      | Geq -> get_comparison_binop_type se1 op se2
+      | Add
+      | Mult
+      | Sub
+      | Div
+      | Modulo -> get_arithmetic_binop_type se1 op se2
+      | _ -> raise E.InvalidBinaryOperation
+
+and check_assign e1 e2 env =
+    (* NOTE: may want to keep returned env *)
+    let (se1, _) = expr_to_sexpr e1 env in
+    let (se2, _) = expr_to_sexpr e2 env in
+    let type1 = sexpr_to_type se1 in
+    let type2 = sexpr_to_type se2 in
+    match (type1, type2) with
+        _ -> if type1 = type2
+            then SAssign(se2, se2, type1)
+            else 
+                let str1 = U.string_of_datatype type1 in
+                let str2 = U.string_of_datatype type2 in
+                raise (E.AssignmentTypeMismatch(str1, str2))
+
+
+(* TODO: Add all match cases for stmts, exprs *)
+and expr_to_sexpr e env = match e with
+    (* Literals *)
+    IntLit(i)           -> (SIntLit(i), env)
+  | FloatLit(b)         -> (SFloatLit(b), env)
+  | BoolLit(b)          -> (SBoolLit(b), env)
+  | CharLit(c)          -> (SCharLit(c), env)
+  | StringLit(s)        -> (SStringLit(s), env)
+  | Id(s)               -> (SId(s, get_Id_type s env), env) 
+  | This                -> (SId("this", get_this_type env), env)
+  | Noexpr              -> (SNoexpr, env)
+    (* Operations *)
+  | Unop(op, e)         -> (check_unop op e env, env)
+  | Binop(e1, op, e2)   -> (check_binop e1 op e2 env, env)
+  | Assign(e1, e2)      -> (check_assign e1 e2 env, env)
+
+(*
+  | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
+  | FunctionLit of fdecl
+  | Call of string * expr list
+*)
+
+and sexpr_to_type = function
     SIntLit(_)                  -> Datatype(Int_t)
   | SFloatLit(_)                -> Datatype(Float_t)
   | SBoolLit(_)                 -> Datatype(Bool_t)
@@ -159,12 +264,12 @@ let rec check_sblock sl env = match sl with
 
 and check_expr_stmt e env =
     let se, env = expr_to_sexpr e env in
-    let data_t = get_type_from_sexpr se in
+    let data_t = sexpr_to_type se in
     (SExpr(se, data_t), env)
 
 and check_return e env =
     let (se, _) = expr_to_sexpr e env in
-    let data_t = get_type_from_sexpr se in
+    let data_t = sexpr_to_type se in
     match data_t, env.env_return_t  with 
         (* Allow unit returns for reference types e.g. objects, arrays *)
         (* TODO: See if this makes sense for Unit_t... *)
@@ -291,10 +396,10 @@ let convert_method_to_sfdecl reserved class_maps cname fdecl =
         ~init:StringMap.empty 
     in
     let env = {
-        env_name        = cname;
-        env_fname       = None;
-        env_class_maps  = Some(class_maps);
+        env_cname       = Some(cname);
         env_cmap        = Some(class_map);
+        env_class_maps  = Some(class_maps);
+        env_fname       = None;
         env_locals      = StringMap.empty;
         env_parameters  = env_params;
         env_return_t    = fdecl.return_t;
@@ -336,10 +441,10 @@ let convert_fdecl_to_sfdecl reserved fdecl =
         ~init:StringMap.empty 
     in
     let env = {
-        env_name        = fdecl.fname;
-        env_fname       = None;
-        env_class_maps  = None;
+        env_cname       = None;
         env_cmap        = None;
+        env_class_maps  = None;
+        env_fname       = Some(fdecl.fname);
         env_locals      = StringMap.empty;
         env_parameters  = env_params;
         env_return_t    = fdecl.return_t;

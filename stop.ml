@@ -78,7 +78,7 @@ let _ =
                 check_single_argument (Sys.argv.(1))
             else if Array.length Sys.argv = 3 then
                 get_action Sys.argv.(1), Sys.argv.(2)
-            else raise E.InvalidArgc (Array.length Sys.argv)
+            else raise E.InvalidArgc
         in 
 
         (* Iterative Application of each Compilation Phase *)

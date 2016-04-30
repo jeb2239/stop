@@ -6,6 +6,7 @@ class Test {
 }
 */
 
+/*
 class Test {
 	public def main = ():Int {
 		return 0;
@@ -15,6 +16,8 @@ class Test {
 function a = ():Int { 
 	return 0;
 }
+*/
 
 function main = ():Int { 
+	1;
 }

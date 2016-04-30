@@ -1,7 +1,6 @@
 (* Legacy Code *)
 
 (* Old Codegen *)
-(*
 let translate ast = match ast with
     A.Program(includess, specs, classes, functions) -> 
     let context     = L.global_context () in 
@@ -190,4 +189,3 @@ let translate ast = match ast with
 
     List.iter build_function_body functions;
     the_module
-*)

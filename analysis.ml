@@ -444,7 +444,7 @@ let convert_ast_to_sast reserved
     in
     {
         classes     = scdecl_list;
-        fdecls      = sfdecl_list;
+        functions   = sfdecl_list;
         main        = main;
         reserved    = reserved;
     }

@@ -239,3 +239,10 @@ let string_of_program = function
         String.concat ~sep:"\n" (List.map ~f:string_of_spec specs) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_cdecl cdecls) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_fdecl fdecls)
+
+(* Codegen *)
+(* ------- *)
+
+let string_of_formal_name = function
+    Formal(s, _) -> s
+  | _ -> ""

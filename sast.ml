@@ -48,7 +48,7 @@ type scdecl = {
 
 type sprogram = {
     classes : scdecl list;
-    fdecls : sfdecl list;
-    main : sfdecl option;
+    functions : sfdecl list;
+    main : sfdecl;
     reserved : sfdecl list;
 }

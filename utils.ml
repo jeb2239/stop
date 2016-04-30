@@ -5,8 +5,8 @@
 
 open Ast
 open Parser
-open Sast
 open Core.Std
+open Sast
 
 module E = Exceptions
 
@@ -241,6 +241,9 @@ let string_of_program = function
         String.concat ~sep:"\n" (List.map ~f:string_of_cdecl cdecls) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_fdecl fdecls)
 
+(* Codegen *)
+(* ------- *)
+
 
 
 
@@ -349,8 +352,13 @@ and string_of_main main =
 
 let string_of_sprogram sprogram =
     String.concat ~sep:"\n" (List.map ~f:string_of_scdecl sprogram.classes) ^ "\n" ^
-    String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.fdecls) ^ "\n" ^
-    string_of_main sprogram.main ^ "\n" ^
+    String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.functions) ^ "\n" ^
+    string_of_sfdecl sprogram.main ^ "\n" ^
     String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.reserved)
 
+
+
+let string_of_formal_name = function
+    Formal(s, _) -> s
+  | _ -> ""
 

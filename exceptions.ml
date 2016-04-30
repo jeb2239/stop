@@ -31,3 +31,12 @@ exception InvalidStructType of string
 exception PrintfFirstArgNotString
 exception PrintfMissingArgs
 exception NotImplemented
+
+exception FloatOpNotSupported
+exception IntOpNotSupported
+exception InvalidBinopEvaluationType
+
+exception InvalidStructType of string
+exception InvalidDatatype of string
+exception LLVMFunctionNotFound of string
+exception UnexpectedMatchCase

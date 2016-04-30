@@ -1,19 +1,19 @@
 (* Semantic Analyzer for Stop Language *)
 
+open Core.Std
 open Ast
 open Sast
-open Core.Std
 
 module G = Generator
 module U = Utils
 module E = Exceptions
 
-module StringMap = String.Map
-module StringSet = String.Set
+module StringMap = Map.Make(String)
+module StringSet = Set.Make(String)
 
 (* General String of List Function *)
 let string_of_list string_of_item l = 
-    "[" ^ String.concat ~sep:", " (List.map string_of_item l) ^ "]"
+    "[" ^ String.concat ~sep:", " (List.map ~f:string_of_item l) ^ "]"
 
 (* Record which contains information re: Classes *)
 type class_map = {
@@ -90,21 +90,41 @@ let add_reserved_functions =
     let str_t = Arraytype(Char_t, 1) in
     let formal_of s data_t = Formal(s, data_t) in
     let reserved = [
-        reserved_stub "printf"  (void_t) ([Many(Any)]);
-        reserved_stub "malloc"  (str_t)  ([formal_of "size" i32_t ]);
-        reserved_stub "cast"    (Any)    ([formal_of "in" Any]);
-        reserved_stub "sizeof"  (i32_t)  ([formal_of "in" Any]);
-        reserved_stub "open"    (i32_t)  ([formal_of "path" str_t; formal_of "flags" i32_t]);
-        reserved_stub "close"   (i32_t)  ([formal_of "fd" i32_t]);
-        reserved_stub "read"    (i32_t)  ([formal_of "fd" i32_t; 
-                                            formal_of "buf" str_t; formal_of "nbyte" i32_t]);
-        reserved_stub "write"   (i32_t)  ([formal_of "fd" i32_t; 
-                                            formal_of "buf" str_t; formal_of "nbyte" i32_t]);
-        reserved_stub "lseek"   (i32_t)  ([formal_of "fd" i32_t; 
-                                            formal_of "offset" i32_t; formal_of "whence" i32_t]);
-        reserved_stub "exit"    (void_t) ([formal_of "status" i32_t]);
-        reserved_stub "getchar" (i32_t)  ([]);
-        reserved_stub "input"   (str_t)  ([]);
+        reserved_stub "printf" (void_t) 
+            ([Many(Any)]);
+
+        reserved_stub "malloc" (str_t)  
+            ([formal_of "size" i32_t ]);
+
+        reserved_stub "cast" (Any) 
+            ([formal_of "in" Any]);
+
+        reserved_stub "sizeof" (i32_t)
+            ([formal_of "in" Any]);
+
+        reserved_stub "open" (i32_t)
+            ([formal_of "path" str_t; formal_of "flags" i32_t]);
+
+        reserved_stub "close" (i32_t)  
+            ([formal_of "fd" i32_t]);
+
+        reserved_stub "read" (i32_t)  
+            ([formal_of "fd" i32_t; formal_of "buf" str_t; formal_of "nbyte" i32_t]);
+
+        reserved_stub "write" (i32_t)  
+            ([formal_of "fd" i32_t; formal_of "buf" str_t; formal_of "nbyte" i32_t]);
+
+        reserved_stub "lseek" (i32_t)  
+            ([formal_of "fd" i32_t; formal_of "offset" i32_t; formal_of "whence" i32_t]);
+
+        reserved_stub "exit" (void_t) 
+            ([formal_of "status" i32_t]);
+
+        reserved_stub "getchar" (i32_t)  
+            ([]);
+
+        reserved_stub "input" (str_t)
+            ([]);
     ] in
     reserved
 
@@ -185,40 +205,53 @@ and convert_stmt_list_to_sstmt_list sl env =
 
 (* Generate a String Map of all classes to be used for semantic checking *)
 let build_class_maps reserved cdecls =
-    let reserved_map = List.fold_left ~init:StringMap.empty  ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f )  reserved
+    let reserved_map = 
+        List.fold_left reserved
+            ~init:StringMap.empty 
+            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
     in
     (* Check each constituent of a class: fields, member functions, constructors *)
     let helper m (cdecl : Ast.cdecl) =
         (* Check Fields *)
         let check_fields = (fun m -> (function Field(scope, s, data_t) -> 
-            if (StringMap.mem m (s) ) then raise (E.DuplicateField(s))
-            else (StringMap.add m ~key:s ~data:(Field(scope, s, data_t)) )))
+            if (StringMap.mem m (s)) then raise (E.DuplicateField(s))
+            else (StringMap.add m ~key:s ~data:(Field(scope, s, data_t)))))
         in
         (* Check Methods *)
         let method_name = get_method_name cdecl.cname in
         let check_methods m fdecl =
             if (StringMap.mem m (method_name fdecl)) 
                 then raise (E.DuplicateFunctionName(method_name fdecl))
-            else if (StringMap.mem reserved_map fdecl.fname )
+            else if (StringMap.mem reserved_map fdecl.fname)
                 then raise (E.FunctionNameReserved(fdecl.fname))
-            else (StringMap.add m ~key:(method_name fdecl) ~data:fdecl )
+            else (StringMap.add m ~key:(method_name fdecl) ~data:fdecl)
         in
         (* TODO: Check Constructors *)
         if (StringMap.mem m cdecl.cname) then raise (E.DuplicateClassName(cdecl.cname))
         (* Add the class object to the map *)
-        else StringMap.add m ~key:cdecl.cname ~data:({
-            field_map = List.fold_left ~init:StringMap.empty ~f:check_fields cdecl.cbody.fields;
-            method_map = List.fold_left ~init:StringMap.empty ~f:check_methods  cdecl.cbody.methods;
-            reserved_map = reserved_map;
-            cdecl = cdecl
-        }) 
+        else StringMap.add m
+            ~key:cdecl.cname 
+            ~data:({
+                field_map = List.fold_left cdecl.cbody.fields
+                    ~f:check_fields 
+                    ~init:StringMap.empty;
+                method_map = List.fold_left cdecl.cbody.methods
+                    ~f:check_methods 
+                    ~init:StringMap.empty;
+                reserved_map = reserved_map;
+                cdecl = cdecl
+            }) 
     in
-    List.fold_left ~init:StringMap.empty ~f:helper  cdecls
-
+    List.fold_left cdecls
+        ~f:helper 
+        ~init:StringMap.empty 
 
 (* Generate List of all functions to be used for semantic checking *)
 let build_function_maps reserved fdecls =
-    let reserved_map = List.fold_left ~init:StringMap.empty ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f ) reserved
+    let reserved_map = 
+        List.fold_left reserved
+            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f) 
+            ~init:StringMap.empty
     in
     (* Check each function *)
     let check_functions m fdecl =
@@ -226,9 +259,11 @@ let build_function_maps reserved fdecls =
             then raise (E.DuplicateFunctionName(fdecl.fname))
         else if (StringMap.mem reserved_map fdecl.fname )
             then raise (E.FunctionNameReserved(fdecl.fname))
-        else (StringMap.add m ~key:(fdecl.fname) ~data:fdecl )
+        else (StringMap.add m ~key:(fdecl.fname) ~data:fdecl)
     in
-    List.fold_left ~init:StringMap.empty ~f:check_functions fdecls
+    List.fold_left  fdecls 
+        ~f:check_functions 
+        ~init:StringMap.empty
 
 (* Convert a method to a semantically checked function *)
 (* Name = <root_class>.<fname> *)
@@ -248,10 +283,13 @@ let convert_method_to_sfdecl reserved class_maps cname fdecl =
             Ast.Formal("this", Datatype(Object_t(cname)))
     in
     let env_param_helper m formal = match formal with
-        Formal(s, data_t) -> (StringMap.add m ~key:s ~data:formal )
+        Formal(s, data_t) -> (StringMap.add m ~key:s ~data:formal)
       | _ -> m
     in
-    let env_params = List.fold_left ~init:StringMap.empty ~f:env_param_helper  (class_formal :: fdecl.formals) in
+    let env_params = List.fold_left (class_formal :: fdecl.formals)
+        ~f:env_param_helper 
+        ~init:StringMap.empty 
+    in
     let env = {
         env_name        = cname;
         env_fname       = None;
@@ -290,10 +328,13 @@ let convert_method_to_sfdecl reserved class_maps cname fdecl =
 (* Convert a function to a semantically checked function *)
 let convert_fdecl_to_sfdecl reserved fdecl =
     let env_param_helper m formal = match formal with
-        Formal(s, data_t) -> (StringMap.add m ~key:s ~data:formal )
+        Formal(s, data_t) -> (StringMap.add m ~key:s ~data:formal)
       | _ -> m
     in
-    let env_params = List.fold_left ~init:StringMap.empty ~f:env_param_helper  fdecl.formals in
+    let env_params = List.fold_left fdecl.formals
+        ~f:env_param_helper 
+        ~init:StringMap.empty 
+    in
     let env = {
         env_name        = fdecl.fname;
         env_fname       = None;
@@ -362,7 +403,7 @@ let convert_ast_to_sast reserved
         else if List.length mains > 1 then
             raise E.MultipleMainFunctions
         else 
-            List.hd mains
+            List.hd_exn mains
     in
     let remove_main fdecls =
         List.filter ~f:(fun f -> not (is_main f)) fdecls
@@ -371,10 +412,10 @@ let convert_ast_to_sast reserved
 
     (* TODO: Find default constructor *)
     let handle_cdecl cdecl =
-        let class_map = StringMap.find_exn class_maps cdecl.cname  in
-        let sfdecls = List.fold_left ~init:[]
-            ~f:(fun l f -> (convert_method_to_sfdecl reserved class_maps cdecl.cname f) :: l) 
-             cdecl.cbody.methods 
+        let class_map = StringMap.find_exn class_maps cdecl.cname in
+        let sfdecls = List.fold_left cdecl.cbody.methods 
+            ~f:(fun l f -> (convert_method_to_sfdecl reserved class_maps cdecl.cname f) :: l)
+            ~init:[] 
         in
         let sfdecls = remove_main sfdecls 
         in
@@ -386,20 +427,24 @@ let convert_ast_to_sast reserved
         let scdecl = handle_cdecl c in
         (fst scdecl :: fst t, snd scdecl @ snd t)
     in
-    let (scdecl_list, sfdecl_list) = List.fold_left ~init:([], []) ~f:iter_cdecls  cdecls
+    let (scdecl_list, sfdecl_list) = List.fold_left cdecls
+        ~f:iter_cdecls 
+        ~init:([], []) 
     in
     (* Append non-method fdecls to the tuple *)
-    let sfdecls = List.fold_left ~init:[] ~f:(fun l f -> (convert_fdecl_to_sfdecl reserved f) :: l)  fdecls
+    let sfdecls = List.fold_left fdecls
+        ~f:(fun l f -> (convert_fdecl_to_sfdecl reserved f) :: l) 
+        ~init:[] 
     in
     let (scdecl_list, sfdecl_list) = (scdecl_list, sfdecls @ sfdecl_list)
     in
     let main = get_main sfdecl_list
     in
-    let fdecls = remove_main sfdecl_list
+    let sfdecl_list = remove_main sfdecl_list
     in
     {
         classes     = scdecl_list;
-        fdecls      = fdecls;
+        functions   = sfdecl_list;
         main        = main;
         reserved    = reserved;
     }

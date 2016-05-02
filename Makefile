@@ -15,9 +15,17 @@ stop:
 .PHONY : clean
 clean :
 	corebuild -clean
-	rm -rf testall.log *.diff stop scanner.ml parser.ml parser.mli
-	rm -rf *.cmx *.cmi *.cmo *.cmx *.o *.ll *.out
+	rm -rf *.diff stop scanner.ml parser.ml parser.mli
+	rm -rf *.cmx *.cmi *.cmo *.cmx *.o *.ll *.out *.log *.diff *.output
 
 .PHONY : clean_tests
 clean_tests :
-	rm -f *.ll *.out *.log
+	rm -f *.ll *.out *.log *.diff
+
+.PHONY : parser
+parser :
+	ocamlyacc -v src/parser.mly
+
+.PHONY : clean_parser
+clean_parser:
+	rm src/parser.output src/parser.ml src/parser.mli

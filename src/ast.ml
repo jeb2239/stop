@@ -11,11 +11,12 @@ type extends = NoParent | Parent of string
 (* --------- *)
 
 type fdecl = {
-    scope : scope;
     fname : string;
+    ftype : datatype;
     return_t : datatype;
     formals : formal list;
     body : stmt list;
+    scope : scope;
     overrides : bool;
     root_cname : string option;
 }
@@ -71,6 +72,7 @@ and expr =
   | Assign of expr * expr
   | Unop of uop * expr
   | Call of string * expr list
+  | ArrayAccess of expr * expr list
   | ObjAccess of expr * expr
   | This
   | Noexpr
@@ -79,10 +81,10 @@ and stmt =
     Block of stmt list
   | Expr of expr
   | Return of expr
+  | Local of string * datatype * expr
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | While of expr * stmt
-  | Local of string * datatype * expr
 
 and var = Var of datatype * string
 

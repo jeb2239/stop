@@ -4,7 +4,7 @@
  * The hello world program for the stop language
  */
 
-function main = ():Int {
+def main = ():Int {
 	printf("Hello, World!");
 	return 0;
 }

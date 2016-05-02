@@ -49,7 +49,6 @@ let string_of_token = function
   | INCLUDE         -> "INCLUDE"
   | MODULE          -> "MODULE"
   | DOT             -> "DOT"
-  | FUNCTION        -> "FUNCTION"
   | SPEC            -> "SPEC"
   | CLASS           -> "CLASS"
   | METHOD          -> "METHOD"
@@ -64,7 +63,6 @@ let string_of_token = function
   | FLOAT           -> "FLOAT"
   | BOOL            -> "BOOL"
   | CHAR            -> "CHAR"
-  | FUN             -> "FUN"
   | UNIT            -> "UNIT"
   | TYPE            -> "TYPE"
   | VAR             -> "VAR"
@@ -135,7 +133,7 @@ let rec string_of_datatype = function
     Datatype(p) -> string_of_primitive p
   | Arraytype(p, i) -> string_of_primitive p ^ print_brackets i
   | Functiontype(formal_dtypes, rtype) -> 
-        "Fun(" ^
+        "(" ^
         String.concat ~sep:"," (List.map ~f:string_of_datatype formal_dtypes) ^ ")->" ^
         string_of_datatype rtype
   | Any -> "Any"

@@ -32,8 +32,8 @@ let float_lit = (digit+'.'digit*exp?)|(digit+'.'?digit*exp)
 let char_lit = '''(ascii|digit as lit)'''
 let escape_char_lit = '''(escape_char as lit)'''
 let string_lit = '"'((ascii|escape_char)* as lit)'"'
-let id = lower_alpha (alpha | digit | '_' | '-')* as lit
-let typeid = upper_alpha (alpha | digit | '_' | '-')* as lit
+let id = lower_alpha (alpha | digit | '_')* as lit
+let typeid = upper_alpha (alpha | digit | '_')* as lit
 
 rule token = parse
       whitespace    { token lexbuf }                   (* Whitespace *)
@@ -84,7 +84,6 @@ rule token = parse
     | "return"  { RETURN }
 
     (* Reserved Keywords *)
-    | "function"    { FUNCTION }
     | "spec"        { SPEC } 
     | "class"	    { CLASS }
     | "method"      { METHOD }
@@ -102,7 +101,6 @@ rule token = parse
     | "#module"    { MODULE }
 
     (* TYPES *)
-    | "Fun"     { FUN }
     | "Int"     { INT }
     | "Float"   { FLOAT }
     | "Bool"    { BOOL }

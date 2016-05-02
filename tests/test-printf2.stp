@@ -1,8 +1,0 @@
-/*
- * test-printf1.stp
- * ================
- */
-
-function main = ():Int {
-	printf("%d\n", 0);
-}

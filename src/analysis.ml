@@ -17,11 +17,10 @@ let string_of_list string_of_item l =
 
 (* Record which contains information re: Classes *)
 type class_map = {
-    field_map       : Ast.field StringMap.t;
-    method_map      : Ast.fdecl StringMap.t;
+    field_map       : field StringMap.t;
+    method_map      : fdecl StringMap.t;
     (* constructor_map : Ast.fdecl StringMap.t; *)
-    reserved_map    : Sast.sfdecl StringMap.t;
-    cdecl           : Ast.cdecl;
+    cdecl           : cdecl;
 }
 
 (* Analysis Environment *)
@@ -30,12 +29,12 @@ type env = {
     env_cmap        : class_map option;
     env_class_maps  : class_map StringMap.t option;
     env_fname       : string option;
+    env_fmap        : sfdecl StringMap.t; 
     env_locals      : datatype StringMap.t;
     env_parameters  : Ast.formal StringMap.t;
     env_return_t    : datatype;
     env_in_for      : bool;
     env_in_while    : bool;
-    env_reserved    : sfdecl list;
 }
 
 let update_env_cname env env_cname =
@@ -44,12 +43,12 @@ let update_env_cname env env_cname =
     env_cmap        = env.env_cmap;
     env_class_maps  = env.env_class_maps;
     env_fname       = env.env_fname;
+    env_fmap        = env.env_fmap;
     env_locals      = env.env_locals;
     env_parameters  = env.env_parameters;
     env_return_t    = env.env_return_t;
     env_in_for      = env.env_in_for;
     env_in_while    = env.env_in_while;
-    env_reserved    = env.env_reserved;
 }
 
 let update_call_stack env in_for in_while =
@@ -58,12 +57,12 @@ let update_call_stack env in_for in_while =
     env_cmap        = env.env_cmap;
     env_class_maps  = env.env_class_maps;
     env_fname       = env.env_fname;
+    env_fmap        = env.env_fmap;
     env_locals      = env.env_locals;
     env_parameters  = env.env_parameters;
     env_return_t    = env.env_return_t;
     env_in_for      = in_for;
     env_in_while    = in_while;
-    env_reserved    = env.env_reserved;
 }
 
 (* Name all methods <cname>.<fname> *)
@@ -113,8 +112,8 @@ let add_reserved_functions =
 
 (* Return Datatype for Binops with an Equality Operator (=, !=) *)
 let rec get_equality_binop_type se1 op se2 =
-    let type1 = sexpr_to_type se1 in
-    let type2 = sexpr_to_type se2 in
+    let type1 = sexpr_to_type_exn se1 in
+    let type2 = sexpr_to_type_exn se2 in
     match (type1, type2) with
         (Datatype(Char_t), Datatype(Int_t))
       | (Datatype(Int_t), Datatype(Char_t)) ->
@@ -126,17 +125,19 @@ let rec get_equality_binop_type se1 op se2 =
 
 (* Return Datatype for Binops with a Logical Operator (&&, ||) *)
 and get_logical_binop_type se1 op se2 =
-    let type1 = sexpr_to_type se1 in
-    let type2 = sexpr_to_type se2 in
-    match (type1, type2) with
-        (Datatype(Bool_t), Datatype(Bool_t)) ->
-            SBinop(se1, op, se2, Datatype(Bool_t))
-      | _ -> raise E.InvalidBinaryOperation
+    let type1 = sexpr_to_type_exn se1 in
+    let type2 = sexpr_to_type_exn se2 in
+    let operable = Set.of_list [Datatype(Int_t); Datatype(Char_t); Datatype(Bool_t)]
+        ~comparator: Comparator.Poly.comparator
+    in
+    if Set.mem operable type1 && Set.mem operable type2
+    then SBinop(se1, op, se2, Datatype(Bool_t))
+    else raise E.InvalidBinaryOperation
 
 (* Return Datatype for Binops with a Comparison Operator (<, <=, >, >=) *)
 and get_comparison_binop_type se1 op se2 =
-    let type1 = sexpr_to_type se1 in
-    let type2 = sexpr_to_type se2 in
+    let type1 = sexpr_to_type_exn se1 in
+    let type2 = sexpr_to_type_exn se2 in
     let numerics = Set.of_list [Datatype(Int_t); Datatype(Float_t); Datatype(Char_t)]
         ~comparator: Comparator.Poly.comparator
     in
@@ -148,8 +149,8 @@ and get_comparison_binop_type se1 op se2 =
 
 (* Return Datatype for Binops with an Arithemetic Operator (+, *, -, /, %) *)
 and get_arithmetic_binop_type se1 op se2 = 
-    let type1 = sexpr_to_type se1 in
-    let type2 = sexpr_to_type se2 in
+    let type1 = sexpr_to_type_exn se1 in
+    let type2 = sexpr_to_type_exn se2 in
     match (type1, type2) with
         (Datatype(Int_t), Datatype(Int_t))  -> SBinop(se1, op, se2, Datatype(Int_t))
       | _ -> raise E.InvalidBinaryOperation
@@ -161,7 +162,7 @@ and get_Id_type s env =
         try match (StringMap.find_exn env.env_parameters s) with
             Formal(_, data_t) -> data_t 
           | Many(data_t) -> data_t
-        with | Not_found -> raise (E.UndefinedID s)
+        with | Not_found -> raise (E.UndefinedId s)
         
 and get_this_type env = match env.env_cname with
     Some(cname) -> Datatype(Object_t(cname))
@@ -177,7 +178,7 @@ and check_unop op e env =
       | _ -> raise E.InvalidUnaryOperation
     in
     let (se, env) = expr_to_sexpr e env in
-    let data_t = sexpr_to_type se in
+    let data_t = sexpr_to_type_exn se in
     match data_t with
         Datatype(Int_t)
       | Datatype(Float_t)
@@ -209,8 +210,8 @@ and check_assign e1 e2 env =
     (* NOTE: may want to keep returned env *)
     let (se1, _) = expr_to_sexpr e1 env in
     let (se2, _) = expr_to_sexpr e2 env in
-    let type1 = sexpr_to_type se1 in
-    let type2 = sexpr_to_type se2 in
+    let type1 = sexpr_to_type_exn se1 in
+    let type2 = sexpr_to_type_exn se2 in
     match (type1, type2) with
         _ -> if type1 = type2
             then SAssign(se2, se2, type1)
@@ -219,6 +220,40 @@ and check_assign e1 e2 env =
                 let str2 = U.string_of_datatype type2 in
                 raise (E.AssignmentTypeMismatch(str1, str2))
 
+(* TODO: Investigate Dice differences *)
+and check_call s e_l env =
+    let se_l = expr_list_to_sexpr_list e_l env in
+    SCall(s, se_l, Datatype(Unit_t), 0)
+
+and expr_list_to_sexpr_list e_l env = match e_l with
+    hd :: tl -> 
+        let (se, env) = expr_to_sexpr hd env in
+        se :: expr_list_to_sexpr_list tl env
+  | [] -> []
+
+and check_array_access e e_l env = 
+    let (se, _) = expr_to_sexpr e env in
+    let data_t = sexpr_to_type_exn se in
+    let se_l = expr_list_to_sexpr_list e_l env in
+
+    (* Check that the indice parameters are all Int_t *)
+    let check_access_params = List.map se_l 
+        ~f:(fun se -> match (sexpr_to_type_exn se) with 
+            Datatype(Int_t) -> ()
+          | _ -> raise (E.ArrayAccess "Passed non-Int Indice Argument"))
+    in
+
+    (* Check that # dims matches # indices *)
+    let arr_num_indices = List.length e_l in
+    let arr_num_dims = match data_t with 
+        Arraytype(_, n) -> n
+      | _ -> raise (E.ArrayAccess "Passed non-Arraytype Variable")
+    in
+    let check_num_dims_indices = if arr_num_dims <> arr_num_indices
+        then raise (E.ArrayAccess "Number Indices != Number Dimensions")
+    in
+
+    SArrayAccess(se, se_l, data_t)
 
 (* TODO: Add all match cases for stmts, exprs *)
 and expr_to_sexpr e env = match e with
@@ -235,25 +270,29 @@ and expr_to_sexpr e env = match e with
   | Unop(op, e)         -> (check_unop op e env, env)
   | Binop(e1, op, e2)   -> (check_binop e1 op e2 env, env)
   | Assign(e1, e2)      -> (check_assign e1 e2 env, env)
-
+  | Call(s, e_l)        -> (check_call s e_l env, env)
+  | ArrayAccess(e, e_l) -> (check_array_access e e_l env, env)
 (*
   | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
   | FunctionLit of fdecl
-  | Call of string * expr list
 *)
 
-and sexpr_to_type = function
-    SIntLit(_)                  -> Datatype(Int_t)
-  | SFloatLit(_)                -> Datatype(Float_t)
-  | SBoolLit(_)                 -> Datatype(Bool_t)
-  | SCharLit(_)                 -> Datatype(Char_t)
-  | SStringLit(_)               -> Arraytype(Char_t, 1)
-  | SId(_, data_t)              -> data_t
-  | SBinop(_, _, _, data_t)     -> data_t
-  | SUnop(_, _, data_t)         -> data_t
-  | SCall(_, _, data_t, _)      -> data_t
-  | SObjAccess(_, _, data_t)    -> data_t
-  | SNoexpr                     -> Datatype(Unit_t)
+and sexpr_to_type sexpr = match sexpr with
+    SIntLit(_)                  -> Some(Datatype(Int_t))
+  | SFloatLit(_)                -> Some(Datatype(Float_t))
+  | SBoolLit(_)                 -> Some(Datatype(Bool_t))
+  | SCharLit(_)                 -> Some(Datatype(Char_t))
+  | SStringLit(_)               -> Some(Arraytype(Char_t, 1))
+  | SId(_, data_t)              -> Some(data_t)
+  | SBinop(_, _, _, data_t)     -> Some(data_t)
+  | SUnop(_, _, data_t)         -> Some(data_t)
+  | SCall(_, _, data_t, _)      -> Some(data_t)
+  | SObjAccess(_, _, data_t)    -> Some(data_t)
+  | SNoexpr                     -> None
+  
+and sexpr_to_type_exn sexpr = match (sexpr_to_type sexpr) with
+    Some(t) -> t
+  | None -> raise E.UnexpectedNoexpr
 
 (* Statement to SStatement Conversion *)
 let rec check_sblock sl env = match sl with
@@ -264,12 +303,12 @@ let rec check_sblock sl env = match sl with
 
 and check_expr_stmt e env =
     let se, env = expr_to_sexpr e env in
-    let data_t = sexpr_to_type se in
+    let data_t = sexpr_to_type_exn se in
     (SExpr(se, data_t), env)
 
 and check_return e env =
     let (se, _) = expr_to_sexpr e env in
-    let data_t = sexpr_to_type se in
+    let data_t = sexpr_to_type_exn se in
     match data_t, env.env_return_t  with 
         (* Allow unit returns for reference types e.g. objects, arrays *)
         (* TODO: See if this makes sense for Unit_t... *)
@@ -283,15 +322,47 @@ and check_return e env =
                 U.string_of_datatype env.env_return_t, 
                 env.env_fname))
 
+and local_handler s data_t e env =
+    if StringMap.mem env.env_locals s
+    then raise (E.DuplicateLocal(s))
+    else
+        let (se, _) = expr_to_sexpr e env in
+        let valid_assignment = match sexpr_to_type se with 
+            Some(se_data_t) -> if data_t = se_data_t
+                then true
+                else false
+          | None -> true
+        in
+        if valid_assignment
+        then 
+            let new_env = {
+                env_cname = env.env_cname;
+                env_cmap = env.env_cmap;
+                env_class_maps = env.env_class_maps;
+                env_fname = env.env_fname;
+                env_fmap = env.env_fmap;
+                env_locals = StringMap.add env.env_locals ~key:s ~data:data_t;
+                env_parameters =  env.env_parameters;
+                env_return_t = env.env_return_t;
+                env_in_for = env.env_in_for;
+                env_in_while = env.env_in_while;
+            } 
+            in
+            (SLocal(s, data_t, se), new_env)
+        else 
+            let type1 = U.string_of_datatype data_t in
+            let type2 = U.string_of_datatype (sexpr_to_type_exn se) in
+            raise (E.LocalAssignmentTypeMismatch(type1, type2))
+
 and parse_stmt env = function
     Block sl                -> check_sblock sl env
   | Expr e                  -> check_expr_stmt e env
   | Return e                -> check_return e env
+  | Local(s, data_t, e)     -> local_handler s data_t e env 
   (*
   | If(e, s1, s2)           -> check_if e s1 s2 env
   | For(e1, e2, e3, e4)     -> check_for e1 e2 e3 e4 env
   | While(e, s)             -> check_while e s env
-  | Local(s, d, e)          -> local_handler s d e env 
   *)
 
 (* Semantically check a list of stmts; Convert to sstmts *)
@@ -342,7 +413,6 @@ let build_class_maps reserved cdecls =
                 method_map = List.fold_left cdecl.cbody.methods
                     ~f:check_methods 
                     ~init:StringMap.empty;
-                reserved_map = reserved_map;
                 cdecl = cdecl
             }) 
     in
@@ -394,17 +464,22 @@ let convert_method_to_sfdecl reserved class_maps cname fdecl =
         ~f:env_param_helper 
         ~init:StringMap.empty 
     in
+    let reserved_map = 
+        List.fold_left reserved
+            ~init:StringMap.empty 
+            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
+    in
     let env = {
         env_cname       = Some(cname);
         env_cmap        = Some(class_map);
         env_class_maps  = Some(class_maps);
         env_fname       = None;
+        env_fmap        = reserved_map;
         env_locals      = StringMap.empty;
         env_parameters  = env_params;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
-        env_reserved    = reserved;
     }
     in
     (* Assign fname to <fname> or <class>.<fname> appropriately *)
@@ -439,17 +514,22 @@ let convert_fdecl_to_sfdecl reserved fdecl =
         ~f:env_param_helper 
         ~init:StringMap.empty 
     in
+    let reserved_map = 
+        List.fold_left reserved
+            ~init:StringMap.empty 
+            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
+    in
     let env = {
         env_cname       = None;
         env_cmap        = None;
         env_class_maps  = None;
         env_fname       = Some(fdecl.fname);
+        env_fmap        = reserved_map;
         env_locals      = StringMap.empty;
         env_parameters  = env_params;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
-        env_reserved    = reserved;
     }
     in
     (* Assign fname to <fname> or <class>.<fname> appropriately *)
@@ -550,7 +630,6 @@ let convert_ast_to_sast reserved
         classes     = scdecl_list;
         functions   = sfdecl_list;
         main        = main;
-        reserved    = reserved;
     }
 
 (* Analyze *)

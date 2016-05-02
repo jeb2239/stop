@@ -17,6 +17,7 @@ type sexpr =
   | SAssign of sexpr * sexpr * datatype
   | SCall of string * sexpr list * datatype * int
   | SObjAccess of sexpr * sexpr * datatype
+  | SArrayAccess of sexpr * sexpr list * datatype
   | SNoexpr
 
 type sstmt =
@@ -26,7 +27,7 @@ type sstmt =
   | SIf of sexpr * sstmt * sstmt
   | SFor of sexpr * sexpr * sexpr * sstmt 
   | SWhile of sexpr * sstmt 
-  | SLocal of datatype * string * expr
+  | SLocal of string * datatype * sexpr
 
 type fgroup = User | Reserved
 
@@ -51,5 +52,4 @@ type sprogram = {
     classes : scdecl list;
     functions : sfdecl list;
     main : sfdecl;
-    reserved : sfdecl list;
 }

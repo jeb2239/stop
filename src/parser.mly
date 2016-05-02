@@ -3,6 +3,7 @@
 %{ 
     open Ast
     open Core.Std 
+    module E = Exceptions
 %}
 
 %token DOT COMMA SEMI COLON LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
@@ -13,7 +14,7 @@
 %token RETURN
 %token FINAL
 %token PUBLIC PRIVATE ANON
-%token FUNCTION SPEC CLASS METHOD
+%token SPEC CLASS METHOD
 %token MATCH CASE 
 %token TYPE VAR THIS
 %token DEF EXTENDS 
@@ -26,7 +27,7 @@
 
 /* Primitive Types */
 
-%token INT FLOAT BOOL CHAR FUN UNIT
+%token INT FLOAT BOOL CHAR UNIT
 %token <string> TYPE_ID
 
 /* Literals */
@@ -51,6 +52,7 @@
 %right RBRACKET
 %left LBRACKET
 %right DOT
+%right ARROW
 
 %start program
 %type <Ast.program> program
@@ -106,14 +108,15 @@ include_stmt:
 /* --------- */
 
 fdecl:
-    FUNCTION ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
-            scope = Public;
-            fname = $2;
-            return_t = $8;
-            formals = $5;
-            body = $10;
-            overrides = false;
-            root_cname = None;
+    DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+        fname = $2;
+        ftype = Functiontype(snd $5, $8);
+        return_t = $8;
+        formals = fst $5;
+        body = $10;
+        scope = Public;
+        overrides = false;
+        root_cname = None;
     } }
 
 /* Specs */
@@ -150,11 +153,12 @@ cbody:
 
 cfdecl:
     scope DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
-            scope = $1;
             fname = $3;
+            ftype = Functiontype(snd $6, $9);
             return_t = $9;
-            formals = $6;
+            formals = fst $6;
             body = $11;
+            scope = $1;
             overrides = false;
             root_cname = None;
     } }
@@ -170,7 +174,6 @@ datatype:
 type_tag:
     primitive       { $1 }
   | object_type     { $1 }
-
 
 /* AST Datatype */
 
@@ -195,8 +198,11 @@ brackets:
 
 /* AST Functiontype */
 
+/* Type1->Type2 is shorthand for (Type1)->Type2 */
+/* NOTE: ARROW is right-associative */
 function_type:
-    FUN LPAREN formal_dtypes_opt RPAREN ARROW datatype    { Functiontype($3, $6) }
+    LPAREN formal_dtypes_list RPAREN ARROW datatype     { Functiontype($2, $5) }
+  | datatype ARROW datatype                             { Functiontype([$1], $3) }
 
 /* Fields */
 /* ------ */
@@ -208,29 +214,25 @@ field:
 /* ------------------- */
 
 /* Formal Datatypes -- Nameless for Function Types */
-formal_dtypes_opt:
-    /* nothing */               { [] }
-  | formal_dtypes_list          { List.rev $1 }
-
 formal_dtypes_list:
     formal_dtype                            { [$1] }
   | formal_dtypes_list COMMA formal_dtype   { $3::$1 }
 
-/* Formals -- Names & Datatypes for Functions */
-
 formal_dtype:
     datatype       { $1 }
 
+/* Formals -- Names & Datatypes for Functions */
+/* Returns (f, t), where f = list of formal and t = list of data_t */
 formals_opt:
-    /* nothing */               { [] }
-  | formal_list                 { List.rev $1 }
+    /* nothing */               { ([], []) }
+  | formal_list                 { (List.rev (fst $1), List.rev (snd $1))  }
 
 formal_list:
-    formal                      { [$1] }
-  | formal_list COMMA formal    { $3::$1 }
+    formal                      { ([fst $1], [snd $1])  }
+  | formal_list COMMA formal    { (fst $3 :: fst $1), (snd $3 :: snd $1) }
 
 formal:
-    ID COLON datatype           { Formal($1, $3) }
+    ID COLON datatype           { (Formal($1, $3), $3) }
 
 /* Actuals -- Exprs evaluated for Function Calls */
 
@@ -267,15 +269,20 @@ literals:
 function_literal:
     ANON LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { 
         FunctionLit({
-            scope = Private;
             fname = "@";
+            ftype = Functiontype(snd $3, $6);
             return_t = $6;
-            formals = $3;
+            formals = fst $3;
             body = $8;
+            scope = Private;
             overrides = false;
             root_cname = None;
         }) 
     }
+
+bracket_args:
+    LBRACKET expr       { [$2] }
+  | bracket_args RBRACKET LBRACKET expr { $4 :: $1 }
 
 /* Statements */
 /* ---------- */
@@ -292,21 +299,13 @@ stmt:
     | RETURN SEMI                               { Return(Noexpr) }
     | RETURN expr SEMI                          { Return($2) }
     | LBRACE stmt_list RBRACE                   { Block($2) } 
-    | IF LPAREN expr RPAREN stmt %prec NOELSE   
-        { If($3, $5, Block([Expr(Noexpr)])) }
-
-    | IF LPAREN expr RPAREN stmt ELSE stmt      
-        { If($3, $5, $7) }
-
-    | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt 
-        { For($3, $5, $7, $9) }
-        
-    | WHILE LPAREN expr RPAREN stmt     
-        { While($3, $5) }
-
+    | IF LPAREN expr RPAREN stmt ELSE stmt      { If($3, $5, $7) }
+    | WHILE LPAREN expr RPAREN stmt             { While($3, $5) }
     | VAR ID COLON datatype SEMI                { Local($2, $4, Noexpr) }
     | VAR ID ASSIGN expr SEMI                   { Local($2, Any, $4) }
     | VAR ID COLON datatype ASSIGN expr SEMI    { Local($2, $4, $6) }
+    | IF LPAREN expr RPAREN stmt %prec NOELSE   { If($3, $5, Block([Expr(Noexpr)])) }
+    | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
 
 /* Expressions */
 /* ----------- */
@@ -332,6 +331,7 @@ expr:
     | expr OR       expr                { Binop($1, Or, $3) }
     | expr ASSIGN   expr                { Assign($1, $3) }
     | expr DOT      expr                { ObjAccess($1, $3) }
+    | expr bracket_args RBRACKET        { ArrayAccess($1, List.rev $2) }
     | MINUS expr %prec NEG              { Unop(Neg, $2) } 
     | NOT expr                          { Unop(Not, $2) }
     | LPAREN expr RPAREN                { $2 }

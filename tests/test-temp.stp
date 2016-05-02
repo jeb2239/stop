@@ -1,7 +1,10 @@
 #include "ex.stp"
 
-function main = ():Int { 
-	1;
+def main = ():Int { 
+	printf("Testing heap allocation\n");
+	var a:Int = 5;
+	printf("%d\n", a);
+	return 0;
 }
 
 /*
@@ -44,3 +47,4 @@ function bar = (a:Int):Int {
 	return a + 10;
 }
 */
+

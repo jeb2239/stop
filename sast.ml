@@ -6,7 +6,8 @@
 open Ast
 
 type sexpr = 
-    SIntLit of int
+
+     SIntLit of int
   | SFloatLit of float
   | SBoolLit of bool
   | SCharLit of char
@@ -19,7 +20,10 @@ type sexpr =
   | SAssign of sexpr * sexpr * datatype
   | SNoexpr
 
-type sstmt =
+ 
+   
+
+and  sstmt =
     SBlock of sstmt list
   | SExpr of sexpr * datatype
   | SReturn of sexpr * datatype
@@ -28,9 +32,9 @@ type sstmt =
   | SWhile of sexpr * sstmt 
   | SLocal of datatype * string * sexpr
 
-type fgroup = User | Reserved
+and  fgroup = User | Reserved
 
-type sfdecl = {
+and sfdecl = {
     sfname : string;
     sreturn_t : datatype;
     sformals : formal list;
@@ -41,13 +45,13 @@ type sfdecl = {
     sftype : datatype;
 }
 
-type scdecl = {
+and scdecl = {
     scname : string;
     sfields : field list;
     sfdecls : sfdecl list;
 }
 
-type sprogram = {
+and sprogram = {
     classes : scdecl list;
     functions : sfdecl list;
     main : sfdecl;

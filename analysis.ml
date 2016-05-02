@@ -135,6 +135,7 @@ let expr_to_sexpr e env = match e with
   | BoolLit b       -> (SBoolLit(b), env)
   | CharLit c       -> (SCharLit(c), env)
   | StringLit s     -> (SStringLit(s), env)
+  | FunctionLit a   -> (sfdecls())
   (* | Id s            -> (SID(s, get_ID_type env s), env) *)
 
 let get_type_from_sexpr = function

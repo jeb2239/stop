@@ -1,3 +1,0 @@
-def declaring_type_infer = (var a:Int, var b:Int):Unit {
-	var r = 0
-}

@@ -1,0 +1,5 @@
+" Adding C Syntax Highlighting for .stp files:
+" Add the following lines to ~/.vimrc
+syntax on
+filetype on
+au BufNewFile,BufRead *.stp set filetype=c

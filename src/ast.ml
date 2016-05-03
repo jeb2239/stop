@@ -46,10 +46,12 @@ and cdecl = {
 (* i.e. Arraytype (a, 2) <=> a[][]; (a, 3) <=> a[][][] *)
 
 (* Any : used for type of functions that take any datatype e.g. Llvm cast *)
+(* NoFunctiontype : used for type of LLVM Builtin C Functions *)
 and datatype = 
     Datatype of primitive 
   | Arraytype of primitive * int
   | Functiontype of datatype list * datatype
+  | NoFunctiontype
   | Any 
 
 (* Many : used for type of variable length functions e.g. Llvm printf *)

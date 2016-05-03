@@ -29,6 +29,7 @@ exception ReturnTypeMismatch of string * string * string option
 exception AssignmentTypeMismatch of string * string
 exception LocalAssignmentTypeMismatch of string * string
 exception ArrayAccess of string
+exception UndefinedFunction of string
 
 (* Utils Exceptions *)
 exception UtilsError of string

@@ -1,0 +1,50 @@
+#include "ex.stp"
+
+def main = ():Int { 
+	printf("Testing heap allocation\n");
+	var a:Int = 5;
+	printf("%d\n", a);
+	return 0;
+}
+
+/*
+spec Test {}
+
+function a = ():Int {
+	printf("Hello, World!");
+	var a:Int;
+	var result:Int = foo(bar(2));
+	var fun1:Fun(Int)->Int;
+	var fun2:Fun(String, Bool, Fun(String)->Int)->Int = @(c:Int):Int{ return c; };
+	var fun3:Fun(Int)->Int = @(c:Int):Int{ return c; };
+
+	fun1 = fun2;
+	
+	var s1:Shape;
+	s1.w;
+	var a = 1;
+	a = result;
+	return 0;
+}
+
+spec Test2 {}
+
+class Shape {
+	var w:Int;
+	var h:Int;
+	var data:String[];
+
+	public def main = ():Int {
+		return 0;
+	}
+}
+
+function foo = (a:Int):Int {
+	return a + 5;
+}
+
+function bar = (a:Int):Int {
+	return a + 10;
+}
+*/
+

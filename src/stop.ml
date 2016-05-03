@@ -95,7 +95,7 @@ let _ =
             Tokens              -> print_string (U.token_list_to_string (token_list ()))
           | Print               -> print_string (U.string_of_program (ast()))
           | Ast                 -> print_string "Not Implemented\n"
-          | Sast                -> print_string "Not Implemented\n"
+          | Sast                -> print_string (U.string_of_sprogram (sast()))
           | CompileStdinStdout
 (*        | CompileFileStdout   -> sast (); print_string "test" *)
           | CompileFileStdout   -> print_string (L.string_of_llmodule (llm ()))

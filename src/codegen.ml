@@ -145,9 +145,16 @@ let rec handle_binop e1 op e2 data_t llbuilder =
     in
     type_handler data_t
 
-and codegen_call fname sexpr_l llbuilder = match fname with
+and codegen_call fname sexpr_l data_t llbuilder = match fname with
     "printf" -> codegen_printf sexpr_l llbuilder
-  | _ -> raise E.NotImplemented
+  | _ as fname -> codegen_function_call fname sexpr_l data_t llbuilder
+
+and codegen_function_call fname sexpr_l data_t llbuilder =
+    let f = lookup_llfunction_exn fname in
+    let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
+    match data_t with
+        Datatype(Unit_t) -> L.build_call f (Array.of_list params) "" llbuilder
+    |   _ -> L.build_call f (Array.of_list params) "tmp" llbuilder
 
 and codegen_printf sexpr_l llbuilder =
     (* Convert printf format string to llvalue *)
@@ -206,7 +213,7 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
   | SId(id, _)                      -> codegen_id id llbuilder
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
-  | SCall(fname, se_l, _, _)   -> codegen_call fname se_l llbuilder
+  | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
   | SAssign(e1, e2, _)         -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(e, e_l, _)    -> codegen_array_access false e e_l llbuilder
 (*

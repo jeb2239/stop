@@ -340,30 +340,29 @@ let init_params f formals =
     in
     Array.iteri (L.params f)
         ~f:(fun i element ->
-            let n = formals.(i)
-            in
-            let n = U.string_of_formal_name n 
-            in
+            let n = formals.(i) in
+            let n = U.string_of_formal_name n in
             L.set_value_name n element;
             Hashtbl.add_exn named_parameters
                 ~key:n
                 ~data:element;
             )
 
+let codegen_record name llbuilder =
+    let record_struct_name = name ^ ".record" in
+    let record_name = name ^ "_record" in
+    let lltype = find_struct_exn record_struct_name in
+    L.build_malloc lltype record_name llbuilder
+
 let codegen_function sfdecl =
     Hashtbl.clear named_values;
     Hashtbl.clear named_parameters;
-    let fname = sfdecl.sfname
-    in
-    let f = lookup_llfunction_exn fname 
-    in
-    let llbuilder = L.builder_at_end context (L.entry_block f)
-    in
-    let _ = init_params f sfdecl.sformals
-    in
-    (* TODO: Handle overriding functions *)
-    let _ = codegen_stmt llbuilder (SBlock(sfdecl.sbody)) 
-    in
+    let fname = sfdecl.sfname in
+    let f = lookup_llfunction_exn fname in
+    let llbuilder = L.builder_at_end context (L.entry_block f) in
+    let _ = init_params f sfdecl.sformals in
+    let _ = codegen_record fname llbuilder in
+    let _ = codegen_stmt llbuilder (SBlock(sfdecl.sbody)) in
     if sfdecl.sreturn_t = Datatype(Unit_t)
     then ignore(L.build_ret_void llbuilder);
     ()
@@ -385,27 +384,20 @@ let construct_main_args argc argv llbuilder =
 let codegen_main main =
     Hashtbl.clear named_values;
     Hashtbl.clear named_parameters;
-    let ftype = L.function_type i32_t [| i32_t; L.pointer_type str_t |] 
-    in
-    let f = L.define_function "main" ftype the_module
-    in
-    let llbuilder = L.builder_at_end context (L.entry_block f)
-    in
-    let argc = L.param f 0 
-    in
-    let argv = L.param f 1 
-    in
+    let ftype = L.function_type i32_t [| i32_t; L.pointer_type str_t |] in 
+    let f = L.define_function "main" ftype the_module in
+    let llbuilder = L.builder_at_end context (L.entry_block f) in
+    let argc = L.param f 0 in
+    let argv = L.param f 1 in
     L.set_value_name "argc" argc;
     L.set_value_name "argv" argv;
     Hashtbl.add_exn named_parameters ~key:"argc" ~data:argc;
     Hashtbl.add_exn named_parameters ~key:"argv" ~data:argv;
-    (*
-    let args = construct_main_args argc argv llbuilder 
-    in
-    *)
+
+    let _ = codegen_record "main" llbuilder in
+
     (* Generate LLVM IR for statements in function body *)
-    let _ = codegen_stmt llbuilder (SBlock(main.sbody))
-    in
+    let _ = codegen_stmt llbuilder (SBlock(main.sbody)) in
 
     (* Check to make sure we return; add a return statement if not *)
     let last_bb = match (L.block_end (lookup_llfunction_exn "main")) with

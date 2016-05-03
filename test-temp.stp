@@ -1,5 +1,15 @@
 // Test-Temp
 
+class Shape {
+	var a:Int;
+}
+
+def main = (argc:Int):Int {
+	var a:Shape;
+	return 0;
+}
+
+/*
 def f1 = (a:Int):Int->Int {
 	var f2 = @(b:Int):Int {
 		return a + b;
@@ -11,6 +21,7 @@ def main = ():Int {
 	var f = f1(2);
 	return 0;
 }
+*/
 
 /*
 def main = ():Int { 

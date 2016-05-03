@@ -29,7 +29,7 @@ type class_record = {
 type env = {
     env_cname               : string option;
     env_crecord             : class_record option;
-    env_cmap                : class_record StringMap.t option;
+    env_cmap                : class_record StringMap.t;
     env_fname               : string option;
     env_fmap                : fdecl StringMap.t;
     env_named_vars          : datatype StringMap.t;
@@ -76,14 +76,15 @@ let build_reserved_map =
     (* Note: ftype for printf has no functional equivalent *)
     let reserved_stub fname return_t formals =
         {
-            sfname      = fname;
-            sreturn_t   = return_t;
-            sformals    = formals;
-            sbody       = [];
-            fgroup      = Sast.Reserved;
-            overrides   = false;
-            source      = None;
-            sftype      = NoFunctiontype;
+            sfname          = fname;
+            sreturn_t       = return_t;
+            sformals        = formals;
+            srecord_vars    = [];
+            sbody           = [];
+            fgroup          = Sast.Reserved;
+            overrides       = false;
+            source          = None;
+            sftype          = NoFunctiontype;
         }
     in
     let i32_t = Datatype(Int_t) in
@@ -262,8 +263,43 @@ and check_array_access e e_l env =
     SArrayAccess(se, se_l, data_t)
 
 and check_function_literal f env =
-    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap f env.env_named_vars in
+    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap f env.env_named_vars in
     SFunctionLit(sfdecl, sfdecl.sftype);
+
+and check_obj_access e1 e2 env =
+    let get_cname_exn = function
+        Some(cname) -> cname
+      | None -> raise E.CannotUseThisKeywordOutsideOfClass
+    in
+    let check_lhs = function
+        This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
+      | Id s -> SId(s, get_Id_type s env)
+      | _ as e -> raise E.LHSofObjectAccessMustBeAccessible
+    in
+    let check_rhs e2 =
+        let id = match e2 with
+            Id s -> s
+          | _ ->raise E.RHSofObjectAccessMustBeAccessible
+        in
+        let cname = match (check_lhs e1) with
+            SId(_, data_t) -> (match data_t with
+                Datatype(Object_t(name)) -> name)
+          | _ -> raise E.RHSofObjectAccessMustBeAccessible
+        in
+        let crecord = StringMap.find_exn env.env_cmap cname in
+        try 
+            match StringMap.find_exn crecord.field_map id with
+                Field(_, s, data_t) -> SId(s, data_t)
+        with | Not_found -> raise E.UnknownClassVar
+    in
+    let lhs = check_lhs e1 in
+    let lhs_type = sexpr_to_type_exn lhs in
+    let rhs = check_rhs e2 in
+    let rhs_t = match rhs with
+        SId(_, data_t) -> data_t
+    in
+    SObjAccess(lhs, rhs, rhs_t)
+
 
 (* TODO: Add all match cases for stmts, exprs *)
 and expr_to_sexpr e env = match e with
@@ -282,10 +318,8 @@ and expr_to_sexpr e env = match e with
   | Assign(e1, e2)      -> (check_assign e1 e2 env, env)
   | Call(s, e_l)        -> (check_call s e_l env, env)
   | ArrayAccess(e, e_l) -> (check_array_access e e_l env, env)
-  | FunctionLit(f)  -> (check_function_literal f env, env)
-(*
+  | FunctionLit(f)      -> (check_function_literal f env, env)
   | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
-*)
 
 and sexpr_to_type sexpr = match sexpr with
     SIntLit(_)                  -> Some(Datatype(Int_t))
@@ -433,7 +467,7 @@ and convert_stmt_list_to_sstmt_list sl env =
 (* ============== *)
 
 (* Generate StringMap: cname -> crecord *)
-and build_crecord_map fmap cdecls =
+and build_crecord_map fmap cdecls fdecls =
     (* Check each constituent of a class: fields, member functions, constructors *)
     let helper m (cdecl : Ast.cdecl) =
         (* Check Fields *)
@@ -466,9 +500,45 @@ and build_crecord_map fmap cdecls =
                 cdecl = cdecl
             }) 
     in
-    List.fold_left cdecls
+    let crecord_map = List.fold_left cdecls
         ~f:helper 
         ~init:StringMap.empty 
+    in
+    (* Add function Records *)
+    let discover_named_vars fdecl =
+        let field_map = List.fold fdecl.formals
+            ~f:(fun m formal -> match formal with
+                Formal(s, d) -> (StringMap.add m ~key:s ~data:(Field(Public, s, d))))
+            ~init:StringMap.empty
+        in
+        let helper stmt = match stmt with
+            Local(s, d, _) -> Some(s, Field(Public, s, d))
+          | _ -> None
+        in
+        List.fold fdecl.body
+            ~f:(fun m stmt -> match (helper stmt) with
+                Some(t) -> StringMap.add m ~key:(fst t) ~data:(snd t)
+              | None -> m)
+            ~init:field_map
+    in
+    let fhelper m (fdecl : Ast.fdecl) = 
+        let temp_class =    ({
+            field_map = discover_named_vars fdecl;
+            method_map = StringMap.empty;
+            cdecl = ({
+                cname = fdecl.fname ^ ".record";
+                extends = NoParent;
+                cbody = ({ fields = []; methods = []; })
+            })
+        })
+        in
+        StringMap.add m
+            ~key:(fdecl.fname ^ ".record")
+            ~data:temp_class
+    in
+    List.fold_left fdecls
+        ~f:fhelper
+        ~init:crecord_map
 
 (* Generate StringMap: fname -> fdecl *)
 and build_fdecl_map reserved_sfdecl_map fdecls =
@@ -507,8 +577,8 @@ and build_fdecl_map reserved_sfdecl_map fdecls =
 (* Convert a method to a semantically checked function *)
 (* Name = <root_class>.<fname> *)
 (* Prepend instance of class to function parameters *)
-and convert_method_to_sfdecl fmap class_map cname fdecl =
-    let crecord = StringMap.find_exn class_map cname 
+and convert_method_to_sfdecl fmap cmap cname fdecl =
+    let crecord = StringMap.find_exn cmap cname 
     in
     let root_cname = match fdecl.root_cname with
         Some(c) -> c
@@ -532,7 +602,7 @@ and convert_method_to_sfdecl fmap class_map cname fdecl =
     let env = {
         env_cname       = Some(cname);
         env_crecord     = Some(crecord);
-        env_cmap        = Some(class_map);
+        env_cmap        = cmap;
         env_fname       = None;
         env_fmap        = fmap;
         env_named_vars  = StringMap.empty;
@@ -549,21 +619,26 @@ and convert_method_to_sfdecl fmap class_map cname fdecl =
     let fdecl_formals = class_formal :: fdecl.formals
     in
     (* Check the stmts in the fbody *)
-    let (fbody, _) = convert_stmt_list_to_sstmt_list fdecl.body env
+    let (fbody, env) = convert_stmt_list_to_sstmt_list fdecl.body env
+    in
+    let record_vars = StringMap.fold env.env_record_vars
+        ~f:(fun ~key:k ~data:data_t l -> (k,data_t) :: l)
+        ~init:[]
     in
     {
-        sfname      = fname;
-        sreturn_t   = fdecl.return_t;
-        sformals    = fdecl_formals;
-        sbody       = fbody;
-        fgroup      = Sast.User;
-        overrides   = fdecl.overrides;
-        source      = Some(cname);
-        sftype      = fdecl.ftype;
+        sfname          = fname;
+        sreturn_t       = fdecl.return_t;
+        srecord_vars    = record_vars;
+        sformals        = fdecl_formals;
+        sbody           = fbody;
+        fgroup          = Sast.User;
+        overrides       = fdecl.overrides;
+        source          = Some(cname);
+        sftype          = fdecl.ftype;
     }
 
 (* Convert a function to a semantically checked function *)
-and convert_fdecl_to_sfdecl fmap fdecl named_vars =
+and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
     let env_param_helper m formal = match formal with
         Formal(s, data_t) -> 
             if StringMap.mem named_vars s
@@ -582,7 +657,7 @@ and convert_fdecl_to_sfdecl fmap fdecl named_vars =
     let env = {
         env_cname       = None;
         env_crecord     = None;
-        env_cmap        = None;
+        env_cmap        = cmap;
         env_fname       = Some(fdecl.fname);
         env_fmap        = fmap;
         env_named_vars  = named_vars;
@@ -598,18 +673,36 @@ and convert_fdecl_to_sfdecl fmap fdecl named_vars =
     (* Check the stmts in the fbody *)
     let (fbody, env) = convert_stmt_list_to_sstmt_list fdecl.body env
     in
-    print_string (((function Some(fname) -> fname) env.env_fname) ^ "\n");
-    StringMap.iter env.env_record_vars
-        ~f:(fun ~key:k ~data:d -> print_string (k ^ " " ^ (U.string_of_datatype d) ^ "\n"));
+    let record_vars = StringMap.fold env.env_record_vars
+        ~f:(fun ~key:k ~data:data_t l -> (k,data_t) :: l)
+        ~init:[]
+    in
+    (*
+    print_string (((function Some(fname) -> fname) env.env_fname) ^ "\n======\n");
+    List.iter record_vars
+        ~f:(function (k, d) -> print_string (k ^ " " ^ (U.string_of_datatype d) ^ "\n"));
+    *)
     {
-        sfname      = fdecl.fname;
-        sreturn_t   = fdecl.return_t;
-        sformals    = fdecl_formals;
-        sbody       = fbody;
-        fgroup      = Sast.User;
-        overrides   = fdecl.overrides;
-        source      = None;
-        sftype      = fdecl.ftype;
+        sfname          = fdecl.fname;
+        sreturn_t       = fdecl.return_t;
+        srecord_vars    = record_vars;
+        sformals        = fdecl_formals;
+        sbody           = fbody;
+        fgroup          = Sast.User;
+        overrides       = fdecl.overrides;
+        source          = None;
+        sftype          = fdecl.ftype;
+    }
+
+(* Generate activation records for fdecls *)
+let generate_sfdecl_records sfdecl =
+    let fields = List.map sfdecl.srecord_vars
+        ~f:(function (s, data_t) -> Field(Public, s, data_t))
+    in
+    {
+        scname = sfdecl.sfname ^ ".record";
+        sfields = fields;
+        sfdecls = [];
     }
 
 (* Convert cdecls to scdecls *)
@@ -645,8 +738,7 @@ let convert_ast_to_sast
             ~f:(fun l f -> (convert_method_to_sfdecl fdecl_map crecord_map cdecl.cname f) :: l)
             ~init:[] 
         in
-        let sfdecls = remove_main sfdecls 
-        in
+        let sfdecls = remove_main sfdecls in
         let scdecl = convert_cdecl_to_scdecl sfdecls cdecl in
         (scdecl, sfdecls)
     in
@@ -660,15 +752,18 @@ let convert_ast_to_sast
     in
     (* Append non-method fdecls to the tuple *)
     let sfdecls = List.fold_left fdecls
-        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map f StringMap.empty) :: l) 
+        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty) :: l) 
         ~init:[] 
     in
-    let (scdecl_list, sfdecl_list) = (scdecl_list, sfdecls @ sfdecl_list)
+    let (scdecl_list, sfdecl_list) = (scdecl_list, sfdecls @ sfdecl_list) in
+    (* Add Activation Record structs to the tuple *)
+    let scdecls = List.fold_left sfdecl_list
+        ~f:(fun l f -> (generate_sfdecl_records f) :: l)
+        ~init:[]
     in
-    let main = get_main sfdecl_list
-    in
-    let sfdecl_list = remove_main sfdecl_list
-    in
+    let (scdecl_list, sfdecl_list) = (scdecls @ scdecl_list, sfdecl_list) in
+    let main = get_main sfdecl_list in
+    let sfdecl_list = remove_main sfdecl_list in
     {
         classes     = scdecl_list;
         functions   = sfdecl_list;
@@ -681,10 +776,10 @@ let analyze filename ast = match ast with
     Program(includes, specs, cdecls, fdecls) ->
         (* Create sfdecl list of builtin LLVM functions *)
         let reserved_map = build_reserved_map in
-        (* Create StringMap: cname -> cdecl of classes *)
-        let crecord_map = build_crecord_map reserved_map cdecls in
         (* Create StringMap: fname -> fdecl of functions *)
         let fdecl_map = build_fdecl_map reserved_map fdecls in
+        (* Create StringMap: cname -> cdecl of classes *)
+        let crecord_map = build_crecord_map reserved_map cdecls fdecls in
         (* Generate sast: sprogram *)
         let sast = convert_ast_to_sast crecord_map cdecls fdecl_map fdecls in
         sast

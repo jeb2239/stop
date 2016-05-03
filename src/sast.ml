@@ -10,6 +10,7 @@ type fgroup = User | Reserved
 type sfdecl = {
     sfname : string;
     sreturn_t : datatype;
+    srecord_vars : (string * datatype) list;
     sformals : formal list;
     sbody : sstmt list;
     fgroup : fgroup;

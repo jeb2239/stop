@@ -22,12 +22,13 @@ exception InvalidBinaryOperation
 exception UndefinedId of string
 exception DuplicateField of string
 exception DuplicateClassName of string
-exception DuplicateLocal of string
+exception DuplicateVar of string
 exception DuplicateFunctionName of string
 exception FunctionNameReserved of string
 exception ReturnTypeMismatch of string * string * string option
 exception AssignmentTypeMismatch of string * string
 exception LocalAssignmentTypeMismatch of string * string
+exception LocalAssignmentTypeNotAssignable of string
 exception ArrayAccess of string
 exception UndefinedFunction of string
 

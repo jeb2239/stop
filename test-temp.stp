@@ -1,15 +1,15 @@
 // Test-Temp
 
-def main = ():Int {
-	var f:Int->Int = f1(2);
-	return 0;
-}
-
 def f1 = (a:Int):Int->Int {
 	var f2 = @(b:Int):Int {
 		return a + b;
 	};
 	return f2;
+}
+
+def main = ():Int {
+	var f:Int->Int = f1(2);
+	return 0;
 }
 
 /*

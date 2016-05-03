@@ -24,17 +24,18 @@ type class_record = {
 }
 
 (* Analysis Environment *)
+(* Local vars = locals or parameters of current function *)
+(* Named vars = locals or parameters still in scope *)
 type env = {
-    env_cname       : string option;
-    env_crecord     : class_record option;
-    env_cmap        : class_record StringMap.t option;
-    env_fname       : string option;
-    env_fmap        : sfdecl StringMap.t; 
-    env_locals      : datatype StringMap.t;
-    env_parameters  : Ast.formal StringMap.t;
-    env_return_t    : datatype;
-    env_in_for      : bool;
-    env_in_while    : bool;
+    env_cname               : string option;
+    env_crecord             : class_record option;
+    env_cmap                : class_record StringMap.t option;
+    env_fname               : string option;
+    env_fmap                : fdecl StringMap.t;
+    env_named_vars          : datatype StringMap.t;
+    env_return_t            : datatype;
+    env_in_for              : bool;
+    env_in_while            : bool;
 }
 
 let update_env_cname env env_cname =
@@ -44,8 +45,7 @@ let update_env_cname env env_cname =
     env_cmap        = env.env_cmap;
     env_fname       = env.env_fname;
     env_fmap        = env.env_fmap;
-    env_locals      = env.env_locals;
-    env_parameters  = env.env_parameters;
+    env_named_vars  = env.env_named_vars;
     env_return_t    = env.env_return_t;
     env_in_for      = env.env_in_for;
     env_in_while    = env.env_in_while;
@@ -58,8 +58,7 @@ let update_call_stack env in_for in_while =
     env_cmap        = env.env_cmap;
     env_fname       = env.env_fname;
     env_fmap        = env.env_fmap;
-    env_locals      = env.env_locals;
-    env_parameters  = env.env_parameters;
+    env_named_vars  = env.env_named_vars;
     env_return_t    = env.env_return_t;
     env_in_for      = in_for;
     env_in_while    = in_while;
@@ -70,7 +69,7 @@ let get_method_name cname fdecl =
     let name = fdecl.fname in
     cname ^ "." ^ name 
 
-let build_reserved_sfdecl_list =
+let build_reserved_map =
     (* Note: ftype for printf has no functional equivalent *)
     let reserved_stub fname return_t formals =
         {
@@ -101,8 +100,14 @@ let build_reserved_sfdecl_list =
         reserved_stub "exit" (void_t) ([f "status" i32_t]);
         reserved_stub "getchar" (i32_t) ([]);
         reserved_stub "input" (str_t) ([]);
-    ] in
-    reserved_list
+    ] 
+    in
+    let reserved_map = 
+        List.fold_left reserved_list
+            ~init:StringMap.empty 
+            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
+    in
+    reserved_map
 
 (* Return Datatype for Binops with an Equality Operator (=, !=) *)
 let rec get_equality_binop_type se1 op se2 =
@@ -151,12 +156,11 @@ and get_arithmetic_binop_type se1 op se2 =
 
 (* Return Datatype for ID *)
 and get_Id_type s env =
-    try StringMap.find_exn env.env_locals s
-    with | Not_found ->
-        try match (StringMap.find_exn env.env_parameters s) with
-            Formal(_, data_t) -> data_t 
-          | Many(data_t) -> data_t
-        with | Not_found -> raise (E.UndefinedId s)
+    try StringMap.find_exn env.env_named_vars s
+    with | Not_found -> 
+        StringMap.iter env.env_named_vars
+            ~f:(fun ~key:k ~data:data -> print_string (k ^ "\n"));
+        raise (E.UndefinedId s)
         
 and get_this_type env = match env.env_cname with
     Some(cname) -> Datatype(Object_t(cname))
@@ -218,8 +222,8 @@ and check_assign e1 e2 env =
 and check_call s e_l env =
     let se_l = expr_list_to_sexpr_list e_l env in
     try 
-        let sfdecl = StringMap.find_exn env.env_fmap s in
-        let return_t = sfdecl.sreturn_t in
+        let fdecl = StringMap.find_exn env.env_fmap s in
+        let return_t = fdecl.return_t in
         SCall(s, se_l, return_t, 0)
     with | Not_found -> raise (E.UndefinedFunction s)
 
@@ -252,6 +256,10 @@ and check_array_access e e_l env =
     in
     SArrayAccess(se, se_l, data_t)
 
+and check_function_literal f env =
+    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap f env.env_named_vars in
+    SFunctionLit(sfdecl, sfdecl.sftype);
+
 (* TODO: Add all match cases for stmts, exprs *)
 and expr_to_sexpr e env = match e with
     (* Literals *)
@@ -269,9 +277,9 @@ and expr_to_sexpr e env = match e with
   | Assign(e1, e2)      -> (check_assign e1 e2 env, env)
   | Call(s, e_l)        -> (check_call s e_l env, env)
   | ArrayAccess(e, e_l) -> (check_array_access e e_l env, env)
+  | FunctionLit(f)  -> (check_function_literal f env, env)
 (*
   | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
-  | FunctionLit of fdecl
 *)
 
 and sexpr_to_type sexpr = match sexpr with
@@ -280,19 +288,23 @@ and sexpr_to_type sexpr = match sexpr with
   | SBoolLit(_)                 -> Some(Datatype(Bool_t))
   | SCharLit(_)                 -> Some(Datatype(Char_t))
   | SStringLit(_)               -> Some(Arraytype(Char_t, 1))
+  | SFunctionLit(_, data_t)     -> Some(data_t)
   | SId(_, data_t)              -> Some(data_t)
   | SBinop(_, _, _, data_t)     -> Some(data_t)
   | SUnop(_, _, data_t)         -> Some(data_t)
   | SCall(_, _, data_t, _)      -> Some(data_t)
   | SObjAccess(_, _, data_t)    -> Some(data_t)
+  | SAssign(_, _, data_t)       -> Some(data_t)
+  | SArrayAccess(_, _, data_t)  -> Some(data_t)
+  | SThis(data_t)               -> Some(data_t)
   | SNoexpr                     -> None
-  
+
 and sexpr_to_type_exn sexpr = match (sexpr_to_type sexpr) with
     Some(t) -> t
   | None -> raise E.UnexpectedNoexpr
 
 (* Statement to SStatement Conversion *)
-let rec check_sblock sl env = match sl with
+and check_sblock sl env = match sl with
     [] ->   (SBlock([SExpr(SNoexpr, Datatype(Unit_t))]), env)
   | _ ->    let (sl,_) = convert_stmt_list_to_sstmt_list sl env 
             in
@@ -320,17 +332,21 @@ and check_return e env =
                 env.env_fname))
 
 and local_handler s data_t e env =
-    if StringMap.mem env.env_locals s
-    then raise (E.DuplicateLocal(s))
+    if StringMap.mem env.env_named_vars s
+    then raise (E.DuplicateVar(s))
     else
         let (se, _) = expr_to_sexpr e env in
-        let valid_assignment = match sexpr_to_type se with 
-            Some(se_data_t) -> if data_t = se_data_t
-                then true
-                else false
-          | None -> true
+        let se_data_t = sexpr_to_type_exn se in
+        let is_assignable = function
+            NoFunctiontype
+          | Any -> false
+          | _ -> true
         in
-        if valid_assignment
+        let valid_assignment = function
+            (Any, _) -> is_assignable se_data_t
+          | (data_t, se_data_t) -> if data_t = se_data_t then true else false
+        in
+        if valid_assignment (data_t, se_data_t)
         then 
             let new_env = {
                 env_cname = env.env_cname;
@@ -338,8 +354,7 @@ and local_handler s data_t e env =
                 env_cmap = env.env_cmap;
                 env_fname = env.env_fname;
                 env_fmap = env.env_fmap;
-                env_locals = StringMap.add env.env_locals ~key:s ~data:data_t;
-                env_parameters =  env.env_parameters;
+                env_named_vars = StringMap.add env.env_named_vars ~key:s ~data:se_data_t;
                 env_return_t = env.env_return_t;
                 env_in_for = env.env_in_for;
                 env_in_while = env.env_in_while;
@@ -348,7 +363,7 @@ and local_handler s data_t e env =
             (SLocal(s, data_t, se), new_env)
         else 
             let type1 = U.string_of_datatype data_t in
-            let type2 = U.string_of_datatype (sexpr_to_type_exn se) in
+            let type2 = U.string_of_datatype se_data_t in
             raise (E.LocalAssignmentTypeMismatch(type1, type2))
 
 and parse_stmt env = function
@@ -378,13 +393,8 @@ and convert_stmt_list_to_sstmt_list sl env =
 (* Map Generation *)
 (* ============== *)
 
-(* Generate StringMap: cname -> scdecl *)
-let build_scdecl_map reserved cdecls =
-    let reserved_map = 
-        List.fold_left reserved
-            ~init:StringMap.empty 
-            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
-    in
+(* Generate StringMap: cname -> crecord *)
+and build_crecord_map fmap cdecls =
     (* Check each constituent of a class: fields, member functions, constructors *)
     let helper m (cdecl : Ast.cdecl) =
         (* Check Fields *)
@@ -398,7 +408,7 @@ let build_scdecl_map reserved cdecls =
         let check_methods m fdecl =
             if StringMap.mem m (method_name fdecl)
                 then raise (E.DuplicateFunctionName (method_name fdecl))
-            else if (StringMap.mem reserved_map fdecl.fname)
+            else if (StringMap.mem fmap fdecl.fname)
                 then raise (E.FunctionNameReserved fdecl.fname)
             else StringMap.add m ~key:(method_name fdecl) ~data:fdecl
         in
@@ -421,18 +431,13 @@ let build_scdecl_map reserved cdecls =
         ~f:helper 
         ~init:StringMap.empty 
 
-(* Generate StringMap: fname -> sfdecl *)
-let build_sfdecl_map reserved fdecls =
-    let reserved_map = 
-        List.fold_left reserved
-            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f) 
-            ~init:StringMap.empty
-    in
+(* Generate StringMap: fname -> fdecl *)
+and build_fdecl_map fmap fdecls =
     (* Check each function *)
     let check_functions m fdecl =
         if StringMap.mem m fdecl.fname
             then raise (E.DuplicateFunctionName fdecl.fname)
-        else if StringMap.mem reserved_map fdecl.fname
+        else if StringMap.mem fmap fdecl.fname
             then raise (E.FunctionNameReserved fdecl.fname)
         else StringMap.add m ~key:(fdecl.fname) ~data:fdecl
     in
@@ -443,7 +448,7 @@ let build_sfdecl_map reserved fdecls =
 (* Convert a method to a semantically checked function *)
 (* Name = <root_class>.<fname> *)
 (* Prepend instance of class to function parameters *)
-let convert_method_to_sfdecl reserved class_map cname fdecl =
+and convert_method_to_sfdecl fmap class_map cname fdecl =
     let crecord = StringMap.find_exn class_map cname 
     in
     let root_cname = match fdecl.root_cname with
@@ -465,19 +470,13 @@ let convert_method_to_sfdecl reserved class_map cname fdecl =
         ~f:env_param_helper 
         ~init:StringMap.empty 
     in
-    let reserved_map = 
-        List.fold_left reserved
-            ~init:StringMap.empty 
-            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
-    in
     let env = {
         env_cname       = Some(cname);
         env_crecord     = Some(crecord);
         env_cmap        = Some(class_map);
         env_fname       = None;
-        env_fmap        = reserved_map;
-        env_locals      = StringMap.empty;
-        env_parameters  = env_params;
+        env_fmap        = fmap;
+        env_named_vars  = StringMap.empty;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
@@ -492,7 +491,6 @@ let convert_method_to_sfdecl reserved class_map cname fdecl =
     (* Check the stmts in the fbody *)
     let (fbody, _) = convert_stmt_list_to_sstmt_list fdecl.body env
     in
-
     {
         sfname      = fname;
         sreturn_t   = fdecl.return_t;
@@ -505,35 +503,29 @@ let convert_method_to_sfdecl reserved class_map cname fdecl =
     }
 
 (* Convert a function to a semantically checked function *)
-let convert_fdecl_to_sfdecl sfdecl_list fdecl =
+and convert_fdecl_to_sfdecl fmap fdecl named_vars =
     let env_param_helper m formal = match formal with
-        Formal(s, data_t) -> (StringMap.add m ~key:s ~data:formal)
+        Formal(s, data_t) -> 
+            if StringMap.mem named_vars s
+            then raise (E.DuplicateVar s)
+            else StringMap.add m ~key:s ~data:data_t
       | _ -> m
     in
-    let env_params = List.fold_left fdecl.formals
+    let named_vars = List.fold_left fdecl.formals
         ~f:env_param_helper 
-        ~init:StringMap.empty 
-    in
-    let sfdecl_map = 
-        List.fold_left sfdecl_list
-            ~init:StringMap.empty 
-            ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
+        ~init:named_vars
     in
     let env = {
         env_cname       = None;
         env_crecord     = None;
         env_cmap        = None;
         env_fname       = Some(fdecl.fname);
-        env_fmap        = sfdecl_map;
-        env_locals      = StringMap.empty;
-        env_parameters  = env_params;
+        env_fmap        = fmap;
+        env_named_vars  = named_vars;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
     }
-    in
-    (* Assign fname to <fname> or <class>.<fname> appropriately *)
-    let fname = fdecl.fname
     in
     (* Prepend the class as the first parameter to the function if it is a method *)
     let fdecl_formals = fdecl.formals
@@ -542,7 +534,7 @@ let convert_fdecl_to_sfdecl sfdecl_list fdecl =
     let (fbody, _) = convert_stmt_list_to_sstmt_list fdecl.body env
     in
     {
-        sfname      = fname;
+        sfname      = fdecl.fname;
         sreturn_t   = fdecl.return_t;
         sformals    = fdecl_formals;
         sbody       = fbody;
@@ -561,9 +553,9 @@ let convert_cdecl_to_scdecl sfdecls (c:Ast.cdecl) =
     }
 
 (* Generate Sast: sprogram *)
-let convert_ast_to_sast reserved 
-    scdecl_map (cdecls : cdecl list) 
-    sfdecl_map (fdecls : fdecl list) =
+let convert_ast_to_sast
+    crecord_map (cdecls : cdecl list) 
+    fdecl_map (fdecls : fdecl list) =
 
     let is_main = (fun f -> match f.sfname with s -> s = "main") in
     let get_main fdecls =
@@ -580,9 +572,9 @@ let convert_ast_to_sast reserved
         List.filter ~f:(fun f -> not (is_main f)) fdecls
     in
     let handle_cdecl cdecl =
-        let crecord = StringMap.find_exn scdecl_map cdecl.cname in
+        let crecord = StringMap.find_exn crecord_map cdecl.cname in
         let sfdecls = List.fold_left cdecl.cbody.methods 
-            ~f:(fun l f -> (convert_method_to_sfdecl reserved scdecl_map cdecl.cname f) :: l)
+            ~f:(fun l f -> (convert_method_to_sfdecl fdecl_map crecord_map cdecl.cname f) :: l)
             ~init:[] 
         in
         let sfdecls = remove_main sfdecls 
@@ -600,7 +592,7 @@ let convert_ast_to_sast reserved
     in
     (* Append non-method fdecls to the tuple *)
     let sfdecls = List.fold_left fdecls
-        ~f:(fun l f -> (convert_fdecl_to_sfdecl reserved f) :: l) 
+        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map f StringMap.empty) :: l) 
         ~init:[] 
     in
     let (scdecl_list, sfdecl_list) = (scdecl_list, sfdecls @ sfdecl_list)
@@ -620,11 +612,11 @@ let convert_ast_to_sast reserved
 let analyze filename ast = match ast with
     Program(includes, specs, cdecls, fdecls) ->
         (* Create sfdecl list of builtin LLVM functions *)
-        let reserved = build_reserved_sfdecl_list in
-        (* Create StringMap: cname -> scdecl of classes *)
-        let scdecl_map = build_scdecl_map reserved cdecls in
-        (* Create StringMap: fname -> sfdecl of functions *)
-        let sfdecl_map = build_sfdecl_map reserved fdecls in
+        let reserved_map = build_reserved_map in
+        (* Create StringMap: cname -> cdecl of classes *)
+        let crecord_map = build_crecord_map reserved_map cdecls in
+        (* Create StringMap: fname -> fdecl of functions *)
+        let fdecl_map = build_fdecl_map reserved_map fdecls in
         (* Generate sast: sprogram *)
-        let sast = convert_ast_to_sast reserved scdecl_map cdecls sfdecl_map fdecls in
+        let sast = convert_ast_to_sast crecord_map cdecls fdecl_map fdecls in
         sast

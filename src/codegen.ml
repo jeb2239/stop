@@ -69,7 +69,7 @@ and get_function_type data_t_list return_t =
         ~f:(fun l data_t -> get_lltype_exn data_t :: l)
         ~init:[]
     in
-    L.function_type (get_lltype_exn return_t) (Array.of_list llargs)
+    L.pointer_type (L.function_type (get_lltype_exn return_t) (Array.of_list llargs))
 
 and get_lltype_exn (data_t:datatype) = match data_t with
     Datatype(Int_t) -> i32_t
@@ -216,6 +216,7 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
   | SAssign(e1, e2, _)         -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(e, e_l, _)    -> codegen_array_access false e e_l llbuilder
+  | _ -> raise E.NotImplemented
 (*
   | SNoexpr                     -> build_add (const_int i32_t 0) (const_int i32_t 0) "nop" llbuilder
   | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el

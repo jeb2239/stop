@@ -24,8 +24,8 @@ type class_record = {
 }
 
 (* Analysis Environment *)
-(* Local vars = locals or parameters of current function *)
-(* Named vars = locals or parameters still in scope *)
+(* Named vars = vars in scope *)
+(* Record vars = vars to be placed in function activation record *)
 type env = {
     env_cname               : string option;
     env_crecord             : class_record option;
@@ -33,6 +33,7 @@ type env = {
     env_fname               : string option;
     env_fmap                : fdecl StringMap.t;
     env_named_vars          : datatype StringMap.t;
+    env_record_vars         : datatype StringMap.t;
     env_return_t            : datatype;
     env_in_for              : bool;
     env_in_while            : bool;
@@ -46,6 +47,7 @@ let update_env_cname env env_cname =
     env_fname       = env.env_fname;
     env_fmap        = env.env_fmap;
     env_named_vars  = env.env_named_vars;
+    env_record_vars = env.env_record_vars;
     env_return_t    = env.env_return_t;
     env_in_for      = env.env_in_for;
     env_in_while    = env.env_in_while;
@@ -59,6 +61,7 @@ let update_call_stack env in_for in_while =
     env_fname       = env.env_fname;
     env_fmap        = env.env_fmap;
     env_named_vars  = env.env_named_vars;
+    env_record_vars = env.env_record_vars;
     env_return_t    = env.env_return_t;
     env_in_for      = in_for;
     env_in_while    = in_while;
@@ -338,35 +341,69 @@ and local_handler s data_t e env =
     then raise (E.DuplicateVar(s))
     else
         let (se, _) = expr_to_sexpr e env in
-        let se_data_t = sexpr_to_type_exn se in
-        let is_assignable = function
-            NoFunctiontype
-          | Any -> false
-          | _ -> true
-        in
-        let valid_assignment = function
-            (Any, _) -> is_assignable se_data_t
-          | (data_t, se_data_t) -> if data_t = se_data_t then true else false
-        in
-        if valid_assignment (data_t, se_data_t)
-        then 
+        if se = SNoexpr then 
+            let named_vars = StringMap.add env.env_named_vars 
+                ~key:s 
+                ~data:data_t;
+            in
+            let record_vars = StringMap.add env.env_record_vars 
+                ~key:s 
+                ~data:data_t;
+            in
             let new_env = {
                 env_cname = env.env_cname;
                 env_crecord = env.env_crecord;
                 env_cmap = env.env_cmap;
                 env_fname = env.env_fname;
                 env_fmap = env.env_fmap;
-                env_named_vars = StringMap.add env.env_named_vars ~key:s ~data:se_data_t;
+                env_named_vars = named_vars;
+                env_record_vars = record_vars;
                 env_return_t = env.env_return_t;
                 env_in_for = env.env_in_for;
                 env_in_while = env.env_in_while;
             } 
             in
-            (SLocal(s, se_data_t, se), new_env)
+            (SLocal(s, data_t, se), new_env)
         else 
-            let type1 = U.string_of_datatype data_t in
-            let type2 = U.string_of_datatype se_data_t in
-            raise (E.LocalAssignmentTypeMismatch(type1, type2))
+            let se_data_t = sexpr_to_type_exn se in
+            let is_assignable = function
+                NoFunctiontype
+              | Any -> false
+              | _ -> true
+            in
+            let valid_assignment = function
+                (Any, _) -> is_assignable se_data_t
+              | (data_t, se_data_t) -> if data_t = se_data_t 
+                    then true else false
+            in
+            if valid_assignment (data_t, se_data_t)
+            then 
+                let named_vars = StringMap.add env.env_named_vars 
+                    ~key:s 
+                    ~data:se_data_t;
+                in
+                let record_vars = StringMap.add env.env_record_vars 
+                    ~key:s 
+                    ~data:se_data_t;
+                in
+                let new_env = {
+                    env_cname = env.env_cname;
+                    env_crecord = env.env_crecord;
+                    env_cmap = env.env_cmap;
+                    env_fname = env.env_fname;
+                    env_fmap = env.env_fmap;
+                    env_named_vars = named_vars;
+                    env_record_vars = record_vars;
+                    env_return_t = env.env_return_t;
+                    env_in_for = env.env_in_for;
+                    env_in_while = env.env_in_while;
+                } 
+                in
+                (SLocal(s, se_data_t, se), new_env)
+            else 
+                let type1 = U.string_of_datatype data_t in
+                let type2 = U.string_of_datatype se_data_t in
+                raise (E.LocalAssignmentTypeMismatch(type1, type2))
 
 and parse_stmt env = function
     Block sl                -> check_sblock sl env
@@ -499,6 +536,7 @@ and convert_method_to_sfdecl fmap class_map cname fdecl =
         env_fname       = None;
         env_fmap        = fmap;
         env_named_vars  = StringMap.empty;
+        env_record_vars = StringMap.empty;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
@@ -537,6 +575,10 @@ and convert_fdecl_to_sfdecl fmap fdecl named_vars =
         ~f:env_param_helper 
         ~init:named_vars
     in
+    let record_vars = List.fold_left fdecl.formals
+        ~f:env_param_helper 
+        ~init:StringMap.empty
+    in
     let env = {
         env_cname       = None;
         env_crecord     = None;
@@ -544,6 +586,7 @@ and convert_fdecl_to_sfdecl fmap fdecl named_vars =
         env_fname       = Some(fdecl.fname);
         env_fmap        = fmap;
         env_named_vars  = named_vars;
+        env_record_vars = record_vars;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
@@ -553,8 +596,11 @@ and convert_fdecl_to_sfdecl fmap fdecl named_vars =
     let fdecl_formals = fdecl.formals
     in
     (* Check the stmts in the fbody *)
-    let (fbody, _) = convert_stmt_list_to_sstmt_list fdecl.body env
+    let (fbody, env) = convert_stmt_list_to_sstmt_list fdecl.body env
     in
+    print_string (((function Some(fname) -> fname) env.env_fname) ^ "\n");
+    StringMap.iter env.env_record_vars
+        ~f:(fun ~key:k ~data:d -> print_string (k ^ " " ^ (U.string_of_datatype d) ^ "\n"));
     {
         sfname      = fdecl.fname;
         sreturn_t   = fdecl.return_t;

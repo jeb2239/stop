@@ -432,18 +432,38 @@ and build_crecord_map fmap cdecls =
         ~init:StringMap.empty 
 
 (* Generate StringMap: fname -> fdecl *)
-and build_fdecl_map fmap fdecls =
-    (* Check each function *)
+and build_fdecl_map reserved_sfdecl_map fdecls =
+    (* Check each first-order function; add it to the map *)
     let check_functions m fdecl =
         if StringMap.mem m fdecl.fname
             then raise (E.DuplicateFunctionName fdecl.fname)
-        else if StringMap.mem fmap fdecl.fname
+        else if StringMap.mem reserved_sfdecl_map fdecl.fname
             then raise (E.FunctionNameReserved fdecl.fname)
         else StringMap.add m ~key:(fdecl.fname) ~data:fdecl
     in
-    List.fold_left fdecls 
+    let map = List.fold_left fdecls 
         ~f:check_functions 
-        ~init:StringMap.empty
+        ~init:StringMap.empty;
+    in
+    (* Add reserved functions to the map *)
+    let add_reserved_fdecls m key =
+        let sfdecl = StringMap.find_exn reserved_sfdecl_map key in
+        let fdecl = {
+            fname = key;
+            ftype = sfdecl.sftype;
+            return_t = sfdecl.sreturn_t;
+            formals = sfdecl.sformals;
+            body = [];
+            scope = Public;
+            overrides = false;
+            root_cname = None;
+        }
+        in
+        StringMap.add m ~key:key ~data:fdecl
+    in
+    List.fold_left (StringMap.keys reserved_sfdecl_map)
+        ~f:add_reserved_fdecls
+        ~init:map
 
 (* Convert a method to a semantically checked function *)
 (* Name = <root_class>.<fname> *)

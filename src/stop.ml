@@ -97,6 +97,7 @@ let _ =
           | Ast                 -> print_string "Not Implemented\n"
           | Sast                -> print_string "Not Implemented\n"
           | CompileStdinStdout
+(*        | CompileFileStdout   -> sast (); print_string "test" *)
           | CompileFileStdout   -> print_string (L.string_of_llmodule (llm ()))
           | CompileStdinFile
           | CompileFileFile     -> L.print_module (stop_name filename) (llm ())

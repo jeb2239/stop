@@ -158,8 +158,10 @@ and get_arithmetic_binop_type se1 op se2 =
 and get_Id_type s env =
     try StringMap.find_exn env.env_named_vars s
     with | Not_found -> 
+        (*
         StringMap.iter env.env_named_vars
             ~f:(fun ~key:k ~data:data -> print_string (k ^ "\n"));
+            *)
         raise (E.UndefinedId s)
         
 and get_this_type env = match env.env_cname with
@@ -360,7 +362,7 @@ and local_handler s data_t e env =
                 env_in_while = env.env_in_while;
             } 
             in
-            (SLocal(s, data_t, se), new_env)
+            (SLocal(s, se_data_t, se), new_env)
         else 
             let type1 = U.string_of_datatype data_t in
             let type2 = U.string_of_datatype se_data_t in

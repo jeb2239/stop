@@ -58,11 +58,18 @@ let rec get_array_type array_t = match array_t with
   | Arraytype(prim, i) -> L.pointer_type(get_array_type (Arraytype(prim, i-1)))
   | _ -> raise(E.InvalidDatatype "Array Type")
 
-and find_struct name =
+and find_struct_exn name =
     try
         Hashtbl.find_exn struct_types name
     with
         Not_found -> raise (E.InvalidStructType(name))
+
+and get_function_type data_t_list return_t =
+    let llargs = List.fold_left data_t_list
+        ~f:(fun l data_t -> get_lltype_exn data_t :: l)
+        ~init:[]
+    in
+    L.function_type (get_lltype_exn return_t) (Array.of_list llargs)
 
 and get_lltype_exn (data_t:datatype) = match data_t with
     Datatype(Int_t) -> i32_t
@@ -70,8 +77,9 @@ and get_lltype_exn (data_t:datatype) = match data_t with
   | Datatype(Bool_t) -> i1_t
   | Datatype(Char_t) -> i8_t
   | Datatype(Unit_t) -> void_t
-  | Datatype(Object_t(name)) -> L.pointer_type(find_struct name)
+  | Datatype(Object_t(name)) -> L.pointer_type(find_struct_exn name)
   | Arraytype(t, i) -> get_array_type (Arraytype(t, i))
+  | Functiontype(dt_l, dt) -> get_function_type dt_l dt
   | data_t -> raise (E.InvalidDatatype(U.string_of_datatype data_t))
 
 let lookup_llfunction_exn fname = match (L.lookup_function fname the_module) with
@@ -137,7 +145,7 @@ let rec handle_binop e1 op e2 data_t llbuilder =
     in
     type_handler data_t
 
-and codegen_call fname sexpr_l data_t llbuilder = match fname with
+and codegen_call fname sexpr_l llbuilder = match fname with
     "printf" -> codegen_printf sexpr_l llbuilder
   | _ -> raise E.NotImplemented
 
@@ -156,17 +164,17 @@ and codegen_printf sexpr_l llbuilder =
     let llargs = Array.of_list (format_llstr :: format_llargs) in
     L.build_call fun_llvalue llargs "printf" llbuilder
 
-and codegen_id id data_t llbuilder = 
+and codegen_id id llbuilder = 
     try Hashtbl.find_exn named_parameters id
     with | Not_found ->
         try let var = Hashtbl.find_exn named_values id in
             L.build_load var id llbuilder 
         with | Not_found -> raise (E.UndefinedId id)
 
-and codegen_assign e1 e2 data_t llbuilder =
+and codegen_assign e1 e2 llbuilder =
     (* Get lhs llvalue; don't emit as expression *)
     let lhs = match e1 with
-        SId(id, data_t) -> 
+        SId(id, _) -> 
             try Hashtbl.find_exn named_parameters id
             with | Not_found ->
                 try Hashtbl.find_exn named_values id
@@ -181,7 +189,7 @@ and codegen_assign e1 e2 data_t llbuilder =
     ignore(L.build_store rhs lhs llbuilder);
     rhs
 
-and codegen_array_access isAssign e e_l data_t llbuilder =
+and codegen_array_access isAssign e e_l llbuilder =
     let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in
     let indices = Array.of_list indices in
     let arr = codegen_sexpr e llbuilder in
@@ -191,17 +199,16 @@ and codegen_array_access isAssign e e_l data_t llbuilder =
         else L.build_load llvalue "tmp" llbuilder
 
 and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with 
-    SIntLit(i)          -> L.const_int i32_t i
-  | SFloatLit(f)        -> L.const_float float_t f
-  | SBoolLit(b)         -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
-  | SCharLit(c)         -> L.const_int i8_t (Char.to_int c)
-  | SStringLit(s)       -> L.build_global_stringptr s "tmp" llbuilder
-  | SId(id, data_t)     -> codegen_id id data_t llbuilder
+    SIntLit(i)                  -> L.const_int i32_t i
+  | SFloatLit(f)                -> L.const_float float_t f
+  | SBoolLit(b)                 -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
+  | SCharLit(c)                 -> L.const_int i8_t (Char.to_int c)
+  | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
+  | SId(id, _)                      -> codegen_id id llbuilder
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
-  | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
-  | SAssign(e1, e2, data_t)         -> codegen_assign e1 e2 data_t llbuilder
-  | SArrayAccess(e, e_l, data_t)    -> codegen_array_access false e e_l data_t llbuilder
-(* TODO: Add the remainder of this bullocks *)
+  | SCall(fname, se_l, _, _)   -> codegen_call fname se_l llbuilder
+  | SAssign(e1, e2, _)         -> codegen_assign e1 e2 llbuilder
+  | SArrayAccess(e, e_l, _)    -> codegen_array_access false e e_l llbuilder
 (*
   | SNoexpr                     -> build_add (const_int i32_t 0) (const_int i32_t 0) "nop" llbuilder
   | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el
@@ -213,7 +220,7 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SDelete e                   -> codegen_delete e llbuilder
 *)
 
-and codegen_return data_t sexpr llbuilder = match sexpr with
+and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder
   | _ -> L.build_ret (codegen_sexpr sexpr llbuilder) llbuilder
 
@@ -221,7 +228,7 @@ and codegen_return data_t sexpr llbuilder = match sexpr with
 (* Use L.build_load and L.build_store *)
 and codegen_local var_name data_t sexpr llbuilder = 
     let lltype = match data_t with
-        Datatype(Object_t(name)) -> find_struct name
+        Datatype(Object_t(name)) -> find_struct_exn name
       | _ -> get_lltype_exn data_t
     in
     let malloc = L.build_malloc lltype var_name llbuilder in
@@ -229,12 +236,12 @@ and codegen_local var_name data_t sexpr llbuilder =
     let lhs = SId(var_name, data_t) in
     match sexpr with
         SNoexpr -> malloc
-      | _ -> codegen_assign lhs sexpr data_t llbuilder
+      | _ -> codegen_assign lhs sexpr llbuilder
 
 and codegen_stmt llbuilder = function
     SBlock sl               -> List.hd_exn (List.map sl ~f:(codegen_stmt llbuilder))
-  | SExpr(se, data_t)       -> codegen_sexpr se llbuilder
-  | SReturn(se, data_t)     -> codegen_return data_t se llbuilder
+  | SExpr(se, _)            -> codegen_sexpr se llbuilder
+  | SReturn(se, _)     -> codegen_return se llbuilder
   | SLocal(s, data_t, se)   -> codegen_local s data_t se llbuilder
 (*
   | SIf(e, s1, s2)          -> codegen_if_stmt e s1 s2 llbuilder

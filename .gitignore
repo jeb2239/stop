@@ -1,0 +1,9 @@
+# ignore .swp files
+*.swp
+*.swo
+_build/
+*.native
+*.ll
+*.out
+*.diff
+*.log

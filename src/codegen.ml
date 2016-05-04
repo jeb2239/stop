@@ -30,7 +30,6 @@ let i1_t        = L.i1_type context
 let float_t     = L.float_type context
 let double_t    = L.double_type context
 let void_t      = L.void_type context 
-
 let str_t       = L.pointer_type (L.i8_type context)
 
 let struct_types:(string, L.lltype) Hashtbl.t = Hashtbl.create ()
@@ -59,6 +58,7 @@ let rec get_array_type array_t = match array_t with
   | _ -> raise(E.InvalidDatatype "Array Type")
 
 and find_struct_exn name =
+    if name = "String" then (L.i8_type context) else 
     try
         Hashtbl.find_exn struct_types name
     with

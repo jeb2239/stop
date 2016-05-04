@@ -246,13 +246,64 @@ and codegen_local var_name data_t sexpr llbuilder =
         SNoexpr -> malloc
       | _ -> codegen_assign lhs sexpr llbuilder
 
+
+and codegen_if_stmt exp then_ (else_:Sast.sstmt) llbuilder =
+  let cond_val = codegen_sexpr  exp llbuilder in
+
+  (* Grab the first block so that we might later add the conditional branch
+   * to it at the end of the function. *)
+  let start_bb = L.insertion_block llbuilder in
+  let the_function = L.block_parent start_bb in
+
+  let then_bb = L.append_block context "then" the_function in
+  (* Emit 'then' value. *)
+  L.position_at_end then_bb llbuilder;
+  let _(* then_val *) = codegen_stmt llbuilder then_ in
+
+  (* Codegen of 'pthen' can change the current block, update then_bb for the
+   * phi. We create a new name because one is used for the phi node, and the
+   * other is used for the conditional branch. *)
+  let new_then_bb = L.insertion_block llbuilder in
+
+  (* Emit 'else' value. *)
+  let else_bb = L.append_block context "else" the_function in
+  L.position_at_end else_bb llbuilder;
+  let _ (* else_val *) = codegen_stmt llbuilder else_ in
+
+  (* Codegen of 'else' can change the current block, update else_bb for the
+   * phi. *)
+  let new_else_bb = L.insertion_block llbuilder in
+
+  
+  let merge_bb = L.append_block context "ifcont" the_function in
+  L.position_at_end merge_bb llbuilder;
+  (* let then_bb_val = value_of_block new_then_bb in *)
+  let else_bb_val = L.value_of_block new_else_bb in
+  (* let incoming = [(then_bb_val, new_then_bb); (else_bb_val, new_else_bb)] in *)
+  (* let phi = build_phi incoming "iftmp" llbuilder in *)
+
+  (* Return to the start block to add the conditional branch. *)
+  L.position_at_end start_bb llbuilder;
+  ignore (L.build_cond_br cond_val then_bb else_bb llbuilder);
+
+  (* Set a unconditional branch at the end of the 'then' block and the
+   * 'else' block to the 'merge' block. *)
+  L.position_at_end new_then_bb llbuilder; ignore (L.build_br merge_bb llbuilder);
+  L.position_at_end new_else_bb llbuilder; ignore (L.build_br merge_bb llbuilder);
+
+  (* Finally, set the builder to the end of the merge block. *)
+  L.position_at_end merge_bb llbuilder;
+
+  else_bb_val (* phi *)
+
+
 and codegen_stmt llbuilder = function
     SBlock sl               -> List.hd_exn (List.map sl ~f:(codegen_stmt llbuilder))
   | SExpr(se, _)            -> codegen_sexpr se llbuilder
   | SReturn(se, _)     -> codegen_return se llbuilder
   | SLocal(s, data_t, se)   -> codegen_local s data_t se llbuilder
-(*
   | SIf(e, s1, s2)          -> codegen_if_stmt e s1 s2 llbuilder
+(*
   | SFor(e1, e2, e3, s)     -> codegen_for e1 e2 e3 s llbuilder
   | SWhile(e, s)            -> codegen_while e s llbuilder
   | SBreak                  -> codegen_break llbuilder

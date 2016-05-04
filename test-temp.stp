@@ -1,11 +1,8 @@
 // Test-Temp
 
-class Shape {
-	var a:Int;
-}
-
 def main = (argc:Int):Int {
-	var a:Shape;
+	var a:Int = 3;
+	printf("%d",a);
 	return 0;
 }
 

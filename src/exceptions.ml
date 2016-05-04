@@ -40,6 +40,7 @@ exception CannotUseThisKeywordOutsideOfClass
 exception UtilsError of string
 
 (* Codegen Exceptions *)
+exception FieldIndexNotFound
 exception PrintfFirstArgNotString
 exception PrintfMissingArgs
 exception NotImplemented

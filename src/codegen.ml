@@ -132,8 +132,6 @@ let rec handle_binop e1 op e2 data_t llbuilder =
           | _       -> raise Exceptions.FloatOpNotSupported
     in
 
-    (* TODO: Handle Casting *)
-
     (* Use Integer Arithmetic for Ints, Chars, and Bools *)
     (* Use Floating-Point Arithmetic for Floats *)
     let type_handler data_t = match data_t with
@@ -154,7 +152,7 @@ and codegen_function_call fname sexpr_l data_t llbuilder =
     let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
     match data_t with
         Datatype(Unit_t) -> L.build_call f (Array.of_list params) "" llbuilder
-    |   _ -> L.build_call f (Array.of_list params) "tmp" llbuilder
+      | _ -> L.build_call f (Array.of_list params) "tmp" llbuilder
 
 and codegen_printf sexpr_l llbuilder =
     (* Convert printf format string to llvalue *)
@@ -232,25 +230,30 @@ and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder
   | _ -> L.build_ret (codegen_sexpr sexpr llbuilder) llbuilder
 
-(* TODO: Resolve this mess *)
-(* Use L.build_load and L.build_store *)
-and codegen_local var_name data_t sexpr llbuilder = 
+and codegen_local var_name data_t sexpr fname llbuilder = 
     let lltype = match data_t with
         Datatype(Object_t(name)) -> find_struct_exn name
       | _ -> get_lltype_exn data_t
     in
-    let malloc = L.build_malloc lltype var_name llbuilder in
-    Hashtbl.add_exn named_values ~key:var_name ~data:malloc;
+    let record_struct_field_name = fname ^ ".record." ^ var_name in 
+    let record_name = fname ^ "_record" in
+
+    (* let malloc = L.build_malloc lltype var_name llbuilder in *)
+    let index = Hashtbl.find_exn struct_field_indexes record_struct_field_name in
+    let record = Hashtbl.find_exn named_values record_name in
+    let local = L.build_struct_gep record 1 var_name llbuilder in
+
+    Hashtbl.add_exn named_values ~key:var_name ~data:local;
     let lhs = SId(var_name, data_t) in
     match sexpr with
-        SNoexpr -> malloc
+        SNoexpr -> local
       | _ -> codegen_assign lhs sexpr llbuilder
 
-and codegen_stmt llbuilder = function
-    SBlock sl               -> List.hd_exn (List.map sl ~f:(codegen_stmt llbuilder))
+and codegen_stmt stmt ~fname:fname ~builder:llbuilder = match stmt with
+    SBlock sl               -> List.hd_exn (List.map sl ~f:(codegen_stmt ~fname:fname ~builder:llbuilder))
   | SExpr(se, _)            -> codegen_sexpr se llbuilder
-  | SReturn(se, _)     -> codegen_return se llbuilder
-  | SLocal(s, data_t, se)   -> codegen_local s data_t se llbuilder
+  | SReturn(se, _)          -> codegen_return se llbuilder
+  | SLocal(s, data_t, se)   -> codegen_local s data_t se fname llbuilder
 (*
   | SIf(e, s1, s2)          -> codegen_if_stmt e s1 s2 llbuilder
   | SFor(e1, e2, e3, s)     -> codegen_for e1 e2 e3 s llbuilder
@@ -292,8 +295,7 @@ let codegen_struct_stub s =
         ~data:struct_t
 
 let codegen_struct s =
-    let struct_t = Hashtbl.find_exn struct_types s.scname
-    in
+    let struct_t = Hashtbl.find_exn struct_types s.scname in
     let type_list = List.map s.sfields 
         ~f:(function Field(_, _, data_t) -> get_lltype_exn data_t)
     in
@@ -302,25 +304,20 @@ let codegen_struct s =
     in
 
     (* Add key field to all structs *)
-    let type_list = i32_t :: type_list
-    in
-    let name_list = ".key" :: name_list 
-    in
-
-    let type_array = (Array.of_list type_list) 
-    in
+    let type_list = i32_t :: type_list in
+    let name_list = ".key" :: name_list in
+    let type_array = Array.of_list type_list in
     List.iteri name_list
         ~f:(fun i f -> 
             let n = s.scname ^ "." ^ f in
+            (* print_string (n ^ "\n"); *)
             Hashtbl.add_exn struct_field_indexes ~key:n ~data:i);
     (* Add the struct to the module *)
     L.struct_set_body struct_t type_array true
 
 let codegen_function_stub sfdecl =
-    let fname = sfdecl.sfname
-    in
-    let is_var_arg = ref false 
-    in
+    let fname = sfdecl.sfname in
+    let is_var_arg = ref false in
     let params = List.rev 
         (List.fold_left sfdecl.sformals
             ~f:(fun l -> (function 
@@ -336,8 +333,7 @@ let codegen_function_stub sfdecl =
     L.define_function fname ftype the_module
 
 let init_params f formals =
-    let formals = Array.of_list formals
-    in
+    let formals = Array.of_list formals in
     Array.iteri (L.params f)
         ~f:(fun i element ->
             let n = formals.(i) in
@@ -352,7 +348,11 @@ let codegen_record name llbuilder =
     let record_struct_name = name ^ ".record" in
     let record_name = name ^ "_record" in
     let lltype = find_struct_exn record_struct_name in
-    L.build_malloc lltype record_name llbuilder
+    let llval = L.build_malloc lltype record_name llbuilder in
+    Hashtbl.add_exn named_values
+        ~key:record_name
+        ~data:llval;
+    llval
 
 let codegen_function sfdecl =
     Hashtbl.clear named_values;
@@ -360,26 +360,14 @@ let codegen_function sfdecl =
     let fname = sfdecl.sfname in
     let f = lookup_llfunction_exn fname in
     let llbuilder = L.builder_at_end context (L.entry_block f) in
+
     let _ = init_params f sfdecl.sformals in
+
     let _ = codegen_record fname llbuilder in
-    let _ = codegen_stmt llbuilder (SBlock(sfdecl.sbody)) in
+    let _ = codegen_stmt (SBlock(sfdecl.sbody)) fname llbuilder in
     if sfdecl.sreturn_t = Datatype(Unit_t)
     then ignore(L.build_ret_void llbuilder);
     ()
-
-(* TODO: Figure out how to do argc/argv properly *)
-(*
-let construct_main_args argc argv llbuilder =
-    let str_pt = L.pointer_type str_t 
-    in
-    let size_real = L.build_add argc (L.const_int i32_t 1) "arr_size" llbuilder
-    in
-
-    let arr = L.build_array_malloc str_pt size_real "args" llbuilder 
-    in
-    let arr = L.build_pointercast arr str_pt "args" llbuilder
-    in
-*)
 
 let codegen_main main =
     Hashtbl.clear named_values;
@@ -387,6 +375,7 @@ let codegen_main main =
     let ftype = L.function_type i32_t [| i32_t; L.pointer_type str_t |] in 
     let f = L.define_function "main" ftype the_module in
     let llbuilder = L.builder_at_end context (L.entry_block f) in
+
     let argc = L.param f 0 in
     let argv = L.param f 1 in
     L.set_value_name "argc" argc;
@@ -395,9 +384,7 @@ let codegen_main main =
     Hashtbl.add_exn named_parameters ~key:"argv" ~data:argv;
 
     let _ = codegen_record "main" llbuilder in
-
-    (* Generate LLVM IR for statements in function body *)
-    let _ = codegen_stmt llbuilder (SBlock(main.sbody)) in
+    let _ = codegen_stmt (SBlock(main.sbody)) "main" llbuilder in
 
     (* Check to make sure we return; add a return statement if not *)
     let last_bb = match (L.block_end (lookup_llfunction_exn "main")) with
@@ -414,21 +401,15 @@ let codegen_main main =
 
 let codegen_sast sast =
     (* Declare the various LLVM Reserved Functions *)
-    let _ = codegen_library_functions ()
-    in
+    let _ = codegen_library_functions () in
     (* Generate a map of class names to their respective LLVM Struct Types *)
-    let _ = List.map sast.classes ~f:(fun s -> codegen_struct_stub s)
-    in
+    let _ = List.map sast.classes ~f:(fun s -> codegen_struct_stub s) in
     (* Generate LLVM IR for classes *)
-    let _ = List.map sast.classes ~f:(fun s -> codegen_struct s)
-    in
+    let _ = List.map sast.classes ~f:(fun s -> codegen_struct s) in
     (* Define the program functions *)
-    let _ = List.map sast.functions ~f:(fun f -> codegen_function_stub f)
-    in
+    let _ = List.map sast.functions ~f:(fun f -> codegen_function_stub f) in
     (* Generate LLVM IR for functions *)
-    let _ = List.map sast.functions ~f:(fun f -> codegen_function f)
-    in
+    let _ = List.map sast.functions ~f:(fun f -> codegen_function f) in
     (* Generate LLVM IR for main function *)
-    let _ = codegen_main sast.main
-    in
+    let _ = codegen_main sast.main in
     the_module

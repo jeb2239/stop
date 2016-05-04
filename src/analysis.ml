@@ -445,7 +445,7 @@ and parse_stmt env = function
   | Return e                -> check_return e env
   | Local(s, data_t, e)     -> local_handler s data_t e env 
   
- (* | If(e, s1, s2)           -> check_if e s1 s2 env*)
+  | If(e, s1, s2)           -> check_if e s1 s2 env
  (* | For(e1, e2, e3, e4)     -> check_for e1 e2 e3 e4 env
   | While(e, s)             -> check_while e s env
   *)
@@ -462,6 +462,17 @@ and convert_stmt_list_to_sstmt_list sl env =
     in
     let sstmt_list = ((iter sl), !env_ref) in
     sstmt_list
+
+
+and check_if e s1 s2 env =
+  let se, _ = expr_to_sexpr e env in
+  let t = sexpr_to_type_exn se in
+  let ifbody, _ = parse_stmt env s1 in
+  let elsebody, _ = parse_stmt env s2 in
+  if t = Datatype(Bool_t) 
+    then SIf(se, ifbody, elsebody), env
+    else raise E.InvalidIfStatementType
+
 
 (* Map Generation *)
 (* ============== *)

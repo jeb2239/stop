@@ -35,6 +35,7 @@ exception LHSofObjectAccessMustBeAccessible
 exception RHSofObjectAccessMustBeAccessible
 exception UnknownClassVar
 exception CannotUseThisKeywordOutsideOfClass
+exception InvalidIfStatementType
 
 (* Utils Exceptions *)
 exception UtilsError of string

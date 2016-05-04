@@ -180,19 +180,29 @@ and codegen_assign e1 e2 llbuilder =
     (* Get lhs llvalue; don't emit as expression *)
     let lhs = match e1 with
         SId(id, _) -> 
+            (print_string "ab";
             try Hashtbl.find_exn named_parameters id
-            with | Not_found ->
+            with Not_found ->
                 try Hashtbl.find_exn named_values id
-                with | Not_found -> raise (E.UndefinedId id)
+                with Not_found -> raise (E.UndefinedId id))
+      | SObjAccess(e1, e2, data_t) -> raise E.NotImplemented
       | _ -> raise E.AssignmentLhsMustBeAssignable
+            (* codegen_obj_access true e1 e2 data_t llbuilder *)
     in
     (* Get rhs llvalue *)
     let rhs = match e2 with 
-      | _ -> codegen_sexpr e2 llbuilder 
+        _ -> codegen_sexpr e2 llbuilder 
     in
     (* Codegen Assignment Stmt *)
     ignore(L.build_store rhs lhs llbuilder);
     rhs
+
+    (*
+and codegen_obj_access isAssign lhs rhs data_t llbuilder =
+    let lhs = match lhs with
+        SId(id, _) -> 
+        *)
+
 
 and codegen_array_access isAssign e e_l llbuilder =
     let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in

@@ -1,0 +1,21 @@
+/*
+ * test-class2.stp
+ * ===============
+ */
+
+#include "ex.stp"
+
+def main = ():Int { 
+	var s:Rectangle;
+	s.w = 5;
+	s.h = 10;
+	printf("%d %d\n", s.w, s.h);
+	return 0;
+}
+
+class Rectangle = {
+	var x:Int;
+	var y:Int;
+	var w:Int;
+	var h:Int;
+}

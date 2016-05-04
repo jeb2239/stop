@@ -1,0 +1,30 @@
+/*
+ * test-fib_dynamic.stp
+ * ====================
+ */
+
+def fib_helper = (i:Int, results:Int[]) {
+	if (results[i] != -1) {
+		return results[i];
+	} else {
+		results[i] = fib_helper(i-1, results) + fib_helper(i-2, results);
+	}
+}
+
+def fib = (i:Int, results:Int[]):Int {
+	var results:Int[i];
+	results[0] = 0;
+	results[1] = 1;
+
+	for (j:Int = 0; j < i; j++) {
+		results[j] = -1;
+	}
+	return fib_helper(i, results);
+}
+
+def main = ():Int {
+	printf("%d\n", fib(10));
+	printf("%d\n", fib(9));
+	printf("%d\n", fib(8));
+	return 0;
+}

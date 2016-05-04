@@ -131,10 +131,10 @@ sdecl:
 /* ------- */
 
 cdecl:
-    CLASS TYPE_ID LBRACE cbody RBRACE { {
+    CLASS TYPE_ID ASSIGN LBRACE cbody RBRACE { {
         cname = $2;
         extends = NoParent;
-        cbody = $4;
+        cbody = $5;
     } }
 
 cbody:

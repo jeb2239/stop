@@ -1,0 +1,18 @@
+test-allfeatures...FAILED
+  lli failed on lli test-allfeatures.ll > test-allfeatures.out
+test-class1...FAILED
+  ./stop.native failed on ./stop.native tests/test-class1.stp > test-class1.ll
+test-class2...FAILED
+  ./stop.native failed on ./stop.native tests/test-class2.stp > test-class2.ll
+test-expr1...OK
+test-expr2...FAILED
+  ./stop.native failed on ./stop.native tests/test-expr2.stp > test-expr2.ll
+test-fib_dynamic...FAILED
+  lli failed on lli test-fib_dynamic.ll > test-fib_dynamic.out
+test-fib_rec...FAILED
+  ./stop.native failed on ./stop.native tests/test-fib_rec.stp > test-fib_rec.ll
+test-firstorder1...OK
+test-helloworld...OK
+test-main...OK
+test-printf...OK
+test-temp...OK

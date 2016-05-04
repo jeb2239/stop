@@ -373,9 +373,9 @@ and parse_stmt env = function
   | Expr e                  -> check_expr_stmt e env
   | Return e                -> check_return e env
   | Local(s, data_t, e)     -> local_handler s data_t e env 
-  (*
-  | If(e, s1, s2)           -> check_if e s1 s2 env
-  | For(e1, e2, e3, e4)     -> check_for e1 e2 e3 e4 env
+  
+ (* | If(e, s1, s2)           -> check_if e s1 s2 env*)
+ (* | For(e1, e2, e3, e4)     -> check_for e1 e2 e3 e4 env
   | While(e, s)             -> check_while e s env
   *)
 

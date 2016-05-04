@@ -5,6 +5,7 @@
 
 open Ast
 open Parser
+open Sast
 open Core.Std
 
 module E = Exceptions
@@ -244,3 +245,107 @@ let string_of_program = function
 let string_of_formal_name = function
     Formal(s, _) -> s
   | _ -> ""
+
+
+
+
+let rec string_of_bracket_sexpr = function
+    []        -> ""
+  |   head :: tail  -> "[" ^ (string_of_sexpr head) ^ "]" ^ (string_of_bracket_sexpr tail)
+and string_of_sarray_primitive = function
+    []        -> ""
+  |   [last]      -> (string_of_sexpr last)
+  |   head :: tail  -> (string_of_sexpr head) ^ ", " ^ (string_of_sarray_primitive tail)
+and string_of_sexpr = function 
+    SIntLit(i)         -> string_of_int i
+  | SBoolLit(b)       -> if b then "true" else "false"
+  | SFloatLit(f)       -> string_of_float f
+  | SStringLit(s)        -> "\"" ^ (String.escaped s) ^ "\""
+  | SCharLit(c)        -> Char.escaped c
+  | SId(s, _)         -> s
+  | SBinop(e1, o, e2, _)    -> (string_of_sexpr e1) ^ " " ^ (string_of_op o) ^ " " ^ (string_of_sexpr e2)
+  | SAssign(e1, e2, _)      -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) 
+  | SNoexpr           -> ""
+  | SObjAccess(e1, e2, _)   -> (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2)
+  | SCall(f, el, _, _)      -> f ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"
+  (* | SArrayPrimitive(el, _)    -> "|" ^ (string_of_sarray_primitive el) ^ "|" *)
+  |   SUnop(op, e, _)       -> (string_of_uop op) ^ "(" ^ string_of_sexpr e ^ ")"
+  (* | SNull           -> "null" *)
+  (* |   SArrayCreate(d, el, _)    -> "new " ^ string_of_datatype d ^ string_of_bracket_sexpr el *)
+  (* |   SArrayAccess(e, el, _)    -> (string_of_sexpr e) ^ (string_of_bracket_sexpr el) *)
+  (* |   SObjectCreate(s, el, _)   -> "new " ^ s ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")" *)
+  (* |   SDelete(e)          -> "delete (" ^ (string_of_sexpr e) ^ ")" *)
+(* 
+let string_of_local_expr = function
+    Noexpr -> ""
+  |   e      -> " = " ^ string_of_expr e
+ *)
+(* Print statements *)
+
+
+and string_of_local_sexpr = function
+    SNoexpr   -> ""
+  |   e         -> " = " ^ string_of_sexpr e
+
+and string_of_sstmt indent =
+  let indent_string = String.make indent '\t' in
+  let get_stmt_string = function 
+
+      SBlock(stmts)       -> 
+        indent_string ^ "{\n" ^ 
+          String.concat ~sep:"" (List.map ~f:(string_of_sstmt (indent+1)) stmts) ^ 
+        indent_string ^ "}\n"
+
+    |   SExpr(expr, _)        -> 
+        indent_string ^ string_of_sexpr expr ^ ";\n";
+
+    |   SReturn(expr, _)      -> 
+        indent_string ^ "return " ^ string_of_sexpr expr ^ ";\n";
+
+    |   SIf(e, s, SBlock([SExpr(SNoexpr, _)]))  -> 
+        indent_string ^ "if (" ^ string_of_sexpr e ^ ")\n" ^ 
+          (string_of_sstmt (indent+1) s)
+
+    |   SIf(e, s1, s2)      -> 
+        indent_string ^ "if (" ^ string_of_sexpr e ^ ")\n" ^ 
+          string_of_sstmt (indent+1) s1 ^ 
+        indent_string ^ "else\n" ^ 
+          string_of_sstmt (indent+1) s2
+
+    |   SFor(e1, e2, e3, s)     -> 
+        indent_string ^ "for (" ^ string_of_sexpr e1  ^ " ; " ^ string_of_sexpr e2 ^ " ; " ^ string_of_sexpr e3  ^ ")\n" ^ 
+          string_of_sstmt (indent) s
+
+    |   SWhile(e, s)      -> 
+        indent_string ^ "while (" ^ string_of_sexpr e ^ ")\n" ^ 
+          string_of_sstmt (indent) s
+
+    (* |   SBreak          -> indent_string ^ "break;\n" *)
+    (* |   SContinue       -> indent_string ^ "continue;\n" *)
+    |   SLocal(s, d, e)       -> indent_string ^ string_of_datatype d ^ " " ^ s ^ string_of_local_sexpr e ^ ";\n"
+  in get_stmt_string
+  
+and string_of_sfdecl sfdecl = 
+      "function" ^ " " ^ sfdecl.sfname ^ " = (" ^
+      String.concat ~sep:", " (List.map ~f:string_of_formal sfdecl.sformals) ^
+      "):" ^ string_of_datatype sfdecl.sreturn_t ^ "{\n" ^ 
+      string_of_sstmt 0 (SBlock(sfdecl.sbody)) ^
+      "}\n"
+and string_of_scdecl scdecl =
+     
+        "class " ^ scdecl.scname ^ " {\n" ^
+        String.concat ~sep:"" (List.map ~f:string_of_field scdecl.sfields) ^
+        String.concat ~sep:"" (List.map ~f:string_of_sfdecl scdecl.sfdecls) ^
+        "}\n"
+    
+and string_of_main main =
+    match main with 
+    Some(sfdecl) -> string_of_sfdecl sfdecl
+    |None -> ""
+
+
+let string_of_sprogram sprogram =
+    String.concat ~sep:"\n" (List.map ~f:string_of_scdecl sprogram.classes) ^ "\n" ^
+    String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.functions) ^ "\n" ^
+    string_of_sfdecl sprogram.main ^ "\n" 
+    

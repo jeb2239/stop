@@ -3,6 +3,7 @@
  * ====================
  */
 
+/*
 def fib_helper = (i:Int, results:Int[]):Int {
 	if (results[i] != -1) {
 		return results[i];
@@ -29,3 +30,4 @@ def main = ():Int {
 	printf("%d\n", fib(8));
 	return 0;
 }
+*/

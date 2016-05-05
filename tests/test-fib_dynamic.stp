@@ -11,7 +11,7 @@ def fib_helper = (i:Int, results:Int[]):Int {
 	}
 }
 
-def fib = (i:Int, results:Int[]):Int {
+def fib = (i:Int):Int {
 	var results:Int[];
 	results[0] = 0;
 	results[1] = 1;

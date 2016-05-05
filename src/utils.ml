@@ -249,36 +249,43 @@ let string_of_formal_name = function
   | _ -> ""
 
 let rec string_of_bracket_sexpr = function
-    []        -> ""
-  |   head :: tail  -> "[" ^ (string_of_sexpr head) ^ "]" ^ (string_of_bracket_sexpr tail)
+    [] -> ""
+  | head :: tail  -> "[" ^ (string_of_sexpr head) ^ "]" ^ (string_of_bracket_sexpr tail)
+
 and string_of_sarray_primitive = function
-    []        -> ""
-  |   [last]      -> (string_of_sexpr last)
-  |   head :: tail  -> (string_of_sexpr head) ^ ", " ^ (string_of_sarray_primitive tail)
+    [] -> ""
+  | [last] -> (string_of_sexpr last)
+  | head :: tail -> (string_of_sexpr head) ^ ", " ^ (string_of_sarray_primitive tail)
+
 and string_of_sexpr = function 
-    SIntLit(i)         -> string_of_int i
-  | SBoolLit(b)       -> if b then "true" else "false"
-  | SFloatLit(f)       -> string_of_float f
-  | SStringLit(s)        -> "\"" ^ (String.escaped s) ^ "\""
-  | SCharLit(c)        -> Char.escaped c
-  | SId(s, _)         -> s
-  | SBinop(e1, o, e2, _)    -> (string_of_sexpr e1) ^ " " ^ (string_of_op o) ^ " " ^ (string_of_sexpr e2)
-  | SAssign(e1, e2, _)      -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) 
-  | SNoexpr           -> ""
-  | SObjAccess(e1, e2, data_t) -> (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2) ^":"^ (string_of_datatype data_t)
+    SIntLit(i) -> string_of_int i
+  | SBoolLit(b) -> if b then "true" else "false"
+  | SFloatLit(f) -> string_of_float f
+  | SStringLit(s) -> "\"" ^ (String.escaped s) ^ "\""
+  | SCharLit(c) -> Char.escaped c
+  | SId(s, _) -> s
+  | SBinop(e1, o, e2, _) -> (string_of_sexpr e1) ^ " " ^ (string_of_op o) ^ " " ^ (string_of_sexpr e2)
+  | SAssign(e1, e2, _) -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) 
+  | SNoexpr -> ""
+  | SObjAccess(e1, e2, data_t) -> 
+          (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2) ^":"^ (string_of_datatype data_t)
   | SCall(f, el, _, _)      -> f ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"
-  (* | SArrayPrimitive(el, _)    -> "|" ^ (string_of_sarray_primitive el) ^ "|" *)
-  |   SUnop(op, e, _)       -> (string_of_uop op) ^ "(" ^ string_of_sexpr e ^ ")"
-  (* | SNull           -> "null" *)
-  (* |   SArrayCreate(d, el, _)    -> "new " ^ string_of_datatype d ^ string_of_bracket_sexpr el *)
-  (* |   SArrayAccess(e, el, _)    -> (string_of_sexpr e) ^ (string_of_bracket_sexpr el) *)
-  (* |   SObjectCreate(s, el, _)   -> "new " ^ s ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")" *)
-  (* |   SDelete(e)          -> "delete (" ^ (string_of_sexpr e) ^ ")" *)
+  | SUnop(op, e, _) -> (string_of_uop op) ^ "(" ^ string_of_sexpr e ^ ")"
+  | SArrayAccess(se, se_l, _) ->
+        string_of_sexpr se ^ "[" ^ String.concat ~sep:"][" (List.map ~f:string_of_sexpr se_l) ^ "]"
+
+  (* | SNull -> "null" *)
+  (* | SArrayCreate(d, el, _) -> "new " ^ string_of_datatype d ^ string_of_bracket_sexpr el *)
+  (* | SObjectCreate(s, el, _) -> 
+        "new " ^ s ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")" *)
+  (* | SDelete(e) -> "delete (" ^ (string_of_sexpr e) ^ ")" *)
+
 (* 
 let string_of_local_expr = function
     Noexpr -> ""
-  |   e      -> " = " ^ string_of_expr e
+  | e -> " = " ^ string_of_expr e
  *)
+
 (* Print statements *)
 
 and string_of_local_sexpr = function

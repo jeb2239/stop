@@ -51,6 +51,8 @@ exception PrintfMissingArgs
 exception NotImplemented
 exception FloatOpNotSupported
 exception IntOpNotSupported
+exception UnopNotSupported
+exception InvalidUnopEvaluationType
 exception InvalidBinopEvaluationType
 exception InvalidStructType of string
 exception InvalidStructType of string

@@ -148,6 +148,26 @@ let rec handle_binop e1 op e2 data_t llbuilder =
     in
     type_handler data_t
 
+and handle_unop op se data_t llbuilder =
+    let se_type = A.sexpr_to_type_exn se in
+    let llvalue = codegen_sexpr se llbuilder in
+
+    let unops op se_type llval = match (op, se_type) with
+        (Neg, Datatype(Int_t))      -> L.build_neg llvalue "int_unoptmp" llbuilder
+      | (Neg, Datatype(Float_t))    -> L.build_fneg llvalue "flt_unoptmp" llbuilder
+      | (Not, Datatype(Bool_t))     -> L.build_not llvalue "bool_unoptmp" llbuilder
+      | _ -> raise E.UnopNotSupported
+    in
+
+    let type_handler data_t = match data_t with
+        Datatype(Float_t)
+      | Datatype(Int_t)
+      | Datatype(Bool_t) -> unops op se_type llvalue
+      | _ -> raise E.InvalidUnopEvaluationType
+    in
+
+    type_handler data_t
+
 and codegen_call fname sexpr_l data_t llbuilder = match fname with
     "printf" -> codegen_printf sexpr_l llbuilder
   | _ as fname -> codegen_function_call fname sexpr_l data_t llbuilder
@@ -190,8 +210,9 @@ and codegen_assign e1 e2 llbuilder =
                 try Hashtbl.find_exn named_values id
                 with Not_found -> raise (E.UndefinedId id))
       | SObjAccess(e1, e2, data_t) -> raise E.NotImplemented
+      | SArrayAccess(se, se_l, _) -> 
+            codegen_array_access true se se_l llbuilder
       | _ -> raise E.AssignmentLhsMustBeAssignable
-            (* codegen_obj_access true e1 e2 data_t llbuilder *)
     in
     (* Get rhs llvalue *)
     let rhs = match e2 with 
@@ -205,7 +226,6 @@ and codegen_assign e1 e2 llbuilder =
 and codegen_obj_access isAssign lhs rhs data_t llbuilder =
     let lhs = match lhs with
         SId(s, data_t) -> codegen_id s d llbuilder
-      | _ -> raise E.NotImplemented
     in 
     let rhs = match rhs with
         SId(s, data_t) -> 
@@ -228,19 +248,19 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SBoolLit(b)                 -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
   | SCharLit(c)                 -> L.const_int i8_t (Char.to_int c)
   | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
-  | SId(id, _)                      -> codegen_id id llbuilder
-  | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
-  | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
   | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(e, e_l, _)     -> codegen_array_access false e e_l llbuilder
   | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
-  | _ -> raise E.NotImplemented
+  | SId(id, _)                      -> codegen_id id llbuilder
+  | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
+  | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
+  | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
+  | _ -> print_string (U.string_of_sexpr sexpr); raise E.NotImplemented
 
  (* | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el *)
  (* | SObjAccess(e1, e2, d)       -> codegen_obj_access true e1 e2 d llbuilder*)
  (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder
   | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
-  | SUnop(op, e, d)             -> handle_unop op e d llbuilder
   | SNull                       -> const_null i32_t
   | SDelete e                   -> codegen_delete e llbuilder
 *)

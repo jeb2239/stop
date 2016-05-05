@@ -39,7 +39,7 @@ type env = {
     env_in_while            : bool;
 }
 
-let update_env_cname env env_cname =
+let update_env_cname env_cname env =
 {
     env_cname       = env_cname;
     env_crecord     = env.env_crecord;
@@ -53,7 +53,7 @@ let update_env_cname env env_cname =
     env_in_while    = env.env_in_while;
 }
 
-let update_call_stack env in_for in_while =
+let update_call_stack in_for in_while env =
 {
     env_cname       = env.env_cname;
     env_crecord     = env.env_crecord;
@@ -448,7 +448,8 @@ and parse_stmt stmt env = match stmt with
   | Return e                -> check_return e env
   | Local(s, data_t, e)     -> local_handler s data_t e env 
   | If(e, s1, s2)           -> check_if e s1 s2 env
- (* | For(e1, e2, e3, e4)     -> check_for e1 e2 e3 e4 env
+  | For(e1, e2, e3, s)     -> check_for e1 e2 e3 s env
+  (*
   | While(e, s)             -> check_while e s env
   *)
 
@@ -473,6 +474,22 @@ and check_if e s1 s2 env =
     if t = Datatype(Bool_t) 
         then (SIf(se, ifbody, elsebody), env)
         else raise E.InvalidIfStatementType
+
+and check_for e1 e2 e3 s env =
+    let old_in_for = env.env_in_for in
+    let env = update_call_stack true env.env_in_while env in
+    let (se1,_) = expr_to_sexpr e1 env in
+    let (se2,_) = expr_to_sexpr e2 env in
+    let (se3,_) = expr_to_sexpr e3 env in
+    let (sbody,_) = parse_stmt s env in
+    let conditional_t = sexpr_to_type_exn se2 in
+    let sfor =
+        if conditional_t = Datatype(Bool_t) 
+            then SFor(se1, se2, se3, sbody)
+            else raise E.InvalidForStatementType
+    in
+    let env = update_call_stack old_in_for env.env_in_while env in
+    (sfor, env)
 
 (* Map Generation *)
 (* ============== *)

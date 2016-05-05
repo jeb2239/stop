@@ -273,7 +273,7 @@ and check_obj_access e1 e2 env =
     in
     let check_lhs = function
         This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
-      | Id (s) -> print_endline s; SId(s, get_Id_type s env)
+      | Id (s) ->  SId(s, get_Id_type s env)
       | _ as e -> raise E.LHSofObjectAccessMustBeAccessible
     in
     let check_rhs e2 =
@@ -292,7 +292,7 @@ and check_obj_access e1 e2 env =
                 Field(_, s, data_t) -> SId(s, data_t)
         with | Not_found -> raise E.UnknownClassVar
     in
-    
+
     let lhs = check_lhs e1 in
     let lhs_type = sexpr_to_type_exn lhs in
     let rhs = check_rhs e2 in
@@ -693,9 +693,9 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
         ~init:[]
     in
     
-    print_string (((function Some(fname) -> fname) env.env_fname) ^ "\n======\n");
+   (*  print_string (((function Some(fname) -> fname) env.env_fname) ^ "\n======\n");
     List.iter record_vars
-        ~f:(function (k, d) -> print_string (k ^ " " ^ (U.string_of_datatype d) ^ "\n"));
+        ~f:(function (k, d) -> print_string (k ^ " " ^ (U.string_of_datatype d) ^ "\n")); *)
     
     {
         sfname          = fdecl.fname;

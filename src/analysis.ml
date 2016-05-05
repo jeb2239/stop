@@ -449,9 +449,7 @@ and parse_stmt stmt env = match stmt with
   | Local(s, data_t, e)     -> local_handler s data_t e env 
   | If(e, s1, s2)           -> check_if e s1 s2 env
   | For(e1, e2, e3, s)     -> check_for e1 e2 e3 s env
-  (*
   | While(e, s)             -> check_while e s env
-  *)
 
 (* Semantically check a list of stmts; Convert to sstmts *)
 and convert_stmt_list_to_sstmt_list sl env =
@@ -490,6 +488,20 @@ and check_for e1 e2 e3 s env =
     in
     let env = update_call_stack old_in_for env.env_in_while env in
     (sfor, env)
+
+and check_while e s env =
+    let old_in_while = env.env_in_while in
+    let env = update_call_stack env.env_in_for true env in
+    let (se,_) = expr_to_sexpr e env in
+    let conditional_t = sexpr_to_type_exn se in
+    let (sbody,_) = parse_stmt s env in
+    let swhile = 
+        if conditional_t = Datatype(Bool_t)
+            then SWhile(se, sbody)
+            else raise E.InvalidWhileStatementType
+    in
+    let env = update_call_stack env.env_in_for old_in_while env in
+    (swhile, env)
 
 (* Map Generation *)
 (* ============== *)

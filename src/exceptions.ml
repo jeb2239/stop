@@ -37,6 +37,7 @@ exception UnknownClassVar
 exception CannotUseThisKeywordOutsideOfClass
 exception InvalidIfStatementType
 exception InvalidForStatementType
+exception InvalidWhileStatementType
 
 (* Utils Exceptions *)
 exception UtilsError of string

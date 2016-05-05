@@ -54,6 +54,7 @@ exception IntOpNotSupported
 exception UnopNotSupported
 exception InvalidUnopEvaluationType
 exception InvalidBinopEvaluationType
+exception InvalidObjAccessType
 exception InvalidStructType of string
 exception InvalidStructType of string
 exception InvalidDatatype of string

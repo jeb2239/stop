@@ -25,9 +25,13 @@ def fib = (i:Int):Int {
 }
 */
 
-def main = ():Int {
-	var results:Int[];
-	results[0] = 0;
-	results[1] = 1;
+class Test = {
+	var a:Int;
+}
+
+def main = (argc:Int, argv:String[]):Int {
+	var a:Test;
+	a.a = 5;
+	printf("%d\n", a.a);
 	return 0;
 }

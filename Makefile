@@ -20,7 +20,7 @@ clean :
 
 .PHONY : clean_tests
 clean_tests :
-	rm -f *.ll *.out *.log *.diff
+	rm -f *.ll *.out *.log *.diff *.s
 
 .PHONY : parser
 parser :

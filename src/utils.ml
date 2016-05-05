@@ -124,7 +124,7 @@ let string_of_primitive = function
   | Bool_t -> "Bool"
   | Char_t -> "Char"
   | Unit_t -> "Unit"
-  | Object_t(s) -> "~Class " ^ s ^ "~"
+  | Object_t(s) -> s
 
 let rec print_brackets = function
     1 -> "[]"

@@ -16,19 +16,13 @@ def main = ():Int {
 
 	var b:Int = 1;
 	if (a >= 3) {
-		b = a + 1;
+		b = 0;
 	}else if (a <= 2){
 		b = a;
 	}
 	
 	printf("%d",b);
         
-	if (a!=b){
-		a = b+1;
-	} else {
-		var d:Int = 3;
-	}
 
-	printf("%d", d);
 	return 0;
 }

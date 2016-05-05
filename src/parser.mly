@@ -304,7 +304,7 @@ stmt:
     | VAR ID COLON datatype SEMI                { Local($2, $4, Noexpr) }
     | VAR ID ASSIGN expr SEMI                   { Local($2, Any, $4) }
     | VAR ID COLON datatype ASSIGN expr SEMI    { Local($2, $4, $6) }
-    | IF LPAREN expr RPAREN stmt %prec NOELSE   { If($3, $5, Block([Expr(Noexpr)])) }
+    | IF LPAREN expr RPAREN stmt %prec NOELSE   { If($3, $5, Block([])) }
     | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
 
 /* Expressions */

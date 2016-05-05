@@ -372,7 +372,6 @@ and check_return e env =
                 env.env_fname))
 
 and local_handler s data_t e env =
-
     if StringMap.mem env.env_named_vars s
     then raise (E.DuplicateVar(s))
     else
@@ -443,12 +442,11 @@ and local_handler s data_t e env =
                 let type2 = U.string_of_datatype se_data_t in
                 raise (E.LocalAssignmentTypeMismatch(type1, type2))
 
-and parse_stmt env = function
+and parse_stmt stmt env = match stmt with
     Block sl                -> check_sblock sl env
   | Expr e                  -> check_expr_stmt e env
   | Return e                -> check_return e env
   | Local(s, data_t, e)     -> local_handler s data_t e env 
-  
   | If(e, s1, s2)           -> check_if e s1 s2 env
  (* | For(e1, e2, e3, e4)     -> check_for e1 e2 e3 e4 env
   | While(e, s)             -> check_while e s env
@@ -459,7 +457,7 @@ and convert_stmt_list_to_sstmt_list sl env =
     let env_ref = ref(env) in
     let rec iter = function
         head :: tail ->
-            let (a_head, env) = parse_stmt !env_ref head in
+            let (a_head, env) = parse_stmt head !env_ref in
             env_ref := env;
             a_head :: (iter tail)
       | [] -> []
@@ -467,16 +465,14 @@ and convert_stmt_list_to_sstmt_list sl env =
     let sstmt_list = ((iter sl), !env_ref) in
     sstmt_list
 
-
 and check_if e s1 s2 env =
-  let se, _ = expr_to_sexpr e env in
-  let t = sexpr_to_type_exn se in
-  let ifbody, _ = parse_stmt env s1 in
-  let elsebody, _ = parse_stmt env s2 in
-  if t = Datatype(Bool_t) 
-    then SIf(se, ifbody, elsebody), env
-    else raise E.InvalidIfStatementType
-
+    let (se, _) = expr_to_sexpr e env in
+    let t = sexpr_to_type_exn se in
+    let (ifbody, _) = parse_stmt s1 env in
+    let (elsebody, _) = parse_stmt s2 env in
+    if t = Datatype(Bool_t) 
+        then (SIf(se, ifbody, elsebody), env)
+        else raise E.InvalidIfStatementType
 
 (* Map Generation *)
 (* ============== *)
@@ -729,10 +725,7 @@ let convert_cdecl_to_scdecl sfdecls (c:Ast.cdecl) =
     }
 
 (* Generate Sast: sprogram *)
-let convert_ast_to_sast
-    crecord_map (cdecls : cdecl list) 
-    fdecl_map (fdecls : fdecl list) =
-
+let convert_ast_to_sast crecord_map (cdecls : cdecl list) fdecl_map (fdecls : fdecl list) =
     let is_main = (fun f -> match f.sfname with s -> s = "main") in
     let get_main fdecls =
         let mains = (List.filter ~f:is_main fdecls)

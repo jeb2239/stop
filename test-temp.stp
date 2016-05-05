@@ -1,16 +1,11 @@
 // Test-Temp
 
-def main = (argc:Int):Int {
-<<<<<<< HEAD
-	var a:Shape;
-	if(true){
-=======
-	var a:Int = 3;
-	printf("%d",a);
->>>>>>> compiler_updates_jms
+def main = ():Int {
+	var a:Int = 0;
+	if (a < 1) {
+		printf("%d\n", a);
+	}
 	return 0;
-	}else {
-	return 0;}
 }
 
 /*

@@ -298,7 +298,7 @@ stmt:
       expr SEMI                                 { Expr($1) }
     | RETURN SEMI                               { Return(Noexpr) }
     | RETURN expr SEMI                          { Return($2) }
-    | LBRACE stmt_list RBRACE                   { Block($2) } 
+    | LBRACE stmts RBRACE                       { Block($2) } 
     | IF LPAREN expr RPAREN stmt ELSE stmt      { If($3, $5, $7) }
     | WHILE LPAREN expr RPAREN stmt             { While($3, $5) }
     | VAR ID COLON datatype SEMI                { Local($2, $4, Noexpr) }

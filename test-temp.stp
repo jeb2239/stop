@@ -1,21 +1,31 @@
 /*
- * test-class2.stp
- * ===============
+ * test-fib_dynamic.stp
+ * ====================
  */
 
-#include "ex.stp"
-
-def main = ():Int { 
-	var j:Rectangle;
-	j.w;
-	j.h = 10;
-	printf("%d %d\n", j.w, j.h);
-	return 0;
+def fib_helper = (i:Int, results:Int[]):Int {
+	if (results[i] != -1) {
+		return results[i];
+	} else {
+		results[i] = fib_helper(i-1, results) + fib_helper(i-2, results);
+	}
 }
 
-class Rectangle = {
-	var x:Int;
-	var y:Int;
-	var w:Int;
-	var h:Int;
+def fib = (i:Int, results:Int[]):Int {
+	var results:Int[];
+	results[0] = 0;
+	results[1] = 1;
+
+	var j:Int;
+	for (j = 0; j < i; j = j + 1) {
+		results[j] = -1;
+	}
+	return fib_helper(i, results);
+}
+
+def main = ():Int {
+	printf("%d\n", fib(10));
+	printf("%d\n", fib(9));
+	printf("%d\n", fib(8));
+	return 0;
 }

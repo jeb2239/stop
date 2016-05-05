@@ -19,14 +19,13 @@ module S = Scanner
 module U = Utils
 
 (* Compile <src> <destination> *)
-type action = Tokens | Print | Ast | Sast 
+type action = Tokens | Ast | Sast 
             | CompileStdinStdout| CompileStdinFile
             | CompileFileStdout | CompileFileFile 
             | Help
 
 let get_action = function
     "-t"    -> Tokens
-  | "-p"    -> Print
   | "-a"    -> Ast
   | "-s"    -> Sast
   | "-css"  -> CompileStdinStdout
@@ -40,9 +39,8 @@ let check_single_argument = function
       "-h"      -> (Help, "")
     | "-tendl"
     | "-t"
-    | "-p"
-    | "-ast"
-    | "-sast"
+    | "-a"
+    | "-s"
     | "-c"
     | "-cfs"    -> raise (E.NoFileArgument)
     | "-cff"
@@ -52,9 +50,8 @@ let help_string = (
       "Usage: stop [-option] <source file>\n" ^
         "-option: (defaults to \"-css\")\n" ^
         "\t-t: Print tokens\n" ^
-        "\t-p: Prints AST as program\n" ^
-        "\t-a: Prints AST as json\n" ^
-        "\t-s: Prints SAST as json\n" ^
+        "\t-a: Prints AST\n" ^
+        "\t-s: Prints SAST\n" ^
         "\t-css: Compiles stdin to stdout \n" ^
         "\t-csf: Compiles stdin to file\n" ^
         "\t-cfs: Compiles file to stdout (<filename>.<ext>)\n" ^
@@ -93,8 +90,7 @@ let _ =
         (* Respond Appropriately to Action *)
         match action with
             Tokens              -> print_string (U.token_list_to_string (token_list ()))
-          | Print               -> print_string (U.string_of_program (ast()))
-          | Ast                 -> print_string "Not Implemented\n"
+          | Ast                 -> print_string (U.string_of_program (ast()))
           | Sast                -> print_string (U.string_of_sprogram (sast()))
           | CompileStdinStdout
 (*        | CompileFileStdout   -> sast (); print_string "test" *)

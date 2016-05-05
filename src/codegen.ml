@@ -249,40 +249,34 @@ and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder
   | _ -> L.build_ret (codegen_sexpr sexpr ~builder:llbuilder) llbuilder
 
-and codegen_local var_name data_t sexpr fname llbuilder = 
+and codegen_local var_name data_t sexpr llbuilder = 
     let lltype = match data_t with
         Datatype(Object_t(name)) -> find_struct_exn name
       | _ -> get_lltype_exn data_t
     in
-    let record_struct_field_name = fname ^ ".record." ^ var_name in 
-    let record_name = fname ^ "_record" in
+    let malloc = L.build_malloc lltype var_name llbuilder in
 
-    (* let malloc = L.build_malloc lltype var_name llbuilder in *)
-    let index = Hashtbl.find_exn struct_field_indexes record_struct_field_name in
-    let record = Hashtbl.find_exn named_values record_name in
-    let local = L.build_struct_gep record 1 var_name llbuilder in
-
-    Hashtbl.add_exn named_values ~key:var_name ~data:local;
+    Hashtbl.add_exn named_values ~key:var_name ~data:malloc;
     let lhs = SId(var_name, data_t) in
     match sexpr with
-        SNoexpr -> local
+        SNoexpr -> malloc
       | _ -> codegen_assign lhs sexpr llbuilder
 
-and codegen_stmt stmt ~fname:fname ~builder:llbuilder = match stmt with
-    SBlock(sl)              -> List.hd_exn (List.map ~f:(codegen_stmt ~fname:fname ~builder:llbuilder) sl)
+and codegen_stmt stmt ~builder:llbuilder = match stmt with
+    SBlock(sl)              -> List.hd_exn (List.map ~f:(codegen_stmt ~builder:llbuilder) sl)
   | SExpr(se, _)            -> codegen_sexpr se llbuilder
   | SReturn(se, _)          -> codegen_return se llbuilder
-  | SLocal(s, data_t, se)   -> codegen_local s data_t se fname llbuilder
-  | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 fname llbuilder 
-  | SFor(se1, se2, se3, ss) -> codegen_for_stmt se1 se2 se3 ss fname llbuilder
-  | SWhile(se, ss)          -> codegen_while_stmt se ss fname llbuilder
+  | SLocal(s, data_t, se)   -> codegen_local s data_t se llbuilder
+  | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 llbuilder 
+  | SFor(se1, se2, se3, ss) -> codegen_for_stmt se1 se2 se3 ss llbuilder
+  | SWhile(se, ss)          -> codegen_while_stmt se ss llbuilder
 (*
   | SLocal(d, s, e)         -> codegen_alloca d s e llbuilder
   | SBreak                  -> codegen_break llbuilder
   | SContinue               -> codegen_continue llbuilder
 *)
 
-and codegen_if_stmt predicate then_stmt else_stmt fname llbuilder =
+and codegen_if_stmt predicate then_stmt else_stmt llbuilder =
     let cond_val = codegen_sexpr predicate llbuilder in
     let start_bb = L.insertion_block llbuilder in
     let the_function = L.block_parent start_bb in
@@ -290,13 +284,13 @@ and codegen_if_stmt predicate then_stmt else_stmt fname llbuilder =
     let then_bb = L.append_block context "then" the_function in
 
     L.position_at_end then_bb llbuilder;
-    let _ = codegen_stmt then_stmt fname llbuilder in
+    let _ = codegen_stmt then_stmt llbuilder in
 
     let new_then_bb = L.insertion_block llbuilder in
 
     let else_bb = L.append_block context "else" the_function in
     L.position_at_end else_bb llbuilder;
-    let _ = codegen_stmt else_stmt fname llbuilder in
+    let _ = codegen_stmt else_stmt llbuilder in
 
     let new_else_bb = L.insertion_block llbuilder in
     let merge_bb = L.append_block context "ifcont" the_function in
@@ -311,7 +305,7 @@ and codegen_if_stmt predicate then_stmt else_stmt fname llbuilder =
     L.position_at_end merge_bb llbuilder;
     else_bb_val
 
-and codegen_for_stmt init_se cond_se inc_se body_stmt fname llbuilder =
+and codegen_for_stmt init_se cond_se inc_se body_stmt llbuilder =
     let old_val = !is_loop in
     is_loop := true;
 
@@ -335,7 +329,7 @@ and codegen_for_stmt init_se cond_se inc_se body_stmt fname llbuilder =
     (* Emit the body of the loop.  This, like any other expr, can change the
     * current BB.  Note that we ignore the value computed by the body, but
     * don't allow an error *)
-    ignore (codegen_stmt body_stmt ~fname:fname ~builder:llbuilder);
+    ignore (codegen_stmt body_stmt ~builder:llbuilder);
 
     let bb = L.insertion_block llbuilder in
     L.move_block_after bb inc_bb;
@@ -358,9 +352,9 @@ and codegen_for_stmt init_se cond_se inc_se body_stmt fname llbuilder =
     is_loop := old_val;
     L.const_null float_t
 
-and codegen_while_stmt cond_se body_stmt fname llbuilder =
+and codegen_while_stmt cond_se body_stmt llbuilder =
     let null_sexpr = SIntLit(0) in
-    codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt fname llbuilder
+    codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt llbuilder
 
 (* Codegen Library Functions *)
 (* ========================= *)
@@ -446,16 +440,6 @@ let init_params f formals =
                 ~data:element;
             )
 
-let codegen_record name llbuilder =
-    let record_struct_name = name ^ ".record" in
-    let record_name = name ^ "_record" in
-    let lltype = find_struct_exn record_struct_name in
-    let llval = L.build_malloc lltype record_name llbuilder in
-    Hashtbl.add_exn named_values
-        ~key:record_name
-        ~data:llval;
-    llval
-
 let codegen_function sfdecl =
     Hashtbl.clear named_values;
     Hashtbl.clear named_parameters;
@@ -464,12 +448,28 @@ let codegen_function sfdecl =
     let llbuilder = L.builder_at_end context (L.entry_block f) in
 
     let _ = init_params f sfdecl.sformals in
-
-    let _ = codegen_record fname llbuilder in
-    let _ = codegen_stmt (SBlock(sfdecl.sbody)) ~fname:fname ~builder:llbuilder in
+    let _ = codegen_stmt (SBlock(sfdecl.sbody)) ~builder:llbuilder in
+    
+    (* Check to make sure we return; add a return statement if not *)
+    let last_bb = match (L.block_end (lookup_llfunction_exn fname)) with
+        L.After(block) -> block
+      | L.At_start(_) -> raise (E.FunctionWithoutBasicBlock(fname))
+    in
+    let return_t = L.return_type (L.type_of (lookup_llfunction_exn fname)) in
+    match (L.instr_end last_bb) with
+        L.After(instr) ->
+            let op = L.instr_opcode instr in
+            if op = L.Opcode.Ret 
+            then ()
+            else ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()
+      | L.At_start(_) -> ignore(L.build_ret (L.const_null return_t) llbuilder); ()
+      
+    (*
+      (L.const_int i32_t 0) llbuilder); ()
     if sfdecl.sreturn_t = Datatype(Unit_t)
     then ignore(L.build_ret_void llbuilder);
     ()
+*)
 
 let codegen_main main =
     Hashtbl.clear named_values;
@@ -485,8 +485,7 @@ let codegen_main main =
     Hashtbl.add_exn named_parameters ~key:"argc" ~data:argc;
     Hashtbl.add_exn named_parameters ~key:"argv" ~data:argv;
 
-    let _ = codegen_record "main" llbuilder in
-    let _ = codegen_stmt (SBlock(main.sbody)) "main" llbuilder in
+    let _ = codegen_stmt (SBlock(main.sbody)) llbuilder in
 
     (* Check to make sure we return; add a return statement if not *)
     let last_bb = match (L.block_end (lookup_llfunction_exn "main")) with

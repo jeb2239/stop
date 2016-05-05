@@ -245,9 +245,9 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
     let search_term = obj_type_name ^ "." ^ field_name in
     let field_index = Hashtbl.find_exn struct_field_indexes search_term in
     let llvalue = L.build_struct_gep struct_llval field_index field_name llbuilder in
-    let llvalue = if not isAssign 
-        then llvalue
-        else L.build_load llvalue field_name llbuilder
+    let llvalue = if isAssign 
+        then L.build_load llvalue field_name llbuilder
+        else llvalue
     in
     llvalue
 
@@ -268,7 +268,7 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
   | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(se, se_l, _)   -> codegen_array_access false se se_l llbuilder
-  | SObjAccess(se1, se2, d)     -> codegen_obj_access false se1 se2 d llbuilder
+  | SObjAccess(se1, se2, d)     -> codegen_obj_access true se1 se2 d llbuilder
   | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
   | SId(id, _)                      -> codegen_id true id llbuilder
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder

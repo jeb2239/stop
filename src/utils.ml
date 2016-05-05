@@ -189,11 +189,13 @@ and string_of_expr = function
   | Assign(e1, e2) -> string_of_expr e1 ^ " = " ^ string_of_expr e2
   | Unop(op, e1) ->
         string_of_uop op ^ " " ^ string_of_expr e1
-  | Call(s, e_list) -> s ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_expr e_list) ^ ")"
+  | Call(s, e_l) -> s ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_expr e_l) ^ ")"
   | ObjAccess(e1, e2) -> string_of_expr e1 ^ "." ^ string_of_expr e2
+  | ArrayAccess(e, e_l) -> 
+        string_of_expr e ^ "[" ^ String.concat ~sep:"][" (List.map ~f:string_of_expr e_l) ^ "]"
   | This -> "this"
   | Noexpr -> ""
-  
+
 and string_of_stmt = function
     Block(stmts) -> 
         "{\n" ^ String.concat ~sep:"" (List.map ~f:string_of_stmt stmts) ^ "}\n"

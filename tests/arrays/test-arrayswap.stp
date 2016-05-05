@@ -1,0 +1,18 @@
+/*
+ * test-arrayswap.stp
+ * =====================
+ */
+
+def main = ():Int {
+        var arr:Int = {0,1,2,3,4,5,6,7};
+        var i:Int;
+        for (i = 0;i<sizeof(arr);i = i+2){
+        	var temp:Int = arr[i];
+        	arr[i]=arr[i+1];
+        	arr[i+1]=temp;
+        }
+
+        for (i=0; i<sizeof(arr);i=i+1){
+        	printf("%d",arr[i]);
+        }
+}

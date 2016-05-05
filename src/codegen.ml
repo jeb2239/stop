@@ -194,29 +194,36 @@ and codegen_printf sexpr_l llbuilder =
     let llargs = Array.of_list (format_llstr :: format_llargs) in
     L.build_call fun_llvalue llargs "printf" llbuilder
 
-and codegen_id id llbuilder = 
-    try Hashtbl.find_exn named_parameters id
-    with | Not_found ->
-        try let var = Hashtbl.find_exn named_values id in
-            L.build_load var id llbuilder 
-        with | Not_found -> raise (E.UndefinedId id)
+and codegen_id isDeref id llbuilder = 
+    if isDeref then
+        try Hashtbl.find_exn named_parameters id
+        with | Not_found ->
+            try let var = Hashtbl.find_exn named_values id in
+                L.build_load var id llbuilder 
+            with | Not_found -> raise (E.UndefinedId id)
+    else
+        try Hashtbl.find_exn named_values id
+        with | Not_found ->
+            try Hashtbl.find_exn named_values id 
+            with | Not_found -> raise (E.UndefinedId id)
 
-and codegen_assign e1 e2 llbuilder =
+and codegen_assign se1 se2 llbuilder =
     (* Get lhs llvalue; don't emit as expression *)
-    let lhs = match e1 with
+    let lhs = match se1 with
         SId(id, _) -> 
             (try Hashtbl.find_exn named_parameters id
             with Not_found ->
                 try Hashtbl.find_exn named_values id
                 with Not_found -> raise (E.UndefinedId id))
-      | SObjAccess(se1, se2, data_t) -> codegen_obj_access true se1 se2 data_t llbuilder
+      | SObjAccess(se1, se2, data_t) -> codegen_obj_access false se1 se2 data_t llbuilder
       | SArrayAccess(se, se_l, _) -> 
             codegen_array_access true se se_l llbuilder
       | _ -> raise E.AssignmentLhsMustBeAssignable
     in
     (* Get rhs llvalue *)
-    let rhs = match e2 with 
-      | _ -> codegen_sexpr e2 ~builder:llbuilder 
+    let rhs = match se2 with 
+        SObjAccess(se1, se2, data_t) -> codegen_obj_access true se1 se2 data_t llbuilder
+      | _ -> codegen_sexpr se2 ~builder:llbuilder 
     in
     (* Codegen Assignment Stmt *)
     ignore(L.build_store rhs lhs llbuilder);
@@ -227,7 +234,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
         SId(_, data_t) -> U.string_of_datatype data_t
     in 
     let struct_llval = match lhs with
-        SId(s, _) -> codegen_id s llbuilder
+        SId(s, _) -> codegen_id false s llbuilder
     in
     let field_name = match rhs with
         SId(field, _) -> field
@@ -238,12 +245,9 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
     let search_term = obj_type_name ^ "." ^ field_name in
     let field_index = Hashtbl.find_exn struct_field_indexes search_term in
     let llvalue = L.build_struct_gep struct_llval field_index field_name llbuilder in
-    let llvalue = match field_type with
-        Datatype(Object_t(_)) ->
-            if not isAssign 
-            then llvalue
-            else L.build_load llvalue field_name llbuilder
-      | _ -> raise E.InvalidObjAccessType
+    let llvalue = if not isAssign 
+        then llvalue
+        else L.build_load llvalue field_name llbuilder
     in
     llvalue
 
@@ -263,16 +267,15 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SCharLit(c)                 -> L.const_int i8_t (Char.to_int c)
   | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
   | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
-  | SArrayAccess(e, e_l, _)     -> codegen_array_access false e e_l llbuilder
+  | SArrayAccess(se, se_l, _)   -> codegen_array_access false se se_l llbuilder
+  | SObjAccess(se1, se2, d)     -> codegen_obj_access false se1 se2 d llbuilder
   | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
-  | SId(id, _)                      -> codegen_id id llbuilder
+  | SId(id, _)                      -> codegen_id true id llbuilder
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
   | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
   | _ -> raise E.NotImplemented
-
  (* | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el *)
- (* | SObjAccess(e1, e2, d)       -> codegen_obj_access true e1 e2 d llbuilder*)
  (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder
   | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
   | SNull                       -> const_null i32_t

@@ -263,8 +263,8 @@ and codegen_stmt stmt ~fname:fname ~builder:llbuilder = match stmt with
   | SLocal(s, data_t, se)   -> codegen_local s data_t se fname llbuilder
   | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 fname llbuilder 
   | SFor(se1, se2, se3, ss) -> codegen_for_stmt se1 se2 se3 ss fname llbuilder
+  | SWhile(se, ss)          -> codegen_while_stmt se ss fname llbuilder
 (*
-  | SWhile(e, s)            -> codegen_while e s llbuilder
   | SBreak                  -> codegen_break llbuilder
   | SContinue               -> codegen_continue llbuilder
   | SLocal(d, s, e)         -> codegen_alloca d s e llbuilder
@@ -304,25 +304,17 @@ and codegen_for_stmt init_se cond_se inc_se body_stmt fname llbuilder =
     is_loop := true;
 
     let the_function = L.block_parent (L.insertion_block llbuilder) in
-    (* Emit the start code first, without 'variable' in scope. *)
     let _ = codegen_sexpr init_se llbuilder in
 
-    (* Make the new basic block for the loop header, inserting after current
-    * block. *)
     let loop_bb = L.append_block context "loop" the_function in
-    (* Insert maintenance block *)
     let inc_bb = L.append_block context "inc" the_function in
-    (* Insert condition block *)
     let cond_bb = L.append_block context "cond" the_function in
-    (* Create the "after loop" block and insert it. *)
     let after_bb = L.append_block context "afterloop" the_function in
 
     let _ = if not old_val then
         cont_block := inc_bb;
         br_block := after_bb;
     in
-    (* Insert an explicit fall through from the current block to the
-    * loop_bb. *)
     ignore (L.build_br cond_bb llbuilder);
 
     (* Start insertion in loop_bb. *)
@@ -353,6 +345,10 @@ and codegen_for_stmt init_se cond_se inc_se body_stmt fname llbuilder =
     L.position_at_end after_bb llbuilder;
     is_loop := old_val;
     L.const_null float_t
+
+and codegen_while_stmt cond_se body_stmt fname llbuilder =
+    let null_sexpr = SIntLit(0) in
+    codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt fname llbuilder
 
 (* Codegen Library Functions *)
 (* ========================= *)

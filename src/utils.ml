@@ -266,7 +266,7 @@ and string_of_sexpr = function
   | SBinop(e1, o, e2, _)    -> (string_of_sexpr e1) ^ " " ^ (string_of_op o) ^ " " ^ (string_of_sexpr e2)
   | SAssign(e1, e2, _)      -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) 
   | SNoexpr           -> ""
-  | SObjAccess(e1, e2, _)   -> (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2)
+  | SObjAccess(e1, e2, data_t)   -> (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2) ^":"^ (string_of_datatype data_t)
   | SCall(f, el, _, _)      -> f ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"
   (* | SArrayPrimitive(el, _)    -> "|" ^ (string_of_sarray_primitive el) ^ "|" *)
   |   SUnop(op, e, _)       -> (string_of_uop op) ^ "(" ^ string_of_sexpr e ^ ")"
@@ -283,10 +283,10 @@ let string_of_local_expr = function
 (* Print statements *)
 
 
-and string_of_local_sexpr = function
+ and string_of_local_sexpr = function
     SNoexpr   -> ""
   |   e         -> " = " ^ string_of_sexpr e
-
+ 
 and string_of_sstmt indent =
   let indent_string = String.make indent '\t' in
   let get_stmt_string = function 
@@ -296,8 +296,8 @@ and string_of_sstmt indent =
           String.concat ~sep:"" (List.map ~f:(string_of_sstmt (indent+1)) stmts) ^ 
         indent_string ^ "}\n"
 
-    |   SExpr(expr, _)        -> 
-        indent_string ^ string_of_sexpr expr ^ ";\n";
+    |   SExpr(expr, data_t)        -> 
+        indent_string ^ string_of_sexpr expr ^":"^string_of_datatype data_t ^";\n";
 
     |   SReturn(expr, _)      -> 
         indent_string ^ "return " ^ string_of_sexpr expr ^ ";\n";
@@ -319,6 +319,7 @@ and string_of_sstmt indent =
     |   SWhile(e, s)      -> 
         indent_string ^ "while (" ^ string_of_sexpr e ^ ")\n" ^ 
           string_of_sstmt (indent) s
+
 
     (* |   SBreak          -> indent_string ^ "break;\n" *)
     (* |   SContinue       -> indent_string ^ "continue;\n" *)

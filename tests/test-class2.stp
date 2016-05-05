@@ -6,10 +6,10 @@
 #include "ex.stp"
 
 def main = ():Int { 
-	var s:Rectangle;
-	s.w = 5;
-	s.h = 10;
-	printf("%d %d\n", s.w, s.h);
+	var j:Rectangle;
+	j.w = 5;
+	j.h = 10;
+	printf("%d %d\n", j.w, j.h);
 	return 0;
 }
 

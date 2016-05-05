@@ -228,11 +228,11 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SAssign(e1, e2, _)         -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(e, e_l, _)    -> codegen_array_access false e e_l llbuilder
   | _ -> raise E.NotImplemented
-(*
-  | SNoexpr                     -> build_add (const_int i32_t 0) (const_int i32_t 0) "nop" llbuilder
-  | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el
-  | SObjAccess(e1, e2, d)       -> codegen_obj_access true e1 e2 d llbuilder
-  | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder
+
+  | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
+ (* | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el *)
+ (* | SObjAccess(e1, e2, d)       -> codegen_obj_access true e1 e2 d llbuilder*)
+ (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder
   | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
   | SUnop(op, e, d)             -> handle_unop op e d llbuilder
   | SNull                       -> const_null i32_t

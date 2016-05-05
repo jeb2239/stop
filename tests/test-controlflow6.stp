@@ -1,0 +1,25 @@
+/*
+ * test-controlflow5.stp
+ * =====================
+ */
+
+def main = ():Int {
+	var a:Int = 1;
+        if (a == 0) {
+		a = a - 2;
+        }
+	
+	if (a == 1){
+		printf("%d", a+1);
+		a = a+1; 
+	}
+
+	if (a >= 3) {
+		var b:Int = a + 1;
+	}else if (a <= 2){
+		var b:Int = a;
+	}
+	
+	printf("%d",b);
+        return 0;
+}

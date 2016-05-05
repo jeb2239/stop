@@ -286,11 +286,13 @@ and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder
   | _ -> L.build_ret (codegen_sexpr sexpr ~builder:llbuilder) llbuilder
 
+(* TODO: Alloca vs. Malloc *)
 and codegen_local var_name data_t sexpr llbuilder = 
     let lltype = match data_t with
         Datatype(Object_t(name)) -> find_struct_exn name
       | _ -> get_lltype_exn data_t
     in
+    let alloca = L.build_alloca lltype var_name llbuilder in
     let malloc = L.build_malloc lltype var_name llbuilder in
 
     Hashtbl.add_exn named_values ~key:var_name ~data:malloc;

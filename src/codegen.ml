@@ -455,21 +455,21 @@ let codegen_function sfdecl =
         L.After(block) -> block
       | L.At_start(_) -> raise (E.FunctionWithoutBasicBlock(fname))
     in
+    (* TODO: Return this return type (not working for some reason) *)
     let return_t = L.return_type (L.type_of (lookup_llfunction_exn fname)) in
     match (L.instr_end last_bb) with
         L.After(instr) ->
             let op = L.instr_opcode instr in
             if op = L.Opcode.Ret 
             then ()
-            else ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()
-      | L.At_start(_) -> ignore(L.build_ret (L.const_null return_t) llbuilder); ()
-
-    (*
-    (L.const_int i32_t 0) llbuilder); ()
-    if sfdecl.sreturn_t = Datatype(Unit_t)
-    then ignore(L.build_ret_void llbuilder);
-    ()
-*)
+            else 
+                if return_t = void_t
+                then (ignore(L.build_ret_void); ())
+                else (ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ())
+      | L.At_start(_) -> 
+            if return_t = void_t
+            then (ignore(L.build_ret_void); ())
+            else (ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ())
 
 let codegen_main main =
     Hashtbl.clear named_values;

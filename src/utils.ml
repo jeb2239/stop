@@ -217,8 +217,16 @@ and string_of_stmt_helper = function
 let string_of_include = function
     Include(s) -> "#include \"" ^ s ^ "\"\n"
 
+
+
 let string_of_spec spec =
-    "spec " ^ spec.sname ^ " {\n" ^ "}\n"
+    "spec " ^ spec.specname ^ " {\n" ^
+    String.concat ~sep:"" (List.map ~f:string_of_field spec.specbody.fields) ^
+    String.concat ~sep:"" (List.map ~f:(fun x ->
+     "def " ^ x.spfname ^":"^ string_of_datatype x.ftype ^ ";\n"
+    ) spec.specbody.spfdecl)
+    ^ "}\n"
+    
 
 let string_of_cdecl cdecl = match cdecl.extends with
     NoParent ->

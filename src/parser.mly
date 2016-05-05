@@ -123,9 +123,26 @@ fdecl:
 /* ----- */
 
 sdecl:
-    SPEC TYPE_ID LBRACE RBRACE { { 
-            sname = $2;
+    SPEC TYPE_ID ASSIGN LBRACE specbody RBRACE { { 
+            specname = $2;
+            specbody = $5;
     } }
+
+specbody:
+    /*nothing*/ {{
+        fields=[];
+        spfdecl=[];
+        }}
+    | specbody field {{
+        fields = $2::$1.fields;
+        spfdecl=$1.spfdecl;
+        }}
+    | specbody specfdecl {{
+        fields =$1.fields;
+        spfdecl= $2::$1.spfdecl;
+        }}
+
+
 
 /* Classes */
 /* ------- */
@@ -162,6 +179,12 @@ cfdecl:
             overrides = false;
             root_cname = None;
     } }
+specfdecl:
+    scope DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype SEMI {{
+        spfname = $3;
+        ftype = Functiontype(snd $6, $9);
+       
+        } }
 
 /* Datatypes */
 /* --------- */

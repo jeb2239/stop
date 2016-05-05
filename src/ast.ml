@@ -25,8 +25,19 @@ type fdecl = {
 (* ----- *)
 
 and spec = {
-    sname : string;
+    specname : string;
+    specbody :specbody
 }
+
+and specbody = {
+  fields: field list ;
+  spfdecl: specfdecl list;
+}
+
+and specfdecl = {
+   spfname : string;
+   ftype : datatype;
+   }
 
 (* Classes *)
 (* ------- *)

@@ -218,7 +218,7 @@ and check_assign e1 e2 env =
     let type2 = sexpr_to_type_exn se2 in
     match (type1, type2) with
         _ -> if type1 = type2
-            then SAssign(se2, se2, type1)
+            then SAssign(se1, se2, type1)
             else 
                 let str1 = U.string_of_datatype type1 in
                 let str2 = U.string_of_datatype type2 in
@@ -273,7 +273,7 @@ and check_obj_access e1 e2 env =
     in
     let check_lhs = function
         This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
-      | Id (s) ->  SId(s, get_Id_type s env)
+      | Id (s) -> SId(s, get_Id_type s env)
       | _ as e -> raise E.LHSofObjectAccessMustBeAccessible
     in
     let check_rhs e2 =
@@ -300,7 +300,6 @@ and check_obj_access e1 e2 env =
         SId(_, data_t) -> data_t
     in
     SObjAccess(lhs, rhs, rhs_t)
-
 
 (* TODO: Add all match cases for stmts, exprs *)
 and expr_to_sexpr e env = match e with

@@ -201,6 +201,18 @@ and codegen_assign e1 e2 llbuilder =
     ignore(L.build_store rhs lhs llbuilder);
     rhs
 
+(*
+and codegen_obj_access isAssign lhs rhs data_t llbuilder =
+    let lhs = match lhs with
+        SId(s, data_t) -> codegen_id s d llbuilder
+      | _ -> raise E.NotImplemented
+    in 
+    let rhs = match rhs with
+        SId(s, data_t) -> 
+    in
+    rhs
+*)
+
 and codegen_array_access isAssign e e_l llbuilder =
     let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in
     let indices = Array.of_list indices in
@@ -265,9 +277,9 @@ and codegen_stmt stmt ~fname:fname ~builder:llbuilder = match stmt with
   | SFor(se1, se2, se3, ss) -> codegen_for_stmt se1 se2 se3 ss fname llbuilder
   | SWhile(se, ss)          -> codegen_while_stmt se ss fname llbuilder
 (*
+  | SLocal(d, s, e)         -> codegen_alloca d s e llbuilder
   | SBreak                  -> codegen_break llbuilder
   | SContinue               -> codegen_continue llbuilder
-  | SLocal(d, s, e)         -> codegen_alloca d s e llbuilder
 *)
 
 and codegen_if_stmt predicate then_stmt else_stmt fname llbuilder =

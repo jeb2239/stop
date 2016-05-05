@@ -239,15 +239,12 @@ let string_of_program = function
         String.concat ~sep:"\n" (List.map ~f:string_of_cdecl cdecls) ^ "\n" ^
         String.concat ~sep:"\n" (List.map ~f:string_of_fdecl fdecls)
 
-(* Codegen *)
-(* ------- *)
+(* SAST Printing Functions *)
+(* ======================= *)
 
 let string_of_formal_name = function
     Formal(s, _) -> s
   | _ -> ""
-
-
-
 
 let rec string_of_bracket_sexpr = function
     []        -> ""
@@ -266,7 +263,7 @@ and string_of_sexpr = function
   | SBinop(e1, o, e2, _)    -> (string_of_sexpr e1) ^ " " ^ (string_of_op o) ^ " " ^ (string_of_sexpr e2)
   | SAssign(e1, e2, _)      -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) 
   | SNoexpr           -> ""
-  | SObjAccess(e1, e2, data_t)   -> (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2) ^":"^ (string_of_datatype data_t)
+  | SObjAccess(e1, e2, data_t) -> (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2) ^":"^ (string_of_datatype data_t)
   | SCall(f, el, _, _)      -> f ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"
   (* | SArrayPrimitive(el, _)    -> "|" ^ (string_of_sarray_primitive el) ^ "|" *)
   |   SUnop(op, e, _)       -> (string_of_uop op) ^ "(" ^ string_of_sexpr e ^ ")"
@@ -282,8 +279,7 @@ let string_of_local_expr = function
  *)
 (* Print statements *)
 
-
- and string_of_local_sexpr = function
+and string_of_local_sexpr = function
     SNoexpr   -> ""
   |   e         -> " = " ^ string_of_sexpr e
  

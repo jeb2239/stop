@@ -32,6 +32,11 @@ let double_t    = L.double_type context
 let void_t      = L.void_type context 
 let str_t       = L.pointer_type (L.i8_type context)
 
+(* Control Flow References *)
+let br_block    = ref (L.block_of_value (L.const_int i32_t 0))
+let cont_block  = ref (L.block_of_value (L.const_int i32_t 0))
+let is_loop     = ref false
+
 let struct_types:(string, L.lltype) Hashtbl.t = Hashtbl.create ()
     ~hashable:String.hashable 
     ~size:10
@@ -251,8 +256,21 @@ and codegen_local var_name data_t sexpr fname llbuilder =
         SNoexpr -> local
       | _ -> codegen_assign lhs sexpr llbuilder
 
+and codegen_stmt stmt ~fname:fname ~builder:llbuilder = match stmt with
+    SBlock(sl)              -> List.hd_exn (List.map ~f:(codegen_stmt ~fname:fname ~builder:llbuilder) sl)
+  | SExpr(se, _)            -> codegen_sexpr se llbuilder
+  | SReturn(se, _)          -> codegen_return se llbuilder
+  | SLocal(s, data_t, se)   -> codegen_local s data_t se fname llbuilder
+  | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 fname llbuilder 
+  | SFor(se1, se2, se3, ss) -> codegen_for_stmt se1 se2 se3 ss fname llbuilder
+(*
+  | SWhile(e, s)            -> codegen_while e s llbuilder
+  | SBreak                  -> codegen_break llbuilder
+  | SContinue               -> codegen_continue llbuilder
+  | SLocal(d, s, e)         -> codegen_alloca d s e llbuilder
+*)
 
-and codegen_if_stmt predicate then_stmt else_stmt ~fname:fname ~builder:llbuilder =
+and codegen_if_stmt predicate then_stmt else_stmt fname llbuilder =
     let cond_val = codegen_sexpr predicate llbuilder in
     let start_bb = L.insertion_block llbuilder in
     let the_function = L.block_parent start_bb in
@@ -260,42 +278,84 @@ and codegen_if_stmt predicate then_stmt else_stmt ~fname:fname ~builder:llbuilde
     let then_bb = L.append_block context "then" the_function in
 
     L.position_at_end then_bb llbuilder;
-    let _ = codegen_stmt llbuilder then_stmt in
+    let _ = codegen_stmt then_stmt fname llbuilder in
 
     let new_then_bb = L.insertion_block llbuilder in
 
     let else_bb = L.append_block context "else" the_function in
     L.position_at_end else_bb llbuilder;
-    let _ = codegen_stmt llbuilder else_stmt in
+    let _ = codegen_stmt else_stmt fname llbuilder in
 
     let new_else_bb = L.insertion_block llbuilder in
     let merge_bb = L.append_block context "ifcont" the_function in
     L.position_at_end merge_bb llbuilder;
 
     let else_bb_val = L.value_of_block new_else_bb in
-
-    (* Return to the start block to add the conditional branch. *)
     L.position_at_end start_bb llbuilder;
-    ignore (L.build_cond_br cond_val then_bb else_bb llbuilder);
 
-    (* Set a unconditional branch at the end of the 'then' block and the
-     * 'else' block to the 'merge' block. *)
+    ignore (L.build_cond_br cond_val then_bb else_bb llbuilder);
     L.position_at_end new_then_bb llbuilder; ignore (L.build_br merge_bb llbuilder);
     L.position_at_end new_else_bb llbuilder; ignore (L.build_br merge_bb llbuilder);
+    L.position_at_end merge_bb llbuilder;
+    else_bb_val
 
-and codegen_stmt stmt ~fname:fname ~builder:llbuilder = match stmt with
-    SBlock(sl)               -> List.hd_exn (List.map ~f:(codegen_stmt ~fname:fname ~builder:llbuilder) sl)
-  | SExpr(se, _)            -> codegen_sexpr se llbuilder
-  | SReturn(se, _)          -> codegen_return se llbuilder
-  | SLocal(s, data_t, se)   -> codegen_local s data_t se fname llbuilder
-  | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 ~fname:fname ~builder:llbuilder 
-(*
-  | SFor(se1, e2, e3, ss)   -> codegen_for se1 se2 se3 ss llbuilder
-  | SWhile(e, s)            -> codegen_while e s llbuilder
-  | SBreak                  -> codegen_break llbuilder
-  | SContinue               -> codegen_continue llbuilder
-  | SLocal(d, s, e)         -> codegen_alloca d s e llbuilder
-*)
+and codegen_for_stmt init_se cond_se inc_se body_stmt fname llbuilder =
+    let old_val = !is_loop in
+    is_loop := true;
+
+    let the_function = L.block_parent (L.insertion_block llbuilder) in
+    (* Emit the start code first, without 'variable' in scope. *)
+    let _ = codegen_sexpr init_se llbuilder in
+
+    (* Make the new basic block for the loop header, inserting after current
+    * block. *)
+    let loop_bb = L.append_block context "loop" the_function in
+    (* Insert maintenance block *)
+    let inc_bb = L.append_block context "inc" the_function in
+    (* Insert condition block *)
+    let cond_bb = L.append_block context "cond" the_function in
+    (* Create the "after loop" block and insert it. *)
+    let after_bb = L.append_block context "afterloop" the_function in
+
+    let _ = if not old_val then
+        cont_block := inc_bb;
+        br_block := after_bb;
+    in
+    (* Insert an explicit fall through from the current block to the
+    * loop_bb. *)
+    ignore (L.build_br cond_bb llbuilder);
+
+    (* Start insertion in loop_bb. *)
+    L.position_at_end loop_bb llbuilder;
+
+    (* Emit the body of the loop.  This, like any other expr, can change the
+    * current BB.  Note that we ignore the value computed by the body, but
+    * don't allow an error *)
+    ignore (codegen_stmt body_stmt ~fname:fname ~builder:llbuilder);
+
+    let bb = L.insertion_block llbuilder in
+    L.move_block_after bb inc_bb;
+    L.move_block_after inc_bb cond_bb;
+    L.move_block_after cond_bb after_bb;
+    ignore(L.build_br inc_bb llbuilder);
+
+    (* Start insertion in loop_bb. *)
+    L.position_at_end inc_bb llbuilder;
+ 
+    (* Emit the step value. *)
+    let _ = codegen_sexpr inc_se llbuilder in
+    ignore(L.build_br cond_bb llbuilder);
+
+    L.position_at_end cond_bb llbuilder;
+
+    let cond_val = codegen_sexpr cond_se llbuilder in
+    ignore (L.build_cond_br cond_val loop_bb after_bb llbuilder);
+    L.position_at_end after_bb llbuilder;
+    is_loop := old_val;
+    L.const_null float_t
+
+(* Codegen Library Functions *)
+(* ========================= *)
 
 let codegen_library_functions () = 
     (* C Std lib functions (Free with Llvm) *)

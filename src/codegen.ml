@@ -463,9 +463,9 @@ let codegen_function sfdecl =
             then ()
             else ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()
       | L.At_start(_) -> ignore(L.build_ret (L.const_null return_t) llbuilder); ()
-      
+
     (*
-      (L.const_int i32_t 0) llbuilder); ()
+    (L.const_int i32_t 0) llbuilder); ()
     if sfdecl.sreturn_t = Datatype(Unit_t)
     then ignore(L.build_ret_void llbuilder);
     ()

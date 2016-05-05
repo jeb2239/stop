@@ -18,7 +18,9 @@ exception MissingMainFunction
 exception MultipleMainFunctions
 exception InvalidUnaryOperation
 exception UnexpectedNoexpr
+exception UnexpectedType
 exception InvalidBinaryOperation
+exception InvalidEqualityBinop of string * string
 exception UndefinedId of string
 exception DuplicateField of string
 exception DuplicateClassName of string

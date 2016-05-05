@@ -124,7 +124,10 @@ let rec get_equality_binop_type se1 op se2 =
       | _ ->
               if type1 = type2
               then SBinop(se1, op, se2, Datatype(Bool_t))
-              else raise E.InvalidBinaryOperation
+              else 
+                  let type1 = U.string_of_datatype type1 in
+                  let type2 = U.string_of_datatype type2 in
+                  raise (E.InvalidEqualityBinop(type1, type2))
 
 (* Return Datatype for Binops with a Logical Operator (&&, ||) *)
 and get_logical_binop_type se1 op se2 =
@@ -321,6 +324,10 @@ and expr_to_sexpr e env = match e with
   | FunctionLit(f)      -> (check_function_literal f env, env)
   | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
 
+and arraytype_to_access_type data_t = match data_t with
+    Arraytype(p, _) -> Datatype(p)
+  | _ -> raise E.UnexpectedType
+
 and sexpr_to_type sexpr = match sexpr with
     SIntLit(_)                  -> Some(Datatype(Int_t))
   | SFloatLit(_)                -> Some(Datatype(Float_t))
@@ -334,7 +341,7 @@ and sexpr_to_type sexpr = match sexpr with
   | SCall(_, _, data_t, _)      -> Some(data_t)
   | SObjAccess(_, _, data_t)    -> Some(data_t)
   | SAssign(_, _, data_t)       -> Some(data_t)
-  | SArrayAccess(_, _, data_t)  -> Some(data_t)
+  | SArrayAccess(_, _, data_t)  -> Some(arraytype_to_access_type data_t)
   | SThis(data_t)               -> Some(data_t)
   | SNoexpr                     -> None
 

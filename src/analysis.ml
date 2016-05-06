@@ -455,7 +455,8 @@ and local_handler s data_t e env =
                 env_in_while = env.env_in_while;
             } 
             in
-            (SLocal(s, data_t, se), new_env)
+            (* Don't allocate any locals: save them on the activation record *)
+            (SExpr(SNoexpr, Datatype(Unit_t)), new_env)
         else 
             let se_data_t = sexpr_to_type_exn se in
             let is_assignable = function
@@ -493,7 +494,12 @@ and local_handler s data_t e env =
                     env_in_while = env.env_in_while;
                 } 
                 in
-                (SLocal(s, se_data_t, se), new_env)
+                (* Don't allocate any locals: save them on the activation record *)
+                let lhs = check_record_access s new_env in
+                let sexpr = SAssign(lhs, se, se_data_t) in
+                let sstmt = SExpr(sexpr, se_data_t) in
+                (sstmt, new_env)
+                (* (SLocal(s, se_data_t, se), new_env) *)
             else 
                 let type1 = U.string_of_datatype data_t in
                 let type2 = U.string_of_datatype se_data_t in

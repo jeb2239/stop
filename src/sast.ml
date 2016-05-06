@@ -45,6 +45,7 @@ and sexpr =
   | SCall of string * sexpr list * datatype * int
   | SObjAccess of sexpr * sexpr * datatype
   | SArrayAccess of sexpr * sexpr list * datatype
+  | SArrayCreate of datatype * sexpr list * datatype 
   | SThis of datatype
   | SNoexpr
 

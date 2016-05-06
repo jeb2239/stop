@@ -194,7 +194,7 @@ and string_of_expr = function
   | ArrayAccess(e, e_l) -> 
         string_of_expr e ^ "[" ^ String.concat ~sep:"][" (List.map ~f:string_of_expr e_l) ^ "]"
   | ArrayCreate(d, e_l) ->
-        string_of_datatype d ^ "[" ^ String.concat ~sep:"][" (List.map ~f: string_of_expr e_l) ^ "]"
+        string_of_datatype d ^ "[" ^ String.concat ~sep:"][" (List.map ~f:string_of_expr e_l) ^ "]"
   | This -> "this"
   | Noexpr -> ""
 
@@ -274,10 +274,10 @@ and string_of_sexpr = function
   | SCall(f, el, _, _)      -> f ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"
   | SUnop(op, e, _) -> (string_of_uop op) ^ "(" ^ string_of_sexpr e ^ ")"
   | SArrayAccess(se, se_l, _) ->
-        string_of_sexpr se ^ "[" ^ String.concat ~sep:"][" (List.map ~f:string_of_sexpr se_l) ^ "]"
-
+        string_of_sexpr se ^ "[" ^ string_of_bracket_sexpr se_l ^ "]"
   (* | SNull -> "null" *)
-  (* | SArrayCreate(d, el, _) -> "new " ^ string_of_datatype d ^ string_of_bracket_sexpr el *)
+  | SArrayCreate(d, se_l, _) -> 
+        string_of_datatype d ^ "[" ^ string_of_bracket_sexpr se_l ^ "]"
   (* | SObjectCreate(s, el, _) -> 
         "new " ^ s ^ "(" ^ String.concat ", " (List.map string_of_sexpr el) ^ ")" *)
   (* | SDelete(e) -> "delete (" ^ (string_of_sexpr e) ^ ")" *)

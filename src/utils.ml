@@ -193,6 +193,8 @@ and string_of_expr = function
   | ObjAccess(e1, e2) -> string_of_expr e1 ^ "." ^ string_of_expr e2
   | ArrayAccess(e, e_l) -> 
         string_of_expr e ^ "[" ^ String.concat ~sep:"][" (List.map ~f:string_of_expr e_l) ^ "]"
+  | ArrayCreate(d, e_l) ->
+        string_of_datatype d ^ "[" ^ String.concat ~sep:"][" (List.map ~f: string_of_expr e_l) ^ "]"
   | This -> "this"
   | Noexpr -> ""
 

@@ -336,5 +336,6 @@ expr:
     | NOT expr                          { Unop(Not, $2) }
     | LPAREN expr RPAREN                { $2 }
     | ID LPAREN actuals_opt RPAREN      { Call($1, $3) }
+    | type_tag bracket_args RBRACKET LPAREN RPAREN { ArrayCreate (Datatype($1), List.rev $2) }
 
 %%

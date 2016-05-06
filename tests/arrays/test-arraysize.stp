@@ -4,7 +4,7 @@
  */
 
 def main = ():Int {
-        var a:Int[];
+        var a:Int[] = Int[2]();
 		a[0]=0;
 		a[1]=1;
 		var size:Int = sizeof(a);

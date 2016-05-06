@@ -4,7 +4,7 @@
  */
 
 def main = ():Int {
-        var arr:Int = {0,1,2,3,4,5,6,7};
+        var arr:Int[] = {0,1,2,3,4,5,6,7};
         var i:Int;
         for (i = 0;i<sizeof(arr);i = i+2){
         	var temp:Int = arr[i];

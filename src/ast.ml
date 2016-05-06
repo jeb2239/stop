@@ -75,6 +75,7 @@ and expr =
   | Unop of uop * expr
   | Call of string * expr list
   | ArrayAccess of expr * expr list
+  | ArrayCreate of datatype * expr list 
   | ObjAccess of expr * expr
   | This
   | Noexpr

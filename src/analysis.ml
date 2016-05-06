@@ -650,16 +650,6 @@ and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
         ~init:[]
     in
 
-    (*
-    let print fdecl =
-        print_string (fdecl.fname ^ "\n")
-    in
-    List.iter first_order_fdecls 
-        ~f:print;
-    List.iter higher_order_fdecls
-        ~f:print;
-    *)
-
     (* Add all the higher order functions to the map *)
     let map = List.fold_left higher_order_fdecls 
         ~f:check_functions 

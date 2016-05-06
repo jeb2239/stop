@@ -20,6 +20,16 @@ exception InvalidUnaryOperation
 exception UnexpectedNoexpr
 exception UnexpectedType
 exception InvalidBinaryOperation
+exception LHSofObjectAccessMustBeAccessible
+exception RHSofObjectAccessMustBeAccessible
+exception UnknownClassVar
+exception CannotUseThisKeywordOutsideOfClass
+exception InvalidIfStatementType
+exception InvalidForStatementType
+exception InvalidWhileStatementType
+exception NonIntegerArraySize
+exception NonArrayTypeCreate
+exception CallFailedOnType of string
 exception InvalidEqualityBinop of string * string
 exception UndefinedId of string
 exception DuplicateField of string
@@ -32,16 +42,7 @@ exception AssignmentTypeMismatch of string * string
 exception LocalAssignmentTypeMismatch of string * string
 exception LocalAssignmentTypeNotAssignable of string
 exception ArrayAccess of string
-exception NonIntegerArraySize
-exception NonArrayTypeCreate
 exception UndefinedFunction of string
-exception LHSofObjectAccessMustBeAccessible
-exception RHSofObjectAccessMustBeAccessible
-exception UnknownClassVar
-exception CannotUseThisKeywordOutsideOfClass
-exception InvalidIfStatementType
-exception InvalidForStatementType
-exception InvalidWhileStatementType
 
 (* Utils Exceptions *)
 exception UtilsError of string

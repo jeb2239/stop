@@ -234,7 +234,17 @@ and check_call s e_l env =
         let fdecl = StringMap.find_exn env.env_fmap s in
         let return_t = fdecl.return_t in
         SCall(s, se_l, return_t, 0)
-    with | Not_found -> raise (E.UndefinedFunction s)
+    with | Not_found -> 
+        try 
+            let f = StringMap.find_exn env.env_named_vars s in
+            let return_t = match f with
+                Functiontype(_, return_t) -> return_t
+              | data_t -> 
+                    let data_t = U.string_of_datatype data_t in
+                    raise (E.CallFailedOnType data_t)
+            in
+            SCall(s, se_l, return_t, 0)
+        with | Not_found -> raise (E.UndefinedFunction s)
 
 and expr_list_to_sexpr_list e_l env = match e_l with
     hd :: tl -> 

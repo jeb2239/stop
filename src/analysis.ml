@@ -15,6 +15,8 @@ module StringSet = Set.Make(String)
 let string_of_list string_of_item l = 
     "[" ^ String.concat ~sep:", " (List.map ~f:string_of_item l) ^ "]"
 
+let higher_order_sfdecls:sfdecl StringMap.t = StringMap.empty
+
 (* Record which contains information re: Classes *)
 type class_record = {
     field_map       : field StringMap.t;
@@ -291,11 +293,12 @@ and check_array_create d e_l env =
         | _ -> raise (E.NonArrayTypeCreate)
     in 
     let sexpr_type = convert_d_to_arraytype d in
-
     SArrayCreate(d, se_l, sexpr_type)
 
-and check_function_literal f env =
-    SFunctionLit(f.fname, f.ftype);
+and check_function_literal fdecl env =
+    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap fdecl env.env_named_vars in
+    ignore(StringMap.add higher_order_sfdecls ~key:fdecl.fname ~data:sfdecl);
+    SFunctionLit(fdecl.fname, fdecl.ftype)
 
 and check_obj_access e1 e2 env =
     let get_cname_exn = function
@@ -678,7 +681,7 @@ and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
     in
     let fdecls_to_generate = first_order_fdecls @ higher_order_fdecls
     in
-    (fdecl_map, fdecls_to_generate)
+    (fdecl_map, fdecls_to_generate, first_order_fdecls, higher_order_fdecls)
 
 (* Conversion *)
 (* ========== *)
@@ -823,7 +826,9 @@ let convert_cdecl_to_scdecl sfdecls (c:Ast.cdecl) =
     }
 
 (* Generate Sast: sprogram *)
-let convert_ast_to_sast crecord_map (cdecls : cdecl list) fdecl_map (fdecls : fdecl list) =
+let convert_ast_to_sast 
+    crecord_map (cdecls : cdecl list) 
+    fdecl_map (first_order_fdecls : fdecl list) (higher_order_fdecls : fdecl list) =
     let is_main = (fun f -> match f.sfname with s -> s = "main") in
     let get_main fdecls =
         let mains = (List.filter ~f:is_main fdecls)
@@ -856,12 +861,24 @@ let convert_ast_to_sast crecord_map (cdecls : cdecl list) fdecl_map (fdecls : fd
         ~f:iter_cdecls 
         ~init:([], []) 
     in
-    (* Append non-method fdecls to the tuple *)
-    let sfdecls = List.fold_left fdecls
+
+    (* Append first order fdecls to the tuple *)
+    let sfdecls = List.fold_left first_order_fdecls
         ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty) :: l) 
         ~init:[] 
     in
     let (scdecl_list, sfdecl_list) = (scdecl_list, sfdecls @ sfdecl_list) in
+
+    (* Append higher order fdecls to the tuple *)
+
+    (*
+    let named_values_map fname = StringMap.find_exn function_named_vars fname in
+    let sfdecls = List.fold_left higher_order_fdecls 
+        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f (named_values_map f.fname)) :: l)
+        ~init:[]
+    in
+    *)
+
     (* Add Activation Record structs to the tuple *)
     let scdecls = List.fold_left sfdecl_list
         ~f:(fun l f -> (generate_sfdecl_records f) :: l)
@@ -883,9 +900,9 @@ let analyze filename ast = match ast with
         (* Create sfdecl list of builtin LLVM functions *)
         let reserved_map = build_reserved_map in
         (* Create StringMap: fname -> fdecl of functions *)
-        let (fdecl_map, fdecls) = build_fdecl_map reserved_map fdecls in
+        let (fdecl_map, fdecls, first, higher) = build_fdecl_map reserved_map fdecls in
         (* Create StringMap: cname -> cdecl of classes *)
         let crecord_map = build_crecord_map reserved_map cdecls fdecls in
         (* Generate sast: sprogram *)
-        let sast = convert_ast_to_sast crecord_map cdecls fdecl_map fdecls in
+        let sast = convert_ast_to_sast crecord_map cdecls fdecl_map first higher in
         sast

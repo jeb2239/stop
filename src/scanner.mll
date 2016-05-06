@@ -52,6 +52,8 @@ rule token = parse
     | '.'       { DOT }
 
     (* Operators *)
+	| "++"      { INCREMENT }
+	| "--"      { DECREMENT }
 	| '+'       { PLUS }
 	| '-'       { MINUS }
 	| '*'       { TIMES }

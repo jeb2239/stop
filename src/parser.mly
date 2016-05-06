@@ -8,6 +8,7 @@
 
 %token DOT COMMA SEMI COLON LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
+%token INCREMENT DECREMENT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token IF ELSE FOR WHILE
 %token ARROW FATARROW
@@ -51,6 +52,7 @@
 %right NOT NEG
 %right RBRACKET
 %left LBRACKET
+%left INCREMENT DECREMENT
 %right DOT
 %right ARROW
 
@@ -316,6 +318,8 @@ expr_opt:
 
 expr:
       literals                          { $1 }
+    | expr INCREMENT                    { Binop($1, Add, IntLit(1)) }
+    | expr DECREMENT                    { Binop($1, Sub, IntLit(1)) }
     | expr PLUS     expr                { Binop($1, Add, $3) }
     | expr MINUS    expr                { Binop($1, Sub, $3) }
     | expr TIMES    expr                { Binop($1, Mult, $3) }

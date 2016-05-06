@@ -5,6 +5,6 @@ _build/
 *.native
 *.ll
 *.s
-#*.out
+*.out
 *.diff
 *.log

@@ -13,10 +13,11 @@ def main = ():Int {
 
 	printf("\n");
 
-	for (i = 9; i>=0 ; i--) {
+	for (i = 9; i >= 0; i = i--) {
 		printf("%d", i);
 	}
 
+	printf("\n");
+
 	return 0;
 }
-

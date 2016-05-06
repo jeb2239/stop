@@ -32,6 +32,8 @@ exception AssignmentTypeMismatch of string * string
 exception LocalAssignmentTypeMismatch of string * string
 exception LocalAssignmentTypeNotAssignable of string
 exception ArrayAccess of string
+exception NonIntegerArraySize
+exception NonArrayTypeCreate
 exception UndefinedFunction of string
 exception LHSofObjectAccessMustBeAccessible
 exception RHSofObjectAccessMustBeAccessible
@@ -61,3 +63,4 @@ exception InvalidDatatype of string
 exception LLVMFunctionNotFound of string
 exception FunctionWithoutBasicBlock of string
 exception AssignmentLhsMustBeAssignable
+exception ArrayLargerThan1Unsupported

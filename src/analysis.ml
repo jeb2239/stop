@@ -265,6 +265,25 @@ and check_array_access e e_l env =
     in
     SArrayAccess(se, se_l, data_t)
 
+and check_array_create d e_l env = 
+    let se_l = expr_list_to_sexpr_list e_l env in
+
+    (* Check that the indice parameters are all Int_t *)
+    let check_access_params = List.map se_l 
+        ~f:(fun se -> match (sexpr_to_type_exn se) with 
+            Datatype(Int_t) -> ()
+          | _ -> raise (E.NonIntegerArraySize))
+    in
+
+    let arr_num_indices = List.length e_l in
+    let convert_d_to_arraytype = function
+        Datatype(x) -> Arraytype(x, arr_num_indices)
+        | _ -> raise (E.NonArrayTypeCreate)
+    in 
+    let sexpr_type = convert_d_to_arraytype d in
+
+    SArrayCreate(d, se_l, sexpr_type)
+
 and check_function_literal f env =
     let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap f env.env_named_vars in
     SFunctionLit(sfdecl, sfdecl.sftype);
@@ -321,6 +340,7 @@ and expr_to_sexpr e env = match e with
   | Assign(e1, e2)      -> (check_assign e1 e2 env, env)
   | Call(s, e_l)        -> (check_call s e_l env, env)
   | ArrayAccess(e, e_l) -> (check_array_access e e_l env, env)
+  | ArrayCreate(d, e_l) -> (check_array_create d e_l env, env)
   | FunctionLit(f)      -> (check_function_literal f env, env)
   | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
 
@@ -342,6 +362,7 @@ and sexpr_to_type sexpr = match sexpr with
   | SObjAccess(_, _, data_t)    -> Some(data_t)
   | SAssign(_, _, data_t)       -> Some(data_t)
   | SArrayAccess(_, _, data_t)  -> Some(arraytype_to_access_type data_t)
+  | SArrayCreate(_, _, data_t)  -> Some(data_t)
   | SThis(data_t)               -> Some(data_t)
   | SNoexpr                     -> None
 

@@ -4,6 +4,7 @@
     open Ast
     open Core.Std 
     module E = Exceptions
+    let lambda_num = ref 0
 %}
 
 %token DOT COMMA SEMI COLON LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
@@ -270,8 +271,9 @@ literals:
 
 function_literal:
     ANON LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { 
+        lambda_num := !lambda_num + 1;
         FunctionLit({
-            fname = "@";
+            fname = "@" ^ string_of_int !lambda_num;
             ftype = Functiontype(snd $3, $6);
             return_t = $6;
             formals = fst $3;

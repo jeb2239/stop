@@ -173,11 +173,24 @@ and codegen_call fname sexpr_l data_t llbuilder = match fname with
   | _ as fname -> codegen_function_call fname sexpr_l data_t llbuilder
 
 and codegen_function_call fname sexpr_l data_t llbuilder =
-    let f = lookup_llfunction_exn fname in
-    let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
-    match data_t with
-        Datatype(Unit_t) -> L.build_call f (Array.of_list params) "" llbuilder
-      | _ -> L.build_call f (Array.of_list params) "tmp" llbuilder
+    let call_function fllval =
+        let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
+        match data_t with
+            Datatype(Unit_t) -> L.build_call fllval (Array.of_list params) "" llbuilder
+          | _ -> L.build_call fllval (Array.of_list params) "tmp" llbuilder
+    in
+    try 
+        let fpointer = Hashtbl.find_exn named_parameters fname in
+        let f = L.build_load fpointer "f" llbuilder in
+        call_function f
+    with | Not_found ->
+        try 
+            let fpointer = Hashtbl.find_exn named_values fname in
+            let f = L.build_load fpointer "f" llbuilder in
+            call_function f
+        with | Not_found ->
+            let f = lookup_llfunction_exn fname in
+            call_function f
 
 and codegen_printf sexpr_l llbuilder =
     (* Convert printf format string to llvalue *)
@@ -260,12 +273,17 @@ and codegen_array_access isAssign e e_l llbuilder =
         then llvalue
         else L.build_load llvalue "tmp" llbuilder
 
+and codegen_function_lit fname llbuilder =
+    let f_llval = lookup_llfunction_exn fname in
+    f_llval
+
 and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with 
     SIntLit(i)                  -> L.const_int i32_t i
   | SFloatLit(f)                -> L.const_float float_t f
   | SBoolLit(b)                 -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
   | SCharLit(c)                 -> L.const_int i8_t (Char.to_int c)
   | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
+  | SFunctionLit(s, _)          -> codegen_function_lit s llbuilder
   | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(se, se_l, _)   -> codegen_array_access false se se_l llbuilder
   | SObjAccess(se1, se2, d)     -> codegen_obj_access true se1 se2 d llbuilder
@@ -274,7 +292,7 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
   | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
-  | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el 
+  | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el 
   | _ -> raise E.NotImplemented
  (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder
   | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder

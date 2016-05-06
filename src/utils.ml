@@ -23,6 +23,8 @@ let string_of_token = function
   | RBRACKET        -> "RBRACKET"
   | COMMA           -> "COMMA"
   | COLON           -> "COLON"
+  | INCREMENT       -> "INCREMENT"
+  | DECREMENT       -> "DECREMENT"
   | PLUS            -> "PLUS"
   | MINUS           -> "MINUS"
   | TIMES           -> "TIMES"
@@ -265,11 +267,8 @@ and string_of_sexpr = function
   | SBoolLit(b) -> if b then "true" else "false"
   | SCharLit(c) -> Char.escaped c
   | SStringLit(s) -> "\"" ^ (String.escaped s) ^ "\""
-  | SFunctionLit(sf, _) ->
-        sf.sfname ^ "{" ^
-        String.concat ~sep:", " (List.map ~f:string_of_formal sf.sformals) ^ "):" ^
-        string_of_datatype sf.sreturn_t ^ "{\n" ^
-        String.concat ~sep:"" (List.map ~f:(string_of_sstmt 0) sf.sbody) ^ "\t}"
+  | SFunctionLit(s, data_t) ->
+        s ^ ":" ^ string_of_datatype data_t
   | SId(s, _) -> s
   | SBinop(e1, o, e2, _) -> (string_of_sexpr e1) ^ " " ^ (string_of_op o) ^ " " ^ (string_of_sexpr e2)
   | SUnop(op, e, _) -> (string_of_uop op) ^ "(" ^ string_of_sexpr e ^ ")"
@@ -323,7 +322,7 @@ and string_of_sstmt indent =
 and string_of_sfdecl sfdecl = 
     "function" ^ " " ^ sfdecl.sfname ^ " = (" ^
     String.concat ~sep:", " (List.map ~f:string_of_formal sfdecl.sformals) ^
-    "):" ^ string_of_datatype sfdecl.sreturn_t ^ "{\n" ^ 
+    "):" ^ string_of_datatype sfdecl.sreturn_t ^ " {\n" ^ 
     string_of_sstmt 0 (SBlock(sfdecl.sbody)) ^
     "}\n"
       
@@ -336,7 +335,6 @@ and string_of_scdecl scdecl =
 and string_of_main main = match main with 
     Some(sfdecl) -> string_of_sfdecl sfdecl
   | None -> ""
-
 
 let string_of_sprogram sprogram =
     String.concat ~sep:"\n" (List.map ~f:string_of_scdecl sprogram.classes) ^ "\n" ^

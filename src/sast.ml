@@ -37,7 +37,7 @@ and sexpr =
   | SBoolLit of bool
   | SCharLit of char
   | SStringLit of string
-  | SFunctionLit of sfdecl * datatype
+  | SFunctionLit of string * datatype
   | SId of string * datatype
   | SUnop of uop * sexpr * datatype
   | SBinop of sexpr * op * sexpr * datatype

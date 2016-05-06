@@ -295,8 +295,7 @@ and check_array_create d e_l env =
     SArrayCreate(d, se_l, sexpr_type)
 
 and check_function_literal f env =
-    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap f env.env_named_vars in
-    SFunctionLit(sfdecl, sfdecl.sftype);
+    SFunctionLit(f.fname, f.ftype);
 
 and check_obj_access e1 e2 env =
     let get_cname_exn = function
@@ -618,8 +617,8 @@ and build_crecord_map fmap cdecls fdecls =
         ~init:crecord_map
 
 (* Generate StringMap: fname -> fdecl *)
-and build_fdecl_map reserved_sfdecl_map fdecls =
-    (* Check each first-order function; add it to the map *)
+and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
+    (* Check whether each function is already defined before adding it to the map *)
     let check_functions m fdecl =
         if StringMap.mem m fdecl.fname
             then raise (E.DuplicateFunctionName fdecl.fname)
@@ -627,10 +626,36 @@ and build_fdecl_map reserved_sfdecl_map fdecls =
             then raise (E.FunctionNameReserved fdecl.fname)
         else StringMap.add m ~key:(fdecl.fname) ~data:fdecl
     in
-    let map = List.fold_left fdecls 
+
+    (* Add all the first order functions to the map *)
+    let map = List.fold_left first_order_fdecls 
         ~f:check_functions 
         ~init:StringMap.empty;
     in
+
+    (* DFS to discover all higher-order functions *)
+    let rec discover_higher_order l fdecl = 
+        let check_higher_order_helper l stmt = match stmt with
+            Local(_, _, e) -> (match e with
+                FunctionLit(fdecl) -> fdecl :: discover_higher_order l fdecl
+              | _ -> l)
+          | _ -> l
+        in
+        List.fold_left fdecl.body
+            ~f:check_higher_order_helper
+            ~init:[]
+    in
+    let higher_order_fdecls = List.fold_left first_order_fdecls
+        ~f:discover_higher_order
+        ~init:[]
+    in
+
+    (* Add all the higher order functions to the map *)
+    let map = List.fold_left higher_order_fdecls 
+        ~f:check_functions 
+        ~init:map;
+    in
+
     (* Add reserved functions to the map *)
     let add_reserved_fdecls m key =
         let sfdecl = StringMap.find_exn reserved_sfdecl_map key in
@@ -647,9 +672,16 @@ and build_fdecl_map reserved_sfdecl_map fdecls =
         in
         StringMap.add m ~key:key ~data:fdecl
     in
-    List.fold_left (StringMap.keys reserved_sfdecl_map)
+    let fdecl_map = List.fold_left (StringMap.keys reserved_sfdecl_map)
         ~f:add_reserved_fdecls
         ~init:map
+    in
+    let fdecls_to_generate = first_order_fdecls @ higher_order_fdecls
+    in
+    (fdecl_map, fdecls_to_generate)
+
+(* Conversion *)
+(* ========== *)
 
 (* Convert a method to a semantically checked function *)
 (* Name = <root_class>.<fname> *)
@@ -851,7 +883,7 @@ let analyze filename ast = match ast with
         (* Create sfdecl list of builtin LLVM functions *)
         let reserved_map = build_reserved_map in
         (* Create StringMap: fname -> fdecl of functions *)
-        let fdecl_map = build_fdecl_map reserved_map fdecls in
+        let (fdecl_map, fdecls) = build_fdecl_map reserved_map fdecls in
         (* Create StringMap: cname -> cdecl of classes *)
         let crecord_map = build_crecord_map reserved_map cdecls fdecls in
         (* Generate sast: sprogram *)

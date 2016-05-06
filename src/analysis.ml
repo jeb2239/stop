@@ -282,7 +282,7 @@ and check_array_create d e_l env =
     in 
     let sexpr_type = convert_d_to_arraytype d in
 
-    SArrayCreate( d, se_l, sexpr_type)
+    SArrayCreate(d, se_l, sexpr_type)
 
 and check_function_literal f env =
     let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap f env.env_named_vars in
@@ -362,7 +362,7 @@ and sexpr_to_type sexpr = match sexpr with
   | SObjAccess(_, _, data_t)    -> Some(data_t)
   | SAssign(_, _, data_t)       -> Some(data_t)
   | SArrayAccess(_, _, data_t)  -> Some(arraytype_to_access_type data_t)
-  | SArrayCreate(_, _, data_t)  -> Some(arraytype_to_access_type data_t)
+  | SArrayCreate(_, _, data_t)  -> Some(data_t)
   | SThis(data_t)               -> Some(data_t)
   | SNoexpr                     -> None
 

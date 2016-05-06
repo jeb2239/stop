@@ -783,23 +783,22 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
     let fdecl_formals = fdecl.formals
     in
     (* Check the stmts in the fbody *)
-    let (fbody, env) = convert_stmt_list_to_sstmt_list fdecl.body env
+    let (sfbody, env) = convert_stmt_list_to_sstmt_list fdecl.body env
     in
     let record_vars = StringMap.fold env.env_record_vars
         ~f:(fun ~key:k ~data:data_t l -> (k,data_t) :: l)
         ~init:[]
     in
-    
-   (*  print_string (((function Some(fname) -> fname) env.env_fname) ^ "\n======\n");
-    List.iter record_vars
-        ~f:(function (k, d) -> print_string (k ^ " " ^ (U.string_of_datatype d) ^ "\n")); *)
-    
+    (* Add activation record *)
+    let record_type = Datatype(Object_t(fdecl.fname ^ ".record")) in
+    let record_name = fdecl.fname ^ "_record" in
+    let sfbody = SLocal(record_name, record_type, SNoexpr) :: sfbody in
     {
         sfname          = fdecl.fname;
         sreturn_t       = fdecl.return_t;
         srecord_vars    = record_vars;
         sformals        = fdecl_formals;
-        sbody           = fbody;
+        sbody           = sfbody;
         fgroup          = Sast.User;
         overrides       = fdecl.overrides;
         source          = None;

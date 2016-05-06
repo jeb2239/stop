@@ -314,8 +314,8 @@ and string_of_sstmt indent =
             indent_string ^ "while (" ^ string_of_sexpr e ^ ")\n" ^ 
             string_of_sstmt (indent) s
       | SLocal(s, d, e) -> 
-            indent_string ^ string_of_datatype d ^ " " ^ 
-            s ^ string_of_local_sexpr e ^ ";\n"
+            indent_string ^ s ^ ":" ^ string_of_datatype d ^ 
+            string_of_local_sexpr e ^ ";\n"
     in 
     get_stmt_string
   

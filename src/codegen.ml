@@ -274,8 +274,8 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
   | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
+  | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el 
   | _ -> raise E.NotImplemented
- (* | SArrayCreate(t, el, d)      -> codegen_array_create llbuilder t d el *)
  (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder
   | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
   | SNull                       -> const_null i32_t
@@ -393,6 +393,38 @@ and codegen_while_stmt cond_se body_stmt llbuilder =
     let null_sexpr = SIntLit(0) in
     codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt llbuilder
 
+and codegen_array_create llbuilder t expr_type el = 
+  if(List.length el > 1) then raise(Exceptions.ArrayLargerThan1Unsupported)
+  else
+  match expr_type with 
+    Arraytype(Char_t, 1) -> 
+    let e = List.hd_exn el in
+    let size = (codegen_sexpr e llbuilder) in
+    let t = get_lltype_exn t in
+    let arr = L.build_array_malloc t size "tmp" llbuilder in
+    let arr = L.build_pointercast arr (L.pointer_type t) "tmp" llbuilder in
+    (* initialise_array arr size (const_int i32_t 0) 0 llbuilder; *)
+    arr
+  |   _ -> 
+    let e = List.hd_exn el in
+    let t = get_lltype_exn t in
+
+    (* This will not work for arrays of objects *)
+    let size = (codegen_sexpr e llbuilder) in
+    let size_t = L.build_intcast (L.size_of t) i32_t "tmp" llbuilder in
+    let size = L.build_mul size_t size "tmp" llbuilder in
+    let size_real = L.build_add size (L.const_int i32_t 1) "arr_size" llbuilder in
+    
+      let arr = L.build_array_malloc t size_real "tmp" llbuilder in
+    let arr = L.build_pointercast arr (L.pointer_type t) "tmp" llbuilder in
+
+    let arr_len_ptr = L.build_pointercast arr (L.pointer_type i32_t) "tmp" llbuilder in
+
+    (* Store length at this position *)
+    ignore(L.build_store size_real arr_len_ptr llbuilder); 
+    (* initialise_array arr_len_ptr size_real (const_int i32_t 0) 0 llbuilder; *)
+    arr
+
 (* Codegen Library Functions *)
 (* ========================= *)
 
@@ -426,6 +458,7 @@ let codegen_struct_stub s =
     Hashtbl.add struct_types
         ~key:s.scname
         ~data:struct_t
+
 
 let codegen_struct s =
     let struct_t = Hashtbl.find_exn struct_types s.scname in

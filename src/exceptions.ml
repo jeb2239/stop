@@ -63,3 +63,4 @@ exception InvalidDatatype of string
 exception LLVMFunctionNotFound of string
 exception FunctionWithoutBasicBlock of string
 exception AssignmentLhsMustBeAssignable
+exception ArrayLargerThan1Unsupported

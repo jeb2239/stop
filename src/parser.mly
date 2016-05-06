@@ -11,7 +11,7 @@
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT CARET MODULO
 %token INCREMENT DECREMENT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token IF ELSE FOR WHILE
+%token IF ELSE FOR WHILE BREAK CONTINUE
 %token ARROW FATARROW
 %token RETURN
 %token FINAL
@@ -310,6 +310,8 @@ stmt:
     | VAR ID COLON datatype ASSIGN expr SEMI    { Local($2, $4, $6) }
     | IF LPAREN expr RPAREN stmt %prec NOELSE   { If($3, $5, Block([])) }
     | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt { For($3, $5, $7, $9) }
+    | BREAK SEMI                                { Break }
+    | CONTINUE SEMI                             { Continue }
 
 /* Expressions */
 /* ----------- */

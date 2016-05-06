@@ -57,3 +57,5 @@ and sstmt =
   | SFor of sexpr * sexpr * sexpr * sstmt 
   | SWhile of sexpr * sstmt 
   | SLocal of string * datatype * sexpr
+  | SBreak
+  | SContinue

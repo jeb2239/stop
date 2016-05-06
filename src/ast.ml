@@ -88,6 +88,8 @@ and stmt =
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | While of expr * stmt
+  | Break
+  | Continue
 
 and var = Var of datatype * string
 

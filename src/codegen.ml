@@ -304,6 +304,14 @@ and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder
   | _ -> L.build_ret (codegen_sexpr sexpr ~builder:llbuilder) llbuilder
 
+and codegen_break llbuilder = 
+    let b = fun () -> !br_block in
+    L.build_br (b ()) llbuilder
+
+and codegen_continue llbuilder = 
+    let b = fun () -> !cont_block in
+    L.build_br (b ()) llbuilder
+    
 (* TODO: Alloca vs. Malloc *)
 and codegen_local var_name data_t sexpr llbuilder = 
     let lltype = match data_t with
@@ -327,11 +335,8 @@ and codegen_stmt stmt ~builder:llbuilder = match stmt with
   | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 llbuilder 
   | SFor(se1, se2, se3, ss) -> codegen_for_stmt se1 se2 se3 ss llbuilder
   | SWhile(se, ss)          -> codegen_while_stmt se ss llbuilder
-(*
-  | SLocal(d, s, e)         -> codegen_alloca d s e llbuilder
   | SBreak                  -> codegen_break llbuilder
   | SContinue               -> codegen_continue llbuilder
-*)
 
 and codegen_if_stmt predicate then_stmt else_stmt llbuilder =
     let cond_val = codegen_sexpr predicate llbuilder in

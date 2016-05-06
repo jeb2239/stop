@@ -513,6 +513,8 @@ and parse_stmt stmt env = match stmt with
   | If(e, s1, s2)           -> check_if e s1 s2 env
   | For(e1, e2, e3, s)     -> check_for e1 e2 e3 s env
   | While(e, s)             -> check_while e s env
+  | Break                   -> check_break env
+  | Continue                -> check_continue env
 
 (* Semantically check a list of stmts; Convert to sstmts *)
 and convert_stmt_list_to_sstmt_list sl env =
@@ -565,6 +567,16 @@ and check_while e s env =
     in
     let env = update_call_stack env.env_in_for old_in_while env in
     (swhile, env)
+
+and check_break env = 
+    if env.env_in_for || env.env_in_while then
+      SBreak, env
+    else raise E.BreakOutsideOfLoop
+
+and check_continue env = 
+    if env.env_in_for || env.env_in_while then
+      SContinue, env
+    else raise E.ContinueOustideOfLoop
 
 (* Map Generation *)
 (* ============== *)

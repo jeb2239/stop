@@ -83,6 +83,8 @@ rule token = parse
     | "else"    { ELSE }
     | "for"     { FOR }
     | "while"   { WHILE }
+    | "break"   { BREAK }
+    | "continue" { CONTINUE }
     | "return"  { RETURN }
 
     (* Reserved Keywords *)

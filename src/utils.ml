@@ -47,6 +47,8 @@ let string_of_token = function
   | ELSE            -> "ELSE"
   | FOR             -> "FOR"
   | WHILE           -> "WHILE"
+  | BREAK           -> "BREAK"
+  | CONTINUE        -> "CONTINUE"
   | RETURN          -> "RETURN"
   | FINAL           -> "FINAL"
   | INCLUDE         -> "INCLUDE"
@@ -220,6 +222,8 @@ and string_of_stmt_helper = function
   | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " 
                             ^ string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
+  | Break               -> "break;\n"
+  | Continue            -> "continue;\n" 
   | Local(s, dtype, e) -> ( match e with 
           Noexpr -> "var " ^ s ^ ":" ^ string_of_datatype dtype ^ ";\n"
         | _ -> "var " ^ s ^ ":" ^ string_of_datatype dtype ^ " = " ^ string_of_expr e ^ ";\n" )
@@ -313,6 +317,10 @@ and string_of_sstmt indent =
       | SWhile(e, s) -> 
             indent_string ^ "while (" ^ string_of_sexpr e ^ ")\n" ^ 
             string_of_sstmt (indent) s
+      | SBreak ->
+            indent_string ^ "break;"
+      | SContinue ->
+            indent_string ^ "continue;"
       | SLocal(s, d, e) -> 
             indent_string ^ s ^ ":" ^ string_of_datatype d ^ 
             string_of_local_sexpr e ^ ";\n"

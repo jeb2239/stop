@@ -46,6 +46,8 @@ exception LocalAssignmentTypeMismatch of string * string
 exception LocalAssignmentTypeNotAssignable of string
 exception ArrayAccess of string
 exception UndefinedFunction of string
+exception BreakOutsideOfLoop
+exception ContinueOustideOfLoop
 
 (* Utils Exceptions *)
 exception UtilsError of string

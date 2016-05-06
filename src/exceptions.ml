@@ -19,6 +19,8 @@ exception MultipleMainFunctions
 exception InvalidUnaryOperation
 exception UnexpectedNoexpr
 exception UnexpectedType
+exception UnexpectedNoFname
+exception UnexpectedDatatype
 exception UnexpectedNonBodyStmt
 exception InvalidBinaryOperation
 exception LHSofObjectAccessMustBeAccessible

@@ -69,6 +69,10 @@ let update_call_stack in_for in_while env =
     env_in_while    = in_while;
 }
 
+let get_fname_exn fname_option = match fname_option with
+    Some(s) -> s
+  | None -> raise E.UnexpectedNoFname
+
 (* Name all methods <cname>.<fname> *)
 let get_method_name cname fdecl =
     let name = fdecl.fname in
@@ -334,6 +338,17 @@ and check_obj_access e1 e2 env =
         SId(_, data_t) -> data_t
     in
     SObjAccess(lhs, rhs, rhs_t)
+    
+and check_record_access s env =
+    let fname = get_fname_exn env.env_fname in
+    let record_type = Datatype(Object_t(fname ^ ".record")) in
+    let record_type_name = fname ^ ".record" in
+    let record_name = fname ^ "_record" in
+    let record_class = StringMap.find_exn env.env_cmap record_type_name in
+    let rhs_type = StringMap.find_exn env.env_named_vars s in
+    let lhs = SId(record_name, record_type) in
+    let rhs = SId(s, rhs_type) in
+    SObjAccess(lhs, rhs, rhs_type)
 
 (* TODO: Add all match cases for stmts, exprs *)
 and expr_to_sexpr e env = match e with
@@ -343,8 +358,11 @@ and expr_to_sexpr e env = match e with
   | BoolLit(b)          -> (SBoolLit(b), env)
   | CharLit(c)          -> (SCharLit(c), env)
   | StringLit(s)        -> (SStringLit(s), env)
+  | Id(s)               -> (check_record_access s env, env)
+  (*
   | Id(s)               -> (SId(s, get_Id_type s env), env) 
   | This                -> (SId("this", get_this_type env), env)
+    *)
   | Noexpr              -> (SNoexpr, env)
     (* Operations *)
   | Unop(op, e)         -> (check_unop op e env, env)

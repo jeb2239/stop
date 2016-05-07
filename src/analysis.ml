@@ -17,6 +17,11 @@ let string_of_list string_of_item l =
 
 let higher_order_sfdecls = ref StringMap.empty
 
+(* Type of access link to use *)
+let access_link_types:(string, datatype) Hashtbl.t = Hashtbl.create ()
+    ~hashable:String.hashable 
+    ~size:10
+
 (* Record which contains information re: Classes *)
 type class_record = {
     field_map       : field StringMap.t;
@@ -36,6 +41,7 @@ type env = {
     env_fmap                : fdecl StringMap.t;
     env_named_vars          : datatype StringMap.t;
     env_record_vars         : datatype StringMap.t;
+    env_record_to_pass      : (string * datatype) StringMap.t;
     env_return_t            : datatype;
     env_in_for              : bool;
     env_in_while            : bool;
@@ -43,30 +49,32 @@ type env = {
 
 let update_env_cname env_cname env =
 {
-    env_cname       = env_cname;
-    env_crecord     = env.env_crecord;
-    env_cmap        = env.env_cmap;
-    env_fname       = env.env_fname;
-    env_fmap        = env.env_fmap;
-    env_named_vars  = env.env_named_vars;
-    env_record_vars = env.env_record_vars;
-    env_return_t    = env.env_return_t;
-    env_in_for      = env.env_in_for;
-    env_in_while    = env.env_in_while;
+    env_cname           = env_cname;
+    env_crecord         = env.env_crecord;
+    env_cmap            = env.env_cmap;
+    env_fname           = env.env_fname;
+    env_fmap            = env.env_fmap;
+    env_named_vars      = env.env_named_vars;
+    env_record_vars     = env.env_record_vars;
+    env_record_to_pass  = env.env_record_to_pass;
+    env_return_t        = env.env_return_t;
+    env_in_for          = env.env_in_for;
+    env_in_while        = env.env_in_while;
 }
 
 let update_call_stack in_for in_while env =
 {
-    env_cname       = env.env_cname;
-    env_crecord     = env.env_crecord;
-    env_cmap        = env.env_cmap;
-    env_fname       = env.env_fname;
-    env_fmap        = env.env_fmap;
-    env_named_vars  = env.env_named_vars;
-    env_record_vars = env.env_record_vars;
-    env_return_t    = env.env_return_t;
-    env_in_for      = in_for;
-    env_in_while    = in_while;
+    env_cname           = env.env_cname;
+    env_crecord         = env.env_crecord;
+    env_cmap            = env.env_cmap;
+    env_fname           = env.env_fname;
+    env_fmap            = env.env_fmap;
+    env_named_vars      = env.env_named_vars;
+    env_record_vars     = env.env_record_vars;
+    env_record_to_pass  = env.env_record_to_pass;
+    env_return_t        = env.env_return_t;
+    env_in_for          = in_for;
+    env_in_while        = in_while;
 }
 
 let get_fname_exn fname_option = match fname_option with
@@ -235,6 +243,7 @@ and check_assign e1 e2 env =
 
 (* TODO: Investigate Dice differences *)
 and check_call s e_l env =
+    (* Add our activation record if the function takes one *)
     let se_l = expr_list_to_sexpr_list e_l env in
     try 
         (* Call the function if it is not a var *)
@@ -313,7 +322,7 @@ and check_array_create d e_l env =
 and check_function_literal fdecl env =
     let f = StringMap.find_exn env.env_fmap (get_fname_exn env.env_fname) in
     let link_type = Some(Datatype(Object_t(f.fname ^ ".record"))) in
-    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap fdecl env.env_named_vars link_type in
+    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap fdecl env.env_named_vars link_type env.env_record_to_pass in
     higher_order_sfdecls := StringMap.add !higher_order_sfdecls ~key:fdecl.fname ~data:sfdecl;
     SFunctionLit(fdecl.fname, fdecl.ftype)
 
@@ -465,6 +474,7 @@ and local_handler s data_t e env =
                 env_fmap = env.env_fmap;
                 env_named_vars = named_vars;
                 env_record_vars = record_vars;
+                env_record_to_pass = env.env_record_to_pass;
                 env_return_t = env.env_return_t;
                 env_in_for = env.env_in_for;
                 env_in_while = env.env_in_while;
@@ -507,6 +517,14 @@ and local_handler s data_t e env =
                     ~key:s 
                     ~data:se_data_t;
                 in
+                let record_to_pass = match se with
+                    SFunctionLit(_,_) -> 
+                        let data = (get_fname_exn env.env_fname ^ "_record", Datatype(Object_t(get_fname_exn env.env_fname ^ ".record"))) in
+                        StringMap.add env.env_record_to_pass 
+                            ~key:s 
+                            ~data:data
+                  | _ -> env.env_record_to_pass
+                in
                 let new_env = {
                     env_cname = env.env_cname;
                     env_crecord = env.env_crecord;
@@ -515,6 +533,7 @@ and local_handler s data_t e env =
                     env_fmap = env.env_fmap;
                     env_named_vars = named_vars;
                     env_record_vars = record_vars;
+                    env_record_to_pass = record_to_pass;
                     env_return_t = env.env_return_t;
                     env_in_for = env.env_in_for;
                     env_in_while = env.env_in_while;
@@ -666,8 +685,16 @@ and build_crecord_map fmap cdecls fdecls =
             ~init:field_map
     in
     let fhelper m (fdecl : Ast.fdecl) = 
+        let field_map = discover_named_vars fdecl in
+        let field_map =
+            try 
+                let link_type = Hashtbl.find_exn access_link_types fdecl.fname in
+                let field = Field(Public, "@link", link_type) in
+                StringMap.add field_map ~key:"@link" ~data:field
+            with | Not_found -> field_map
+        in
         let temp_class =    ({
-            field_map = discover_named_vars fdecl;
+            field_map = field_map;
             method_map = StringMap.empty;
             cdecl = ({
                 cname = fdecl.fname ^ ".record";
@@ -705,7 +732,12 @@ and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
     let rec discover_higher_order l fdecl = 
         let check_higher_order_helper l stmt = match stmt with
             Local(_, _, e) -> (match e with
-                FunctionLit(fdecl) -> fdecl :: discover_higher_order l fdecl
+                FunctionLit(nested_fdecl) -> 
+                    let link_t = Datatype(Object_t(fdecl.fname ^ ".record")) in
+                    Hashtbl.add_exn access_link_types
+                        ~key:nested_fdecl.fname
+                        ~data:link_t;
+                    nested_fdecl :: discover_higher_order l nested_fdecl
               | _ -> l)
           | _ -> l
         in
@@ -784,6 +816,7 @@ and convert_method_to_sfdecl fmap cmap cname fdecl =
         env_fmap        = fmap;
         env_named_vars  = StringMap.empty;
         env_record_vars = StringMap.empty;
+        env_record_to_pass = StringMap.empty;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
@@ -815,7 +848,15 @@ and convert_method_to_sfdecl fmap cmap cname fdecl =
     }
 
 (* Convert a function to a semantically checked function *)
-and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type =
+and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass =
+
+    (* Add access link, if the function is not first class *)
+    let sformals = match link_type with
+        Some(t) -> let access_link = Formal("@link", t) in access_link :: fdecl.formals
+      | None -> fdecl.formals
+    in
+
+    (* Add named values to env *)
     let env_param_helper m formal = match formal with
         Formal(s, data_t) -> 
             if StringMap.mem named_vars s
@@ -823,11 +864,11 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type =
             else StringMap.add m ~key:s ~data:data_t
       | _ -> m
     in
-    let named_vars = List.fold_left fdecl.formals
+    let named_vars = List.fold_left sformals
         ~f:env_param_helper 
         ~init:named_vars
     in
-    let record_vars = List.fold_left fdecl.formals
+    let record_vars = List.fold_left sformals
         ~f:env_param_helper 
         ~init:StringMap.empty
     in
@@ -839,26 +880,19 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type =
         env_fmap        = fmap;
         env_named_vars  = named_vars;
         env_record_vars = record_vars;
+        env_record_to_pass = record_to_pass;
         env_return_t    = fdecl.return_t;
         env_in_for      = false;
         env_in_while    = false;
     }
     in
-    (* Prepend the class as the first parameter to the function if it is a method *)
-    let fdecl_formals = fdecl.formals
-    in
+
     (* Check the stmts in the fbody *)
     let (sfbody, env) = convert_stmt_list_to_sstmt_list fdecl.body env
     in
     let record_vars = StringMap.fold env.env_record_vars
         ~f:(fun ~key:k ~data:data_t l -> (k,data_t) :: l)
         ~init:[]
-    in
-
-    (* Add access link, if the function is not first class *)
-    let sformals = match link_type with
-        Some(t) -> let access_link = Formal("@link", t) in access_link :: fdecl_formals
-      | None -> fdecl_formals
     in
     let srecord_vars = match link_type with
         Some(t) -> let access_link = ("@link", t) in access_link :: record_vars 
@@ -874,10 +908,12 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type =
             SExpr(sexpr, data_t) :: l
       | _ -> l
     in
+
     let sfbody = List.fold_left sformals
         ~f:field_helper
         ~init:sfbody
     in
+    
     (* Add activation record *)
     let record_type = Datatype(Object_t(fdecl.fname ^ ".record")) in
     let record_name = fdecl.fname ^ "_record" in
@@ -885,7 +921,7 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type =
     {
         sfname          = fdecl.fname;
         sreturn_t       = fdecl.return_t;
-        srecord_vars    = srecord_vars;
+        srecord_vars    = record_vars;
         sformals        = sformals;
         sbody           = sfbody;
         fgroup          = Sast.User;
@@ -952,7 +988,7 @@ let convert_ast_to_sast
 
     (* Append first order fdecls to the tuple *)
     let sfdecls = List.fold_left first_order_fdecls
-        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty None) :: l) 
+        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty None StringMap.empty) :: l) 
         ~init:[] 
     in
 

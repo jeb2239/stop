@@ -852,10 +852,25 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
         ~f:(fun ~key:k ~data:data_t l -> (k,data_t) :: l)
         ~init:[]
     in
+    
+    (* Assign any parameters to their corresponding activation record vars *)
+    let field_helper l f = match f with
+        Formal(s, data_t) -> 
+            let sstmt_id = SId(s, data_t) in
+            let sstmt_record_var = check_record_access s env in
+            let sexpr = SAssign(sstmt_record_var, sstmt_id, data_t) in
+            SExpr(sexpr, data_t) :: l
+      | _ -> l
+    in
+    let sfbody = List.fold_left fdecl.formals
+        ~f:field_helper
+        ~init:sfbody
+    in
     (* Add activation record *)
     let record_type = Datatype(Object_t(fdecl.fname ^ ".record")) in
     let record_name = fdecl.fname ^ "_record" in
     let sfbody = SLocal(record_name, record_type, SNoexpr) :: sfbody in
+
     {
         sfname          = fdecl.fname;
         sreturn_t       = fdecl.return_t;

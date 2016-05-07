@@ -227,7 +227,7 @@ and codegen_id isDeref id llbuilder =
                 L.build_load var id llbuilder 
             with | Not_found -> raise (E.UndefinedId id)
     else
-        try Hashtbl.find_exn named_values id
+        try Hashtbl.find_exn named_parameters id
         with | Not_found ->
             try Hashtbl.find_exn named_values id 
             with | Not_found -> raise (E.UndefinedId id)

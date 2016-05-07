@@ -311,7 +311,9 @@ and check_array_create d e_l env =
     SArrayCreate(d, se_l, sexpr_type)
 
 and check_function_literal fdecl env =
-    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap fdecl env.env_named_vars in
+    let f = StringMap.find_exn env.env_fmap (get_fname_exn env.env_fname) in
+    let link_type = Some(Datatype(Object_t(f.fname ^ ".record"))) in
+    let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap fdecl env.env_named_vars link_type in
     higher_order_sfdecls := StringMap.add !higher_order_sfdecls ~key:fdecl.fname ~data:sfdecl;
     SFunctionLit(fdecl.fname, fdecl.ftype)
 
@@ -813,7 +815,7 @@ and convert_method_to_sfdecl fmap cmap cname fdecl =
     }
 
 (* Convert a function to a semantically checked function *)
-and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
+and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type =
     let env_param_helper m formal = match formal with
         Formal(s, data_t) -> 
             if StringMap.mem named_vars s
@@ -852,7 +854,17 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
         ~f:(fun ~key:k ~data:data_t l -> (k,data_t) :: l)
         ~init:[]
     in
-    
+
+    (* Add access link, if the function is not first class *)
+    let sformals = match link_type with
+        Some(t) -> let access_link = Formal("@link", t) in access_link :: fdecl_formals
+      | None -> fdecl_formals
+    in
+    let srecord_vars = match link_type with
+        Some(t) -> let access_link = ("@link", t) in access_link :: record_vars 
+      | None -> record_vars
+    in
+
     (* Assign any parameters to their corresponding activation record vars *)
     let field_helper l f = match f with
         Formal(s, data_t) -> 
@@ -862,7 +874,7 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
             SExpr(sexpr, data_t) :: l
       | _ -> l
     in
-    let sfbody = List.fold_left fdecl.formals
+    let sfbody = List.fold_left sformals
         ~f:field_helper
         ~init:sfbody
     in
@@ -870,12 +882,11 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
     let record_type = Datatype(Object_t(fdecl.fname ^ ".record")) in
     let record_name = fdecl.fname ^ "_record" in
     let sfbody = SLocal(record_name, record_type, SNoexpr) :: sfbody in
-
     {
         sfname          = fdecl.fname;
         sreturn_t       = fdecl.return_t;
-        srecord_vars    = record_vars;
-        sformals        = fdecl_formals;
+        srecord_vars    = srecord_vars;
+        sformals        = sformals;
         sbody           = sfbody;
         fgroup          = Sast.User;
         overrides       = fdecl.overrides;
@@ -941,7 +952,7 @@ let convert_ast_to_sast
 
     (* Append first order fdecls to the tuple *)
     let sfdecls = List.fold_left first_order_fdecls
-        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty) :: l) 
+        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty None) :: l) 
         ~init:[] 
     in
 

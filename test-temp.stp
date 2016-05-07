@@ -3,13 +3,14 @@
  * ================
  */
 
-def main = ():Int {
-	var lambda_add_3:Int->Int = @(i:Int):Int {
-		return i + 3;
-	};
-
+class Test = {
 	var a:Int;
-	a = 3;
-	printf("%d\n", a);
+}
+
+def main = ():Int {
+	var b:Test;
+	b.a = 1;
+	var c:Int;
+	c = 5;
 	return 0;
 }

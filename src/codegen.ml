@@ -245,9 +245,11 @@ and codegen_assign se1 se2 llbuilder =
 and codegen_obj_access isAssign lhs rhs data_t llbuilder =
     let obj_type_name = match lhs with
         SId(_, data_t) -> U.string_of_datatype data_t
+      | SObjAccess(_, _, data_t) -> U.string_of_datatype data_t
     in 
     let struct_llval = match lhs with
         SId(s, _) -> codegen_id false s llbuilder
+      | SObjAccess(le, re, data_t) -> codegen_obj_access true le re data_t llbuilder
     in
     let field_name = match rhs with
         SId(field, _) -> field
@@ -318,7 +320,7 @@ and codegen_local var_name data_t sexpr llbuilder =
         Datatype(Object_t(name)) -> find_struct_exn name
       | _ -> get_lltype_exn data_t
     in
-    let alloca = L.build_alloca lltype var_name llbuilder in
+    (* let alloca = L.build_alloca lltype var_name llbuilder in *)
     let malloc = L.build_malloc lltype var_name llbuilder in
 
     Hashtbl.add_exn named_values ~key:var_name ~data:malloc;

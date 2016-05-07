@@ -311,16 +311,18 @@ and check_obj_access e1 e2 env =
     in
     let check_lhs = function
         This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
-      | Id (s) -> SId(s, get_Id_type s env)
+      | Id(s) -> check_record_access s env (* SId(s, get_Id_type s env) *)
       | _ as e -> raise E.LHSofObjectAccessMustBeAccessible
     in
     let check_rhs e2 =
         let id = match e2 with
             Id s -> s
-          | _ ->raise E.RHSofObjectAccessMustBeAccessible
+          | _ -> raise E.RHSofObjectAccessMustBeAccessible
         in
         let cname = match (check_lhs e1) with
             SId(_, data_t) -> (match data_t with
+                Datatype(Object_t(name)) -> name)
+          | SObjAccess(_, _, data_t) -> (match data_t with
                 Datatype(Object_t(name)) -> name)
           | _ -> raise E.RHSofObjectAccessMustBeAccessible
         in

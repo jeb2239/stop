@@ -243,8 +243,13 @@ and check_assign e1 e2 env =
 
 (* TODO: Investigate Dice differences *)
 and check_call s e_l env =
-    (* Add our activation record if the function takes one *)
+    (* Add the correct activation record if the function takes one *)
     let se_l = expr_list_to_sexpr_list e_l env in
+    let record_to_pass = StringMap.find env.env_record_to_pass s in
+    let se_l = match record_to_pass with
+        Some(t) -> se_l
+      | None -> se_l
+    in
     try 
         (* Call the function if it is not a var *)
         let fdecl = StringMap.find_exn env.env_fmap s in
@@ -517,6 +522,8 @@ and local_handler s data_t e env =
                     ~key:s 
                     ~data:se_data_t;
                 in
+
+                (* Record to pass *)
                 let record_to_pass = match se with
                     SFunctionLit(_,_) -> 
                         let data = (get_fname_exn env.env_fname ^ "_record", Datatype(Object_t(get_fname_exn env.env_fname ^ ".record"))) in
@@ -525,6 +532,7 @@ and local_handler s data_t e env =
                             ~data:data
                   | _ -> env.env_record_to_pass
                 in
+                
                 let new_env = {
                     env_cname = env.env_cname;
                     env_crecord = env.env_crecord;

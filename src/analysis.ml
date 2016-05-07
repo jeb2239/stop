@@ -366,6 +366,7 @@ and expr_to_sexpr e env = match e with
   | This                -> (SId("this", get_this_type env), env)
     *)
   | Noexpr              -> (SNoexpr, env)
+
     (* Operations *)
   | Unop(op, e)         -> (check_unop op e env, env)
   | Binop(e1, op, e2)   -> (check_binop e1 op e2 env, env)
@@ -404,15 +405,14 @@ and sexpr_to_type_exn sexpr = match (sexpr_to_type sexpr) with
 
 (* Statement to SStatement Conversion *)
 and check_sblock sl env = match sl with
-    [] ->   (SBlock([SExpr(SNoexpr, Datatype(Unit_t))]), env)
-  | _ ->    let (sl,_) = convert_stmt_list_to_sstmt_list sl env 
-            in
-            (SBlock(sl), env)
+    [] ->   ([SBlock([SExpr(SNoexpr, Datatype(Unit_t))])], env)
+  | _ ->    let (sl,_) = convert_stmt_list_to_sstmt_list sl env in
+            ([SBlock(sl)], env)
 
 and check_expr_stmt e env =
     let se, env = expr_to_sexpr e env in
     let data_t = sexpr_to_type_exn se in
-    (SExpr(se, data_t), env)
+    ([SExpr(se, data_t)], env)
 
 and check_return e env =
     let (se, _) = expr_to_sexpr e env in
@@ -421,10 +421,10 @@ and check_return e env =
         (* Allow unit returns for reference types e.g. objects, arrays *)
         (* TODO: See if this makes sense for Unit_t... *)
         Datatype(Unit_t), Datatype(Object_t(_))
-      | Datatype(Unit_t), Arraytype(_, _) -> (SReturn(se, data_t), env)
+      | Datatype(Unit_t), Arraytype(_, _) -> ([SReturn(se, data_t)], env)
       | _ -> 
             if data_t = env.env_return_t
-            then (SReturn(se, data_t), env)
+            then ([SReturn(se, data_t)], env)
             else raise (E.ReturnTypeMismatch
                 (U.string_of_datatype data_t, 
                 U.string_of_datatype env.env_return_t, 
@@ -457,8 +457,21 @@ and local_handler s data_t e env =
                 env_in_while = env.env_in_while;
             } 
             in
-            (* Don't allocate any locals: save them on the activation record *)
-            (SExpr(SNoexpr, Datatype(Unit_t)), new_env)
+            let save_obj_with_storage =
+                (* Add the temp var as a local *)
+                let var_name = ".tmp_malloc_var" in
+                let var_type = data_t in
+                let sstmt_l = [SLocal(var_name, var_type, SNoexpr)] in
+                let sstmt_id = SId(var_name, var_type) in
+                let sstmt_record_var = check_record_access s new_env in
+                let sexpr = SAssign(sstmt_record_var, sstmt_id, var_type) in
+                let sstmt_l = SExpr(sexpr, var_type) :: sstmt_l in
+                (List.rev sstmt_l, new_env)
+            in
+            (* Only allocate locals if they need to be allocated (pointer in activation record) *)
+            match data_t with
+                    Datatype(Object_t(_)) -> save_obj_with_storage
+                  | _ -> ([SExpr(SNoexpr, Datatype(Unit_t))], new_env)
         else 
             let se_data_t = sexpr_to_type_exn se in
             let is_assignable = function
@@ -473,11 +486,9 @@ and local_handler s data_t e env =
             in
             if valid_assignment (data_t, se_data_t)
             then 
-
                 let named_vars = StringMap.add env.env_named_vars 
                     ~key:s 
                     ~data:se_data_t;
-
                 in
                 let record_vars = StringMap.add env.env_record_vars 
                     ~key:s 
@@ -496,11 +507,14 @@ and local_handler s data_t e env =
                     env_in_while = env.env_in_while;
                 } 
                 in
-                (* Don't allocate any locals: save them on the activation record *)
-                let lhs = check_record_access s new_env in
-                let sexpr = SAssign(lhs, se, se_data_t) in
-                let sstmt = SExpr(sexpr, se_data_t) in
-                (sstmt, new_env)
+                let save_object_no_storage =
+                    let lhs = check_record_access s new_env in
+                    let sexpr = SAssign(lhs, se, se_data_t) in
+                    let sstmt = SExpr(sexpr, se_data_t) in
+                    ([sstmt], new_env)
+                in
+                save_object_no_storage
+                                    
                 (* (SLocal(s, se_data_t, se), new_env) *)
             else 
                 let type1 = U.string_of_datatype data_t in
@@ -513,7 +527,7 @@ and parse_stmt stmt env = match stmt with
   | Return e                -> check_return e env
   | Local(s, data_t, e)     -> local_handler s data_t e env 
   | If(e, s1, s2)           -> check_if e s1 s2 env
-  | For(e1, e2, e3, s)     -> check_for e1 e2 e3 s env
+  | For(e1, e2, e3, s)      -> check_for e1 e2 e3 s env
   | While(e, s)             -> check_while e s env
   | Break                   -> check_break env
   | Continue                -> check_continue env
@@ -525,7 +539,7 @@ and convert_stmt_list_to_sstmt_list sl env =
         head :: tail ->
             let (a_head, env) = parse_stmt head !env_ref in
             env_ref := env;
-            a_head :: (iter tail)
+            a_head @ (iter tail)
       | [] -> []
     in
     let sstmt_list = ((iter sl), !env_ref) in
@@ -537,7 +551,7 @@ and check_if e s1 s2 env =
     let (ifbody, _) = parse_stmt s1 env in
     let (elsebody, _) = parse_stmt s2 env in
     if t = Datatype(Bool_t) 
-        then (SIf(se, ifbody, elsebody), env)
+        then ([SIf(se, SBlock(ifbody), SBlock(elsebody))], env)
         else raise E.InvalidIfStatementType
 
 and check_for e1 e2 e3 s env =
@@ -550,11 +564,11 @@ and check_for e1 e2 e3 s env =
     let conditional_t = sexpr_to_type_exn se2 in
     let sfor =
         if conditional_t = Datatype(Bool_t) 
-            then SFor(se1, se2, se3, sbody)
+            then SFor(se1, se2, se3, SBlock(sbody))
             else raise E.InvalidForStatementType
     in
     let env = update_call_stack old_in_for env.env_in_while env in
-    (sfor, env)
+    ([sfor], env)
 
 and check_while e s env =
     let old_in_while = env.env_in_while in
@@ -564,20 +578,20 @@ and check_while e s env =
     let (sbody,_) = parse_stmt s env in
     let swhile = 
         if conditional_t = Datatype(Bool_t)
-            then SWhile(se, sbody)
+            then SWhile(se, SBlock(sbody))
             else raise E.InvalidWhileStatementType
     in
     let env = update_call_stack env.env_in_for old_in_while env in
-    (swhile, env)
+    ([swhile], env)
 
 and check_break env = 
     if env.env_in_for || env.env_in_while then
-      SBreak, env
+        ([SBreak], env)
     else raise E.BreakOutsideOfLoop
 
 and check_continue env = 
     if env.env_in_for || env.env_in_while then
-      SContinue, env
+        ([SContinue], env)
     else raise E.ContinueOustideOfLoop
 
 (* Map Generation *)

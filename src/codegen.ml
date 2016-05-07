@@ -290,7 +290,7 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SArrayAccess(se, se_l, _)   -> codegen_array_access true se se_l llbuilder
   | SObjAccess(se1, se2, d)     -> codegen_obj_access true se1 se2 d llbuilder
   | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
-  | SId(id, _)                      -> codegen_id true id llbuilder
+  | SId(id, _)                      -> codegen_id false id llbuilder
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
   | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder

@@ -237,19 +237,30 @@ and check_assign e1 e2 env =
 and check_call s e_l env =
     let se_l = expr_list_to_sexpr_list e_l env in
     try 
+        (* Call the function if it is not a var *)
         let fdecl = StringMap.find_exn env.env_fmap s in
         let return_t = fdecl.return_t in
-        SCall(s, se_l, return_t, 0)
+        let sid = SId(s, fdecl.ftype) in
+        SCall(sid, se_l, return_t, 0)
     with | Not_found -> 
         try 
-            let f = StringMap.find_exn env.env_named_vars s in
-            let return_t = match f with
+            (* Get the function pointer if it is a var *)
+            let rhs_type = StringMap.find_exn env.env_named_vars s in
+            let return_t = match rhs_type with
                 Functiontype(_, return_t) -> return_t
               | data_t -> 
                     let data_t = U.string_of_datatype data_t in
                     raise (E.CallFailedOnType data_t)
             in
-            SCall(s, se_l, return_t, 0)
+            let env_fname = get_fname_exn env.env_fname in
+            let record_type = Datatype(Object_t(env_fname ^ ".record")) in
+            let record_type_name = env_fname ^ ".record" in
+            let record_name = env_fname ^ "_record" in
+            let record_class = StringMap.find_exn env.env_cmap record_type_name in
+            let lhs = SId(record_name, record_type) in
+            let rhs = SId(s, rhs_type) in
+            let sstmt = SObjAccess(lhs, rhs, rhs_type) in
+            SCall(sstmt, se_l, return_t, 0)
         with | Not_found -> raise (E.UndefinedFunction s)
 
 and expr_list_to_sexpr_list e_l env = match e_l with

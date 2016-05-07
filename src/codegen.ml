@@ -168,17 +168,28 @@ and handle_unop op se data_t llbuilder =
 
     type_handler data_t
 
-and codegen_call fname sexpr_l data_t llbuilder = match fname with
-    "printf" -> codegen_printf sexpr_l llbuilder
-  | _ as fname -> codegen_function_call fname sexpr_l data_t llbuilder
+and codegen_call sexpr sexpr_l data_t llbuilder = match sexpr with
+    SId(fname, _) -> 
+        (match fname with
+            "printf" -> codegen_printf sexpr_l llbuilder
+          | _ -> codegen_function_call sexpr sexpr_l data_t llbuilder)
+  | _ -> codegen_function_call sexpr sexpr_l data_t llbuilder
 
-and codegen_function_call fname sexpr_l data_t llbuilder =
+and codegen_function_call sexpr sexpr_l data_t llbuilder =
     let call_function fllval =
         let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
         match data_t with
             Datatype(Unit_t) -> L.build_call fllval (Array.of_list params) "" llbuilder
           | _ -> L.build_call fllval (Array.of_list params) "tmp" llbuilder
     in
+    match sexpr with
+        SId(fname, _) -> 
+            let f = lookup_llfunction_exn fname in 
+            call_function f
+      | SObjAccess(se1, se2, data_t) -> 
+            let f = codegen_obj_access true se1 se2 data_t llbuilder in
+            call_function f
+    (*
     try 
         let fpointer = Hashtbl.find_exn named_parameters fname in
         let f = L.build_load fpointer "f" llbuilder in
@@ -191,6 +202,7 @@ and codegen_function_call fname sexpr_l data_t llbuilder =
         with | Not_found ->
             let f = lookup_llfunction_exn fname in
             call_function f
+            *)
 
 and codegen_printf sexpr_l llbuilder =
     (* Convert printf format string to llvalue *)
@@ -296,11 +308,6 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
   | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el 
   | _ -> raise E.NotImplemented
- (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder
-  | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
-  | SNull                       -> const_null i32_t
-  | SDelete e                   -> codegen_delete e llbuilder
-*)
 
 and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder

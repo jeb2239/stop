@@ -279,7 +279,7 @@ and string_of_sexpr = function
   | SAssign(e1, e2, _) -> (string_of_sexpr e1) ^ " = " ^ (string_of_sexpr e2) 
   | SObjAccess(e1, e2, data_t) -> 
           (string_of_sexpr e1) ^ "." ^ (string_of_sexpr e2) ^":"^ (string_of_datatype data_t)
-  | SCall(f, el, _, _)      -> f ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"
+  | SCall(ss, el, _, _) -> string_of_sexpr ss ^ "(" ^ String.concat ~sep:", " (List.map ~f:string_of_sexpr el) ^ ")"
   | SArrayAccess(se, se_l, _) ->
         string_of_sexpr se ^ "[" ^ string_of_bracket_sexpr se_l ^ "]"
   | SArrayCreate(d, se_l, _) -> 

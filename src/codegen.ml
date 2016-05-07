@@ -287,7 +287,7 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
   | SFunctionLit(s, _)          -> codegen_function_lit s llbuilder
   | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
-  | SArrayAccess(se, se_l, _)   -> codegen_array_access false se se_l llbuilder
+  | SArrayAccess(se, se_l, _)   -> codegen_array_access true se se_l llbuilder
   | SObjAccess(se1, se2, d)     -> codegen_obj_access true se1 se2 d llbuilder
   | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
   | SId(id, _)                      -> codegen_id true id llbuilder

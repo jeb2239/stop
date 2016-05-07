@@ -9,8 +9,7 @@ class Test = {
 
 def main = ():Int {
 	var b:Test;
-	b.a = 1;
-	var c:Int;
-	c = 5;
+	b.a = 5;
+	var a:Int = 7;
 	return 0;
 }

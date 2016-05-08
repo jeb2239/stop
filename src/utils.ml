@@ -100,6 +100,8 @@ let error_string_of_cnum cnum token =
     string_of_int cnum ^ "~" 
     ^ string_of_int (cnum + String.length (string_of_token token))
 
+let string_of_list string_of_item l = 
+    "[" ^ String.concat ~sep:", " (List.map ~f:string_of_item l) ^ "]"
 (* Pretty-printing Functions *)
 (* ------------------------- *)
 
@@ -349,3 +351,11 @@ let string_of_sprogram sprogram =
     String.concat ~sep:"\n" (List.map ~f:string_of_sfdecl sprogram.functions) ^ "\n" ^
     string_of_sfdecl sprogram.main ^ "\n" 
     
+(*functions for debuging envs and records*)
+
+
+let string_of_class_record a:Analysis.class_record =
+  String.concat ~sep:"\n" (List.map ~f:(fun k,d -> k ^ string_of_field d) (Map.to_alist a.field_map)) ^
+  String.concat ~sep:"\n" (List.map ~f:(fun k,d -> k ^ string_of_method d) (Map.to_alist a.method_map)) ^
+  string_of_cdecl cdecl
+

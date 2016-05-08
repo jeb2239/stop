@@ -251,15 +251,78 @@ and codegen_assign se1 se2 llbuilder =
     rhs
 
 and codegen_obj_access isAssign lhs rhs data_t llbuilder =
-    
-    let obj_type_name = match lhs with
-        SId(_, data_t) -> U.string_of_datatype data_t
-      | SArrayAccess(_,_,data_t) -> U.string_of_datatype data_t 
-      | SObjAccess(_, _, data_t) -> U.string_of_datatype data_t
+    let check_lhs = function
+      SId(s, d)       -> codegen_id true s llbuilder
+  |   SArrayAccess(e, el, d)  -> codegen_array_access false e el llbuilder
+  |   se  -> raise (Exceptions.LHSofRootAccessMustBeIDorFunc (Utils.string_of_sexpr se))
+  in
+    let rec check_rhs isLHS lhs lhs_t =
+      let lhs_str = U.string_of_datatype lhs_t in
+      function 
+        SId(field,d) ->
+              let search_term = (lhs_str ^ "." ^ field) in
+              let field_index = Hashtbl.find_exn struct_field_indexes search_term in
+              let _val = L.build_struct_gep lhs field_index field llbuilder in
+              let _val = match d with 
+                    Datatype(Object_t(_)) -> 
+                    if not isAssign then _val
+                    else L.build_load _val field llbuilder
+              | _ ->
+              if not isAssign then
+                _val
+              else
+                L.build_load _val field llbuilder
+              in
+              _val
+        | SArrayAccess(e,el,d) -> 
+              let ce = check_rhs false lhs lhs_t e in
+              let index = codegen_sexpr (List.hd_exn el) ~builder:llbuilder  in
+              let index = match d with
+                  Datatype(Char_t) -> index
+               |   _ -> L.build_add index (L.const_int i32_t 1) "tmp" llbuilder
+              in 
+             let _val = L.build_gep ce [| index |] "tmp" llbuilder in
+             if isLHS && isAssign
+                then _val
+              else L.build_load _val "tmp" llbuilder
+        | SObjAccess(e1,e2,d) ->
+              let e1_type = Analysis.sexpr_to_type_exn e1 in
+              let e1 = check_rhs true lhs lhs_t e1 in
+              let e2 = check_rhs true e1 e1_type e2 in
+              e2
+        | _ as e -> raise (Exceptions.InvalidAccessLHS (Utils.string_of_sexpr e))
+        in 
+        let lhs_type = Analysis.sexpr_to_type_exn lhs in 
+        match lhs_type with
+            Arraytype(_,_) ->
+                let lhs = codegen_sexpr lhs llbuilder in
+                let _ = match rhs with
+                  SId("length", _) -> "length"
+                |   _ -> raise(Exceptions.CanOnlyAccessLengthOfArray)
+                in
+                let _val = L.build_gep lhs [| (L.const_int i32_t 0) |] "tmp" llbuilder in
+                L.build_load _val "tmp" llbuilder
+            | _ ->
+                let lhs = check_lhs lhs in
+                let rhs = check_rhs true lhs lhs_type rhs in 
+                rhs 
 
-    in 
-    let struct_llval = match lhs with
+
+
+    
+  (*   let struct_llval = match lhs with
         SId(s, _) -> codegen_id false s llbuilder
+      | SArrayAccess(e,el,d) ->
+      let index = codegen_sexpr llbuilder (List.hd el) in
+      let index = match d with
+        Datatype(Char_t) -> index
+      |   _ -> L.build_add index (L.const_int i32_t 1) "tmp" llbuilder
+      in
+        let _val = build_gep ce [| index |] "tmp" llbuilder in
+        if isLHS && isAssign
+          then _val
+          else build_load _val "tmp" llbuilder
+
       | SObjAccess(le, re, data_t) -> codegen_obj_access true le re data_t llbuilder
 
     in
@@ -276,7 +339,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
         then L.build_load llvalue field_name llbuilder
         else llvalue
     in
-    llvalue
+    llvalue *)
 
 and codegen_array_access isAssign e e_l llbuilder =
     let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in

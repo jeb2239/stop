@@ -54,6 +54,7 @@ exception CannotAccessPrivateFieldInNonProperScope of string
 exception UnknownIdentifierForClass of string 
 exception CannotAccessLengthOfCharArray
 exception CanOnlyAccessLengthOfArray
+
 (* Utils Exceptions *)
 exception UtilsError of string
 
@@ -75,3 +76,5 @@ exception LLVMFunctionNotFound of string
 exception FunctionWithoutBasicBlock of string
 exception AssignmentLhsMustBeAssignable
 exception ArrayLargerThan1Unsupported
+exception CanOnlyAccessLengthOfArray
+exception InvalidAccessLHS of string

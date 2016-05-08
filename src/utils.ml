@@ -8,6 +8,8 @@ open Parser
 open Sast
 open Core.Std
 
+
+
 module E = Exceptions
 
 (* Tokens *)
@@ -354,8 +356,4 @@ let string_of_sprogram sprogram =
 (*functions for debuging envs and records*)
 
 
-let string_of_class_record a:Analysis.class_record =
-  String.concat ~sep:"\n" (List.map ~f:(fun k,d -> k ^ string_of_field d) (Map.to_alist a.field_map)) ^
-  String.concat ~sep:"\n" (List.map ~f:(fun k,d -> k ^ string_of_method d) (Map.to_alist a.method_map)) ^
-  string_of_cdecl cdecl
 

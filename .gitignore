@@ -8,3 +8,4 @@ _build/
 *.out
 *.diff
 *.log
+.merlin

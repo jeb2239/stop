@@ -254,6 +254,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
     
     let obj_type_name = match lhs with
         SId(_, data_t) -> U.string_of_datatype data_t
+      | SArrayAccess(_,_,data_t) -> U.string_of_datatype data_t 
       | SObjAccess(_, _, data_t) -> U.string_of_datatype data_t
 
     in 

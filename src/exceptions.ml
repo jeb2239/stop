@@ -52,6 +52,8 @@ exception LHSofRootAccessMustBeIDorFunc of string
 exception ObjAccessMustHaveObjectType of string 
 exception CannotAccessPrivateFieldInNonProperScope of string
 exception UnknownIdentifierForClass of string 
+exception CannotAccessLengthOfCharArray
+exception CanOnlyAccessLengthOfArray
 (* Utils Exceptions *)
 exception UtilsError of string
 

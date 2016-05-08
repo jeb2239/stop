@@ -304,7 +304,7 @@ and expr_list_to_sexpr_list e_l env = match e_l with
   | [] -> []
 
 and check_array_access e e_l env =
-    print_endline (string_of_env env);
+    (* print_endline (string_of_env env); *)
     let (se, _) = expr_to_sexpr e env in
     let data_t = sexpr_to_type_exn se in
     let se_l = expr_list_to_sexpr_list e_l env in
@@ -351,7 +351,43 @@ and check_function_literal fdecl env =
     SFunctionLit(fdecl.fname, fdecl.ftype)
 
 and check_obj_access e1 e2 env =
-  let check_lhs = function
+  let get_cname_exn = function
+        Some(cname) -> cname
+      | None -> raise E.CannotUseThisKeywordOutsideOfClass
+    in
+    let check_lhs = function
+        This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
+      | Id(s) -> check_record_access s env (* SId(s, get_Id_type s env) *)
+      | ArrayAccess(e,el) -> check_array_access e el env
+      | _ as e -> raise E.LHSofObjectAccessMustBeAccessible
+    in
+    let check_rhs e2 =
+        let id = match e2 with
+            Id s -> s
+          | _ -> raise E.RHSofObjectAccessMustBeAccessible
+        in
+        let cname = match (check_lhs e1) with
+            SId(_, data_t) -> (match data_t with
+                Datatype(Object_t(name)) -> name)
+          | SObjAccess(_, _, data_t) -> (match data_t with
+                Datatype(Object_t(name)) -> name)
+          | _ -> raise E.RHSofObjectAccessMustBeAccessible
+        in
+        let crecord = StringMap.find_exn env.env_cmap cname in
+        try 
+            match StringMap.find_exn crecord.field_map id with
+                Field(_, s, data_t) -> SId(s, data_t)
+        with | Not_found -> raise E.UnknownClassVar
+  in 
+
+  let lhs = check_lhs e1 in
+    let lhs_type = sexpr_to_type_exn lhs in
+    let rhs = check_rhs e2 in
+    let rhs_t = match rhs with
+        SId(_, data_t) -> data_t
+    in
+    SObjAccess(lhs, rhs, rhs_t)
+  (* let check_lhs = function
          
   | Id s      -> SId(s, get_Id_type s env)
   |   ArrayAccess(e, el)  -> check_array_access e el env
@@ -375,23 +411,23 @@ and check_obj_access e1 e2 env =
                 Field(_, s, data_t) -> SId(s, data_t)
         with | Not_found -> raise E.UnknownClassVar
   in 
-  let arr_lhs, _ = expr_to_sexpr lhs env in
-  let arr_lhs_type = get_type_from_sexpr arr_lhs in
+  let arr_lhs, _ = expr_to_sexpr e1 env in
+  let arr_lhs_type = sexpr_to_type_exn arr_lhs in
   match arr_lhs_type with
     Arraytype(Char_t, 1) -> raise(Exceptions.CannotAccessLengthOfCharArray)
   | Arraytype(_, _) -> 
-      let rhs = match rhs with
+      let rhs = match e2 with
         Id("length") -> SId("length", Datatype(Int_t))
       |   _ -> raise(Exceptions.CanOnlyAccessLengthOfArray)
       in
       SObjAccess(arr_lhs, rhs, Datatype(Int_t))
   | _ ->
-    let lhs = check_lhs lhs in
-    let lhs_type = get_type_from_sexpr lhs in 
-    let lhs_env = update_env_name env lhs_type in
+    let lhs = check_lhs e1 in
+    let lhs_type = sexpr_to_type_exn lhs in 
+    let lhs_env = update_env_cname lhs_typeenv  in
     let rhs = check_rhs lhs_env lhs_type env rhs in
     let rhs_type = get_type_from_sexpr rhs in
-    SObjAccess(lhs, rhs, rhs_type)
+    SObjAccess(lhs, rhs, rhs_type) *)
 
     (* let get_cname_exn = function
         Some(cname) -> cname

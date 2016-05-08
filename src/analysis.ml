@@ -12,8 +12,8 @@ module StringMap = Map.Make(String)
 module StringSet = Set.Make(String)
 
 (* General String of List Function *)
-let string_of_list string_of_item l = 
-    "[" ^ String.concat ~sep:", " (List.map ~f:string_of_item l) ^ "]"
+(* moved to utils *)
+
 
 let higher_order_sfdecls = ref StringMap.empty
 
@@ -69,6 +69,48 @@ let update_call_stack in_for in_while env =
     env_in_while    = in_while;
 }
 
+
+let string_of_fdecl_map a =
+  String.concat ~sep:"\n" (List.map ~f:(fun (k,d) -> k ^ U.string_of_method d) (Map.to_alist a))
+let string_of_feild_map a =
+  String.concat ~sep:"\n" (List.map ~f:(fun (k,d) -> k ^ U.string_of_field d) (Map.to_alist a))
+let string_of_datatype_map a =
+  String.concat ~sep:"\n" (List.map ~f:(fun (k,d) -> k ^ U.string_of_datatype d) (Map.to_alist a))
+
+let string_of_class_record a =
+  "{\n"
+   ^ string_of_feild_map a.field_map 
+   ^ string_of_fdecl_map a.method_map ^ 
+  U.string_of_cdecl a.cdecl ^
+  "}"
+
+
+let string_of_class_record_opt a = match a with
+    Some(cr) -> string_of_class_record cr
+    |None -> ""
+
+let string_of_string_opt (a:string option) = match a with 
+  Some(s) ->s
+  |None ->""
+
+let string_of_crecord_map a = 
+  String.concat ~sep:"\n" (List.map ~f:(fun (k,d) -> k ^ string_of_class_record d) (Map.to_alist a))
+
+
+let string_of_env a =
+  
+   "{\n" ^ string_of_string_opt a.env_cname ^ "\n" ^
+  string_of_class_record_opt a.env_crecord ^ "\n" ^
+  string_of_crecord_map a.env_cmap ^ "\n" ^
+  string_of_string_opt a.env_fname ^ "\n"^
+  string_of_fdecl_map a.env_fmap ^ "\n"^
+  string_of_datatype_map a.env_named_vars ^"\n"^
+  string_of_datatype_map a.env_record_vars ^"\n"^
+  U.string_of_datatype a.env_return_t ^"\n"^
+  string_of_bool a.env_in_while ^"\n"^
+  string_of_bool a.env_in_for ^ "\n}"
+
+
 let get_fname_exn fname_option = match fname_option with
     Some(s) -> s
   | None -> raise E.UnexpectedNoFname
@@ -99,7 +141,7 @@ let build_reserved_map =
     let f s data_t = Formal(s, data_t) in
     let reserved_list = [
         reserved_stub "printf" void_t [Many(Any)];
-        reserved_stub "malloc" str_t  [f "size" i32_t ];
+        reserved_stub "malloc" Any  [f "size" i32_t ];
         reserved_stub "cast" Any [f "in" Any];
         reserved_stub "sizeof" i32_t [f "in" Any];
         reserved_stub "open" i32_t [f "path" str_t; f "flags" i32_t];
@@ -182,9 +224,11 @@ and get_this_type env = match env.env_cname with
   | None -> raise E.ThisUsedOutsideClass
 
 and check_unop op e env =
+    
     let check_num_unop op data_t = match op with
         Neg -> data_t
       | _ -> raise E.InvalidUnaryOperation
+
     in
     let check_bool_unop op = match op with
         Not -> Datatype(Bool_t)
@@ -221,6 +265,7 @@ and check_binop e1 op e2 env =
 
 and check_assign e1 e2 env =
     (* NOTE: may want to keep returned env *)
+    
     let (se1, _) = expr_to_sexpr e1 env in
     let (se2, _) = expr_to_sexpr e2 env in
     let type1 = sexpr_to_type_exn se1 in
@@ -258,7 +303,8 @@ and expr_list_to_sexpr_list e_l env = match e_l with
         se :: expr_list_to_sexpr_list tl env
   | [] -> []
 
-and check_array_access e e_l env = 
+and check_array_access e e_l env =
+    print_endline (string_of_env env);
     let (se, _) = expr_to_sexpr e env in
     let data_t = sexpr_to_type_exn se in
     let se_l = expr_list_to_sexpr_list e_l env in
@@ -305,7 +351,49 @@ and check_function_literal fdecl env =
     SFunctionLit(fdecl.fname, fdecl.ftype)
 
 and check_obj_access e1 e2 env =
-    let get_cname_exn = function
+  let check_lhs = function
+         
+  | Id s      -> SId(s, get_Id_type s env)
+  |   ArrayAccess(e, el)  -> check_array_access e el env
+  |   _ as e  -> raise (E.LHSofRootAccessMustBeIDorFunc (Utils.string_of_expr e))
+  in
+  let check_rhs e2 =
+        let id = match e2 with
+            Id s -> s
+          | _ -> raise E.RHSofObjectAccessMustBeAccessible
+        in
+        let cname = match (check_lhs e1) with
+            SId(_, data_t) -> (match data_t with
+                Datatype(Object_t(name)) -> name)
+          | SObjAccess(_, _, data_t) -> (match data_t with
+                Datatype(Object_t(name)) -> name)
+          | _ -> raise E.RHSofObjectAccessMustBeAccessible
+        in
+        let crecord = StringMap.find_exn env.env_cmap cname in
+        try 
+            match StringMap.find_exn crecord.field_map id with
+                Field(_, s, data_t) -> SId(s, data_t)
+        with | Not_found -> raise E.UnknownClassVar
+  in 
+  let arr_lhs, _ = expr_to_sexpr lhs env in
+  let arr_lhs_type = get_type_from_sexpr arr_lhs in
+  match arr_lhs_type with
+    Arraytype(Char_t, 1) -> raise(Exceptions.CannotAccessLengthOfCharArray)
+  | Arraytype(_, _) -> 
+      let rhs = match rhs with
+        Id("length") -> SId("length", Datatype(Int_t))
+      |   _ -> raise(Exceptions.CanOnlyAccessLengthOfArray)
+      in
+      SObjAccess(arr_lhs, rhs, Datatype(Int_t))
+  | _ ->
+    let lhs = check_lhs lhs in
+    let lhs_type = get_type_from_sexpr lhs in 
+    let lhs_env = update_env_name env lhs_type in
+    let rhs = check_rhs lhs_env lhs_type env rhs in
+    let rhs_type = get_type_from_sexpr rhs in
+    SObjAccess(lhs, rhs, rhs_type)
+
+    (* let get_cname_exn = function
         Some(cname) -> cname
       | None -> raise E.CannotUseThisKeywordOutsideOfClass
     in
@@ -339,7 +427,7 @@ and check_obj_access e1 e2 env =
     let rhs_t = match rhs with
         SId(_, data_t) -> data_t
     in
-    SObjAccess(lhs, rhs, rhs_t)
+    SObjAccess(lhs, rhs, rhs_t) *)
     
 and check_record_access s env =
     let fname = get_fname_exn env.env_fname in
@@ -399,7 +487,8 @@ and sexpr_to_type sexpr = match sexpr with
   | SThis(data_t)               -> Some(data_t)
   | SNoexpr                     -> None
 
-and sexpr_to_type_exn sexpr = match (sexpr_to_type sexpr) with
+and sexpr_to_type_exn
+ sexpr = match (sexpr_to_type sexpr) with
     Some(t) -> t
   | None -> raise E.UnexpectedNoexpr
 
@@ -858,7 +947,7 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
     }
 
 (* Generate activation records for fdecls *)
-let generate_sfdecl_records sfdecl =
+and generate_sfdecl_records sfdecl =
     let fields = List.map sfdecl.srecord_vars
         ~f:(function (s, data_t) -> Field(Public, s, data_t))
     in
@@ -869,7 +958,7 @@ let generate_sfdecl_records sfdecl =
     }
 
 (* Convert cdecls to scdecls *)
-let convert_cdecl_to_scdecl sfdecls (c:Ast.cdecl) =
+and convert_cdecl_to_scdecl sfdecls (c:Ast.cdecl) =
     {
         scname = c.cname;
         sfields = c.cbody.fields;
@@ -877,7 +966,7 @@ let convert_cdecl_to_scdecl sfdecls (c:Ast.cdecl) =
     }
 
 (* Generate Sast: sprogram *)
-let convert_ast_to_sast 
+and convert_ast_to_sast 
     crecord_map (cdecls : cdecl list) 
     fdecl_map (first_order_fdecls : fdecl list) (higher_order_fdecls : fdecl list) =
     let is_main = (fun f -> match f.sfname with s -> s = "main") in
@@ -942,8 +1031,8 @@ let convert_ast_to_sast
     }
 
 (* Analyze *)
-(* TODO: Include code from external files *)
-let analyze filename ast = match ast with
+(*sexpr_to_type_exn TODO: Include code from external files *)
+and analyze filename ast = match ast with
     Program(includes, specs, cdecls, fdecls) ->
         (* Create sfdecl list of builtin LLVM functions *)
         let reserved_map = build_reserved_map in

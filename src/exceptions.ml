@@ -48,7 +48,10 @@ exception ArrayAccess of string
 exception UndefinedFunction of string
 exception BreakOutsideOfLoop
 exception ContinueOustideOfLoop
-
+exception LHSofRootAccessMustBeIDorFunc of string
+exception ObjAccessMustHaveObjectType of string 
+exception CannotAccessPrivateFieldInNonProperScope of string
+exception UnknownIdentifierForClass of string 
 (* Utils Exceptions *)
 exception UtilsError of string
 

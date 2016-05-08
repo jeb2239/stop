@@ -57,7 +57,8 @@ let named_parameters:(string, L.llvalue) Hashtbl.t = Hashtbl.create ()
 
 let str_type = Arraytype(Char_t, 1)
 
-let rec get_array_type array_t = match array_t with
+let rec get_array_type array_t = print_endline (U.string_of_datatype array_t);
+   match array_t with
     Arraytype(prim, 1) -> L.pointer_type(get_lltype_exn (Datatype(prim)))
   | Arraytype(prim, i) -> L.pointer_type(get_array_type (Arraytype(prim, i-1)))
   | _ -> raise(E.InvalidDatatype "Array Type")
@@ -76,7 +77,9 @@ and get_function_type data_t_list return_t =
     in
     L.pointer_type (L.function_type (get_lltype_exn return_t) (Array.of_list llargs))
 
-and get_lltype_exn (data_t:datatype) = match data_t with
+and get_lltype_exn (data_t:datatype) = print_endline (U.string_of_datatype data_t) ; 
+match data_t with
+
     Datatype(Int_t) -> i32_t
   | Datatype(Float_t) -> double_t (* TODO: Decide what to do a/b doubles & floats *)
   | Datatype(Bool_t) -> i1_t
@@ -250,9 +253,10 @@ and codegen_assign se1 se2 llbuilder =
     ignore(L.build_store rhs lhs llbuilder);
     rhs
 
-and codegen_obj_access isAssign lhs rhs data_t llbuilder =
-    let check_lhs = function
-      SId(s, d)       -> codegen_id true s llbuilder
+and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.string_of_sexpr lhs);
+    let check_lhs = print_endline (U.string_of_datatype data_t);
+    function
+      SId(s, d)       -> codegen_id false s llbuilder
   |   SArrayAccess(e, el, d)  -> codegen_array_access false e el llbuilder
   |   se  -> raise (Exceptions.LHSofRootAccessMustBeIDorFunc (Utils.string_of_sexpr se))
   in
@@ -286,6 +290,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
                 then _val
               else L.build_load _val "tmp" llbuilder
         | SObjAccess(e1,e2,d) ->
+              print_endline (U.string_of_datatype d);
               let e1_type = Analysis.sexpr_to_type_exn e1 in
               let e1 = check_rhs true lhs lhs_t e1 in
               let e2 = check_rhs true e1 e1_type e2 in
@@ -497,6 +502,7 @@ and codegen_while_stmt cond_se body_stmt llbuilder =
     codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt llbuilder
 
 and codegen_array_create llbuilder t expr_type el = 
+  print_endline "helll";
   if(List.length el > 1) then raise(Exceptions.ArrayLargerThan1Unsupported)
   else
   match expr_type with 

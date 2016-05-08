@@ -350,12 +350,13 @@ and check_function_literal fdecl env =
     higher_order_sfdecls := StringMap.add !higher_order_sfdecls ~key:fdecl.fname ~data:sfdecl;
     SFunctionLit(fdecl.fname, fdecl.ftype)
 
-and check_obj_access e1 e2 env =
+and check_obj_access e1 e2 env = print_endline (string_of_env env);
   let get_cname_exn = function
         Some(cname) -> cname
       | None -> raise E.CannotUseThisKeywordOutsideOfClass
     in
-    let check_lhs = function
+    let check_lhs = print_endline "hell0";
+    function 
         This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
       | Id(s) -> check_record_access s env (* SId(s, get_Id_type s env) *)
       | ArrayAccess(e,el) -> check_array_access e el env

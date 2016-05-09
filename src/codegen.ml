@@ -231,7 +231,7 @@ and codegen_id isDeref id llbuilder =
             try Hashtbl.find_exn named_values id 
             with | Not_found -> raise (E.UndefinedId id)
 
-and codegen_assign se1 se2 llbuilder =
+and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^" = "^ U.string_of_sexpr se2);
     (* Get lhs llvalue; don't emit as expression *)
     let lhs = match se1 with
         SId(id, _) -> 
@@ -239,34 +239,42 @@ and codegen_assign se1 se2 llbuilder =
             with Not_found ->
                 try Hashtbl.find_exn named_values id
                 with Not_found -> raise (E.UndefinedId id))
-      | SObjAccess(se1, se2, data_t) -> codegen_obj_access false se1 se2 data_t llbuilder
+      | SObjAccess(se1, se2, data_t) -> print_endline (U.string_of_sexpr se1 ^"-()-"^ U.string_of_sexpr se2) ; codegen_obj_access false se1 se2 data_t llbuilder
       | SArrayAccess(se, se_l, _) -> 
             codegen_array_access true se se_l llbuilder
       | _ -> raise E.AssignmentLhsMustBeAssignable
     in
     (* Get rhs llvalue *)
-    let rhs = match se2 with 
-        SObjAccess(se1, se2, data_t) -> codegen_obj_access true se1 se2 data_t llbuilder
+    let rhs = print_endline "yo";
+     match se2 with 
+        SObjAccess(se1, se2, data_t) -> print_endline "codass"; codegen_obj_access true se1 se2 data_t llbuilder
       | _ -> codegen_sexpr se2 ~builder:llbuilder 
     in
     (* Codegen Assignment Stmt *)
     ignore(L.build_store rhs lhs llbuilder);
     rhs
 
-and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.string_of_sexpr lhs);
-    let check_lhs = print_endline (U.string_of_datatype data_t);
+and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.string_of_sexpr lhs ^"---------");
+    let check_lhs = print_endline (U.string_of_datatype data_t ^"==========");
     function
-      SId(s, d)       -> codegen_id false s llbuilder
+      SId(s, d)       -> print_endline ("---"^s^"-----"^U.string_of_datatype d);codegen_id true s llbuilder
   |   SArrayAccess(e, el, d)  -> codegen_array_access false e el llbuilder
+  |   SObjAccess(e1,e2,d) -> print_endline "segs here" ;codegen_obj_access true e1 e2 d llbuilder
   |   se  -> raise (Exceptions.LHSofRootAccessMustBeIDorFunc (Utils.string_of_sexpr se))
   in
-    let rec check_rhs isLHS lhs lhs_t =
+    let rec check_rhs isLHS lhs lhs_t = print_endline "----*----";
       let lhs_str = U.string_of_datatype lhs_t in
       function 
-        SId(field,d) ->
+        SId(field,d) -> print_endline "In codegen_obj_access SId";
               let search_term = (lhs_str ^ "." ^ field) in
+
               let field_index = Hashtbl.find_exn struct_field_indexes search_term in
+              print_endline (string_of_int field_index);
+              print_endline (L.string_of_llmodule the_module );
+              print_endline (L.string_of_llvalue lhs);
+              print_endline ("-------");
               let _val = L.build_struct_gep lhs field_index field llbuilder in
+              print_endline "heyy";
               let _val = match d with 
                     Datatype(Object_t(_)) -> 
                     if not isAssign then _val
@@ -289,8 +297,9 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.stri
              if isLHS && isAssign
                 then _val
               else L.build_load _val "tmp" llbuilder
-        | SObjAccess(e1,e2,d) ->
+        | SObjAccess(e1,e2,d) -> 
               print_endline (U.string_of_datatype d);
+              print_endline ("U.string_of_datatype");
               let e1_type = Analysis.sexpr_to_type_exn e1 in
               let e1 = check_rhs true lhs lhs_t e1 in
               let e2 = check_rhs true e1 e1_type e2 in
@@ -359,7 +368,7 @@ and codegen_function_lit fname llbuilder =
     let f_llval = lookup_llfunction_exn fname in
     f_llval
 
-and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with 
+and codegen_sexpr sexpr ~builder:llbuilder =  match sexpr with 
     SIntLit(i)                  -> L.const_int i32_t i
   | SFloatLit(f)                -> L.const_float float_t f
   | SBoolLit(b)                 -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
@@ -368,7 +377,8 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SFunctionLit(s, _)          -> codegen_function_lit s llbuilder
   | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(se, se_l, _)   -> codegen_array_access true se se_l llbuilder
-  | SObjAccess(se1, se2, d)     -> codegen_obj_access true se1 se2 d llbuilder
+  | SObjAccess(se1, se2, d)     
+        -> codegen_obj_access true se1 se2 d llbuilder
   | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
   | SId(id, _)                      -> codegen_id false id llbuilder
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
@@ -609,7 +619,7 @@ let codegen_function_stub sfdecl =
     in
     L.define_function fname ftype the_module
 
-let init_params f formals =
+let init_params f formals = 
     let formals = Array.of_list formals in
     Array.iteri (L.params f)
         ~f:(fun i element ->

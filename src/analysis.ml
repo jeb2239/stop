@@ -280,12 +280,22 @@ and check_assign e1 e2 env =
 
 (* TODO: Investigate Dice differences *)
 and check_call s e_l env =
+    print_endline "===============";
+    print_endline (string_of_env env);
+    print_endline "================";
     let se_l = expr_list_to_sexpr_list e_l env in
     try 
         let fdecl = StringMap.find_exn env.env_fmap s in
         let return_t = fdecl.return_t in
         SCall(s, se_l, return_t, 0)
     with | Not_found -> 
+    try 
+        (*check crecords*)
+        let crecord = StringMap.find_exn env.env_cmap (string_of_string_opt env.env_cname) in
+        let fdecl = StringMap.find_exn crecord.method_map s in
+        let return_t = fdecl.return_t in 
+        SCall(s,se_l,return_t,0)
+      with | Not_found -> 
         try 
             let f = StringMap.find_exn env.env_named_vars s in
             let return_t = match f with
@@ -355,7 +365,7 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
         Some(cname) -> cname
       | None -> raise E.CannotUseThisKeywordOutsideOfClass
     in
-    let check_lhs = print_endline "hell0";
+    let check_lhs = (*print_endline "hell0";*)
     function 
         This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
       | Id(s) -> check_record_access s env (* SId(s, get_Id_type s env) *)
@@ -363,29 +373,55 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
       | _ as e -> raise E.LHSofObjectAccessMustBeAccessible
     in
     let check_rhs e2 =
-        let id = match e2 with
+          let id = match e2 with
             Id s -> s
+          | Call(s,el) -> s
           | _ -> raise E.RHSofObjectAccessMustBeAccessible
-        in
-        let cname = match (check_lhs e1) with
+        in  
+        let cname = 
+        
+        
+        match (check_lhs e1) with
             SId(_, data_t) -> (match data_t with
                 Datatype(Object_t(name)) -> name)
           | SObjAccess(_, _, data_t) -> (match data_t with
                 Datatype(Object_t(name)) -> name)
+
           | _ -> raise E.RHSofObjectAccessMustBeAccessible
         in
+        print_endline cname;
         let crecord = StringMap.find_exn env.env_cmap cname in
-        try 
+        print_endline (string_of_class_record crecord);
+        print_endline (U.string_of_expr e2);
+        print_endline (string_of_fdecl_map crecord.method_map);
+       try (  match e2 with
+        | Id(s) ->  
+                    (match StringMap.find_exn crecord.field_map id with 
+                    Field(_, s, data_t) -> SId(s,data_t))
+
+        | Call(s,el) -> print_endline s; (let fdec =  StringMap.find_exn crecord.method_map (cname^"."^id) in
+                        let env=update_env_cname  (Some cname) env in
+
+                        let env=update_call_stack false false env in
+                        print_endline fdec.fname;
+
+                        check_call (cname^"."^fdec.fname) el env)
+                      )
+                                 
+        (* try 
             match StringMap.find_exn crecord.field_map id with
-                Field(_, s, data_t) -> SId(s, data_t)
-        with | Not_found -> raise E.UnknownClassVar
-  in 
+                Field(_, s, data_t) -> SId(s, data_t)*)
+                
+        with | Not_found -> raise E.UnknownClassVar 
+      
+  in  
 
   let lhs = check_lhs e1 in
     let lhs_type = sexpr_to_type_exn lhs in
     let rhs = check_rhs e2 in
     let rhs_t = match rhs with
-        SId(_, data_t) -> data_t
+        SId(_, data_t) -> print_endline ("--------"^ U.string_of_datatype data_t); data_t
+        | SCall(_,_,data_t,_) -> print_endline "hello"; data_t
     in
     SObjAccess(lhs, rhs, rhs_t)
   (* let check_lhs = function

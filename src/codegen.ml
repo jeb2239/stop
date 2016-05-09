@@ -57,7 +57,7 @@ let named_parameters:(string, L.llvalue) Hashtbl.t = Hashtbl.create ()
 
 let str_type = Arraytype(Char_t, 1)
 
-let rec get_array_type array_t = print_endline (U.string_of_datatype array_t);
+let rec get_array_type array_t = (*print_endline (U.string_of_datatype array_t);*)
    match array_t with
     Arraytype(prim, 1) -> L.pointer_type(get_lltype_exn (Datatype(prim)))
   | Arraytype(prim, i) -> L.pointer_type(get_array_type (Arraytype(prim, i-1)))
@@ -77,7 +77,7 @@ and get_function_type data_t_list return_t =
     in
     L.pointer_type (L.function_type (get_lltype_exn return_t) (Array.of_list llargs))
 
-and get_lltype_exn (data_t:datatype) = print_endline (U.string_of_datatype data_t) ; 
+and get_lltype_exn (data_t:datatype) = (*print_endline (U.string_of_datatype data_t) ; *)
 match data_t with
 
     Datatype(Int_t) -> i32_t
@@ -231,7 +231,7 @@ and codegen_id isDeref id llbuilder =
             try Hashtbl.find_exn named_values id 
             with | Not_found -> raise (E.UndefinedId id)
 
-and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^" = "^ U.string_of_sexpr se2);
+and codegen_assign se1 se2 llbuilder = (*print_endline (U.string_of_sexpr se1 ^" = "^ U.string_of_sexpr se2);*)
     (* Get lhs llvalue; don't emit as expression *)
     let lhs = match se1 with
         SId(id, _) -> 
@@ -239,23 +239,48 @@ and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^" =
             with Not_found ->
                 try Hashtbl.find_exn named_values id
                 with Not_found -> raise (E.UndefinedId id))
-      | SObjAccess(se1, se2, data_t) -> print_endline (U.string_of_sexpr se1 ^"-()-"^ U.string_of_sexpr se2) ; codegen_obj_access false se1 se2 data_t llbuilder
+      | SObjAccess(se1, se2, data_t) ->(* print_endline (U.string_of_sexpr se1 ^"-()-"^ U.string_of_sexpr se2) ;*) codegen_obj_access false se1 se2 data_t llbuilder
       | SArrayAccess(se, se_l, _) -> 
             codegen_array_access true se se_l llbuilder
       | _ -> raise E.AssignmentLhsMustBeAssignable
     in
     (* Get rhs llvalue *)
-    let rhs = print_endline "yo";
+    let rhs = (*print_endline "yo";*)
      match se2 with 
-        SObjAccess(se1, se2, data_t) -> print_endline "codass"; codegen_obj_access true se1 se2 data_t llbuilder
+        SObjAccess(se1, se2, data_t) -> (*print_endline "codass"; *)codegen_obj_access true se1 se2 data_t llbuilder
       | _ -> codegen_sexpr se2 ~builder:llbuilder 
     in
     (* Codegen Assignment Stmt *)
     ignore(L.build_store rhs lhs llbuilder);
     rhs
 
-and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.string_of_sexpr lhs ^"---------");
-    let check_lhs = print_endline (U.string_of_datatype data_t ^"==========");
+and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.string_of_sexpr lhs ^"---------");*)
+   let obj_type_name = match lhs with
+        SId(_, data_t) -> U.string_of_datatype data_t
+      | SObjAccess(_, _, data_t) -> U.string_of_datatype data_t
+
+    in 
+    let struct_llval = match lhs with
+        SId(s, _) -> codegen_id false s llbuilder
+      | SObjAccess(le, re, data_t) -> codegen_obj_access true le re data_t llbuilder
+
+    in
+    let field_name = match rhs with
+        SId(field, _) -> field
+    in
+    let field_type = match rhs with
+        SId(_, data_t) -> data_t
+    in
+    let search_term = obj_type_name ^ "." ^ field_name in
+    let field_index = Hashtbl.find_exn struct_field_indexes search_term in
+    let llvalue = L.build_struct_gep struct_llval field_index field_name llbuilder in
+    let llvalue = if isAssign 
+        then L.build_load llvalue field_name llbuilder
+        else llvalue
+    in
+    llvalue
+
+   (*  let check_lhs = print_endline (U.string_of_datatype data_t ^"==========");
     function
       SId(s, d)       -> print_endline ("---"^s^"-----"^U.string_of_datatype d);codegen_id true s llbuilder
   |   SArrayAccess(e, el, d)  -> codegen_array_access false e el llbuilder
@@ -319,7 +344,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.stri
             | _ ->
                 let lhs = check_lhs lhs in
                 let rhs = check_rhs true lhs lhs_type rhs in 
-                rhs 
+                rhs  *)
 
 
 
@@ -512,7 +537,7 @@ and codegen_while_stmt cond_se body_stmt llbuilder =
     codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt llbuilder
 
 and codegen_array_create llbuilder t expr_type el = 
-  print_endline "helll";
+  (*print_endline "helll";*)
   if(List.length el > 1) then raise(Exceptions.ArrayLargerThan1Unsupported)
   else
   match expr_type with 

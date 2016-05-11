@@ -3,18 +3,10 @@
  * ================
  */
 
-class Example = {
-	var b : Int;
-}
-
-def f = (a:Example):Int {
-	return a.b;
-}
-
 def main = ():Int {
-	var c:Example;
-	c.b = 5;
-	var i:Int = f(c);
-	printf("%d\n", i);
+	var foo:Int->Int = @(i:Int):Int {
+		return 0;
+	};
+
 	return 0;
 }

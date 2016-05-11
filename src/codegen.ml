@@ -189,20 +189,6 @@ and codegen_function_call sexpr sexpr_l data_t llbuilder =
       | SObjAccess(se1, se2, data_t) -> 
             let f = codegen_obj_access true se1 se2 data_t llbuilder in
             call_function f
-    (*
-    try 
-        let fpointer = Hashtbl.find_exn named_parameters fname in
-        let f = L.build_load fpointer "f" llbuilder in
-        call_function f
-    with | Not_found ->
-        try 
-            let fpointer = Hashtbl.find_exn named_values fname in
-            let f = L.build_load fpointer "f" llbuilder in
-            call_function f
-        with | Not_found ->
-            let f = lookup_llfunction_exn fname in
-            call_function f
-            *)
 
 and codegen_printf sexpr_l llbuilder =
     (* Convert printf format string to llvalue *)
@@ -263,7 +249,6 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
     let struct_llval = match lhs with
         SId(s, _) -> codegen_id false s llbuilder
       | SObjAccess(le, re, data_t) -> codegen_obj_access true le re data_t llbuilder
-
     in
     let field_name = match rhs with
         SId(field, _) -> field
@@ -309,8 +294,8 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
   | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el 
- (*| SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder*)
   | _ -> raise E.NotImplemented
+ (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder *)
  (* | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
   | SNull                       -> const_null i32_t
   | SDelete e                   -> codegen_delete e llbuilder
@@ -502,7 +487,6 @@ let codegen_struct_stub s =
         ~key:s.scname
         ~data:struct_t
 
-
 let codegen_struct s =
     let struct_t = Hashtbl.find_exn struct_types s.scname in
     let type_list = List.map s.sfields 
@@ -568,6 +552,7 @@ let codegen_function sfdecl =
         L.After(block) -> block
       | L.At_start(_) -> raise (E.FunctionWithoutBasicBlock(fname))
     in
+
     (* TODO: Return this return type (not working for some reason) *)
     let return_t = L.return_type (L.type_of (lookup_llfunction_exn fname)) in
     match (L.instr_end last_bb) with

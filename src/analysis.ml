@@ -676,6 +676,7 @@ and build_crecord_map fmap cdecls fdecls =
         ~f:helper 
         ~init:StringMap.empty 
     in
+
     (* Add function Records *)
     let discover_named_vars fdecl =
         let field_map = List.fold fdecl.formals
@@ -698,8 +699,9 @@ and build_crecord_map fmap cdecls fdecls =
         let field_map =
             try 
                 let link_type = Hashtbl.find_exn access_link_types fdecl.fname in
-                let field = Field(Public, "@link", link_type) in
-                StringMap.add field_map ~key:"@link" ~data:field
+                let link_name = fdecl.fname ^ "_@link" in
+                let field = Field(Public, link_name, link_type) in
+                StringMap.add field_map ~key:link_name ~data:field
             with | Not_found -> field_map
         in
         let temp_class =    ({
@@ -861,7 +863,7 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
 
     (* Add access link, if the function is not first class *)
     let sformals = match link_type with
-        Some(t) -> let access_link = Formal("@link", t) in access_link :: fdecl.formals
+        Some(t) -> let access_link = Formal(fdecl.fname ^ "_@link", t) in access_link :: fdecl.formals
       | None -> fdecl.formals
     in
 
@@ -904,7 +906,7 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
         ~init:[]
     in
     let srecord_vars = match link_type with
-        Some(t) -> let access_link = ("@link", t) in access_link :: record_vars 
+        Some(t) -> let access_link = (fdecl.fname ^ "_@link", t) in access_link :: record_vars 
       | None -> record_vars
     in
 

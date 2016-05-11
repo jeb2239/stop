@@ -3,18 +3,15 @@
  * ================
  */
 
-class Example = {
-	var b : Int;
+class Box = {
+	var w:Int;
+	var h:Int;
 }
 
-def f = (a:Example):Int {
-	return a.b;
+def getHeight (box:Box) {
+	return box.h;
 }
 
 def main = ():Int {
-	var c:Example;
-	c.b = 5;
-	var i:Int = f(c);
-	printf("%d\n", i);
 	return 0;
 }

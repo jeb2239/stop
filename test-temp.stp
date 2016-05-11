@@ -1,12 +1,13 @@
-def main = ():Int {
-	var j:Int = 3;
-	var lambda_add_i = @(i:Int):Int {
-		var lambda_2 = @():Int {
-			return j;
-		};
-		return lambda_2();
-	};
+/*
+ * test-array1.stp
+ * =====================
+ */
 
-	printf("%d\n", lambda_add_i(5));
-	return 0;
+def main = ():Int {
+        var a:Int[] = Int[2]();
+		a[0]=0;
+		a[1]=1;
+		printf("%d", a[0]);
+		printf("%d", a[1]);
+        return 0;
 }

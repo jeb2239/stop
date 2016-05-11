@@ -79,8 +79,8 @@ let string_of_datatype_map a =
 
 let string_of_class_record a =
   "{\n"
-   ^ string_of_feild_map a.field_map 
-   ^ string_of_fdecl_map a.method_map ^ 
+   ^ string_of_feild_map a.field_map
+   ^ string_of_fdecl_map a.method_map ^
   U.string_of_cdecl a.cdecl ^
   "}"
 
@@ -89,16 +89,16 @@ let string_of_class_record_opt a = match a with
     Some(cr) -> string_of_class_record cr
     |None -> ""
 
-let string_of_string_opt (a:string option) = match a with 
+let string_of_string_opt (a:string option) = match a with
   Some(s) ->s
   |None ->""
 
-let string_of_crecord_map a = 
+let string_of_crecord_map a =
   String.concat ~sep:"\n" (List.map ~f:(fun (k,d) -> k ^ string_of_class_record d) (Map.to_alist a))
 
 
 let string_of_env a =
-  
+
    "{\n" ^ string_of_string_opt a.env_cname ^ "\n" ^
   string_of_class_record_opt a.env_crecord ^ "\n" ^
   string_of_crecord_map a.env_cmap ^ "\n" ^
@@ -118,7 +118,7 @@ let get_fname_exn fname_option = match fname_option with
 (* Name all methods <cname>.<fname> *)
 let get_method_name cname fdecl =
     let name = fdecl.fname in
-    cname ^ "." ^ name 
+    cname ^ "." ^ name
 
 let build_reserved_map =
     (* Note: ftype for printf has no functional equivalent *)
@@ -152,11 +152,11 @@ let build_reserved_map =
         reserved_stub "exit" (void_t) ([f "status" i32_t]);
         reserved_stub "getchar" (i32_t) ([]);
         reserved_stub "input" (str_t) ([]);
-    ] 
+    ]
     in
-    let reserved_map = 
+    let reserved_map =
         List.fold_left reserved_list
-            ~init:StringMap.empty 
+            ~init:StringMap.empty
             ~f:(fun m f -> StringMap.add m ~key:f.sfname ~data:f)
     in
     reserved_map
@@ -172,7 +172,7 @@ let rec get_equality_binop_type se1 op se2 =
       | _ ->
               if type1 = type2
               then SBinop(se1, op, se2, Datatype(Bool_t))
-              else 
+              else
                   let type1 = U.string_of_datatype type1 in
                   let type2 = U.string_of_datatype type2 in
                   raise (E.InvalidEqualityBinop(type1, type2))
@@ -195,14 +195,14 @@ and get_comparison_binop_type se1 op se2 =
     let numerics = Set.of_list [Datatype(Int_t); Datatype(Float_t); Datatype(Char_t)]
         ~comparator: Comparator.Poly.comparator
     in
-    if Set.mem numerics type1 && Set.mem numerics type2 
+    if Set.mem numerics type1 && Set.mem numerics type2
     then SBinop(se1, op, se2, Datatype(Bool_t))
     else raise E.InvalidBinaryOperation
 
 (* TODO: Handle casting *)
 
 (* Return Datatype for Binops with an Arithemetic Operator (+, *, -, /, %) *)
-and get_arithmetic_binop_type se1 op se2 = 
+and get_arithmetic_binop_type se1 op se2 =
     let type1 = sexpr_to_type_exn se1 in
     let type2 = sexpr_to_type_exn se2 in
     match (type1, type2) with
@@ -212,19 +212,19 @@ and get_arithmetic_binop_type se1 op se2 =
 (* Return Datatype for ID *)
 and get_Id_type s env =
     try StringMap.find_exn env.env_named_vars s
-    with | Not_found -> 
+    with | Not_found ->
         (*
         StringMap.iter env.env_named_vars
             ~f:(fun ~key:k ~data:data -> print_string (k ^ "\n"));
             *)
         raise (E.UndefinedId s)
-        
+
 and get_this_type env = match env.env_cname with
     Some(cname) -> Datatype(Object_t(cname))
   | None -> raise E.ThisUsedOutsideClass
 
 and check_unop op e env =
-    
+
     let check_num_unop op data_t = match op with
         Neg -> data_t
       | _ -> raise E.InvalidUnaryOperation
@@ -249,9 +249,9 @@ and check_binop e1 op e2 env =
     let (se2, _) = expr_to_sexpr e2 env in
     match op with
         Equal
-      | Neq -> get_equality_binop_type se1 op se2 
+      | Neq -> get_equality_binop_type se1 op se2
       | And
-      | Or -> get_logical_binop_type se1 op se2 
+      | Or -> get_logical_binop_type se1 op se2
       | Less
       | Leq
       | Greater
@@ -265,7 +265,7 @@ and check_binop e1 op e2 env =
 
 and check_assign e1 e2 env =
     (* NOTE: may want to keep returned env *)
-    
+
     let (se1, _) = expr_to_sexpr e1 env in
     let (se2, _) = expr_to_sexpr e2 env in
     let type1 = sexpr_to_type_exn se1 in
@@ -273,34 +273,31 @@ and check_assign e1 e2 env =
     match (type1, type2) with
         _ -> if type1 = type2
             then SAssign(se1, se2, type1)
-            else 
+            else
                 let str1 = U.string_of_datatype type1 in
                 let str2 = U.string_of_datatype type2 in
                 raise (E.AssignmentTypeMismatch(str1, str2))
 
 (* TODO: Investigate Dice differences *)
 and check_call s e_l env =
-    print_endline "===============";
-    print_endline (string_of_env env);
-    print_endline "================";
     let se_l = expr_list_to_sexpr_list e_l env in
-    try 
+    try
         let fdecl = StringMap.find_exn env.env_fmap s in
         let return_t = fdecl.return_t in
         SCall(s, se_l, return_t, 0)
-    with | Not_found -> 
-    try 
+    with | Not_found ->
+    try
         (*check crecords*)
         let crecord = StringMap.find_exn env.env_cmap (string_of_string_opt env.env_cname) in
         let fdecl = StringMap.find_exn crecord.method_map s in
-        let return_t = fdecl.return_t in 
+        let return_t = fdecl.return_t in
         SCall(s,se_l,return_t,0)
-      with | Not_found -> 
-        try 
+      with | Not_found ->
+        try
             let f = StringMap.find_exn env.env_named_vars s in
             let return_t = match f with
                 Functiontype(_, return_t) -> return_t
-              | data_t -> 
+              | data_t ->
                     let data_t = U.string_of_datatype data_t in
                     raise (E.CallFailedOnType data_t)
             in
@@ -308,7 +305,7 @@ and check_call s e_l env =
         with | Not_found -> raise (E.UndefinedFunction s)
 
 and expr_list_to_sexpr_list e_l env = match e_l with
-    hd :: tl -> 
+    hd :: tl ->
         let (se, env) = expr_to_sexpr hd env in
         se :: expr_list_to_sexpr_list tl env
   | [] -> []
@@ -320,15 +317,15 @@ and check_array_access e e_l env =
     let se_l = expr_list_to_sexpr_list e_l env in
 
     (* Check that the indice parameters are all Int_t *)
-    let check_access_params = List.map se_l 
-        ~f:(fun se -> match (sexpr_to_type_exn se) with 
+    let check_access_params = List.map se_l
+        ~f:(fun se -> match (sexpr_to_type_exn se) with
             Datatype(Int_t) -> ()
           | _ -> raise (E.ArrayAccess "Passed non-Int Indice Argument"))
     in
 
     (* Check that # dims matches # indices *)
     let arr_num_indices = List.length e_l in
-    let arr_num_dims = match data_t with 
+    let arr_num_dims = match data_t with
         Arraytype(_, n) -> n
       | _ -> raise (E.ArrayAccess "Passed non-Arraytype Variable")
     in
@@ -337,12 +334,12 @@ and check_array_access e e_l env =
     in
     SArrayAccess(se, se_l, data_t)
 
-and check_array_create d e_l env = 
+and check_array_create d e_l env =
     let se_l = expr_list_to_sexpr_list e_l env in
 
     (* Check that the indice parameters are all Int_t *)
-    let check_access_params = List.map se_l 
-        ~f:(fun se -> match (sexpr_to_type_exn se) with 
+    let check_access_params = List.map se_l
+        ~f:(fun se -> match (sexpr_to_type_exn se) with
             Datatype(Int_t) -> ()
           | _ -> raise (E.NonIntegerArraySize))
     in
@@ -351,7 +348,7 @@ and check_array_create d e_l env =
     let convert_d_to_arraytype = function
         Datatype(x) -> Arraytype(x, arr_num_indices)
         | _ -> raise (E.NonArrayTypeCreate)
-    in 
+    in
     let sexpr_type = convert_d_to_arraytype d in
     SArrayCreate(d, se_l, sexpr_type)
 
@@ -366,7 +363,7 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
       | None -> raise E.CannotUseThisKeywordOutsideOfClass
     in
     let check_lhs = (*print_endline "hell0";*)
-    function 
+    function
         This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
       | Id(s) -> check_record_access s env (* SId(s, get_Id_type s env) *)
       | ArrayAccess(e,el) -> check_array_access e el env
@@ -377,10 +374,10 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
             Id s -> s
           | Call(s,el) -> s
           | _ -> raise E.RHSofObjectAccessMustBeAccessible
-        in  
-        let cname = 
-        
-        
+        in
+        let cname =
+
+
         match (check_lhs e1) with
             SId(_, data_t) -> (match data_t with
                 Datatype(Object_t(name)) -> name)
@@ -395,26 +392,26 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
         print_endline (U.string_of_expr e2);
         print_endline (string_of_fdecl_map crecord.method_map);
        try (  match e2 with
-        | Id(s) ->  
-                    (match StringMap.find_exn crecord.field_map id with 
+        | Id(s) ->
+                    (match StringMap.find_exn crecord.field_map id with
                     Field(_, s, data_t) -> SId(s,data_t))
 
         | Call(s,el) -> print_endline s; (let fdec =  StringMap.find_exn crecord.method_map (cname^"."^id) in
                         let env=update_env_cname  (Some cname) env in
 
-                        let env=update_call_stack false false env in
+
                         print_endline fdec.fname;
 
                         check_call (cname^"."^fdec.fname) el env)
                       )
-                                 
-        (* try 
+
+        (* try
             match StringMap.find_exn crecord.field_map id with
                 Field(_, s, data_t) -> SId(s, data_t)*)
-                
-        with | Not_found -> raise E.UnknownClassVar 
-      
-  in  
+
+        with | Not_found -> raise E.UnknownClassVar
+
+  in
 
   let lhs = check_lhs e1 in
     let lhs_type = sexpr_to_type_exn lhs in
@@ -425,7 +422,7 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
     in
     SObjAccess(lhs, rhs, rhs_t)
   (* let check_lhs = function
-         
+
   | Id s      -> SId(s, get_Id_type s env)
   |   ArrayAccess(e, el)  -> check_array_access e el env
   |   _ as e  -> raise (E.LHSofRootAccessMustBeIDorFunc (Utils.string_of_expr e))
@@ -443,16 +440,16 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
           | _ -> raise E.RHSofObjectAccessMustBeAccessible
         in
         let crecord = StringMap.find_exn env.env_cmap cname in
-        try 
+        try
             match StringMap.find_exn crecord.field_map id with
                 Field(_, s, data_t) -> SId(s, data_t)
         with | Not_found -> raise E.UnknownClassVar
-  in 
+  in
   let arr_lhs, _ = expr_to_sexpr e1 env in
   let arr_lhs_type = sexpr_to_type_exn arr_lhs in
   match arr_lhs_type with
     Arraytype(Char_t, 1) -> raise(Exceptions.CannotAccessLengthOfCharArray)
-  | Arraytype(_, _) -> 
+  | Arraytype(_, _) ->
       let rhs = match e2 with
         Id("length") -> SId("length", Datatype(Int_t))
       |   _ -> raise(Exceptions.CanOnlyAccessLengthOfArray)
@@ -460,7 +457,7 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
       SObjAccess(arr_lhs, rhs, Datatype(Int_t))
   | _ ->
     let lhs = check_lhs e1 in
-    let lhs_type = sexpr_to_type_exn lhs in 
+    let lhs_type = sexpr_to_type_exn lhs in
     let lhs_env = update_env_cname lhs_typeenv  in
     let rhs = check_rhs lhs_env lhs_type env rhs in
     let rhs_type = get_type_from_sexpr rhs in
@@ -488,7 +485,7 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
           | _ -> raise E.RHSofObjectAccessMustBeAccessible
         in
         let crecord = StringMap.find_exn env.env_cmap cname in
-        try 
+        try
             match StringMap.find_exn crecord.field_map id with
                 Field(_, s, data_t) -> SId(s, data_t)
         with | Not_found -> raise E.UnknownClassVar
@@ -501,7 +498,7 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
         SId(_, data_t) -> data_t
     in
     SObjAccess(lhs, rhs, rhs_t) *)
-    
+
 and check_record_access s env =
     let fname = get_fname_exn env.env_fname in
     let record_type = Datatype(Object_t(fname ^ ".record")) in
@@ -523,7 +520,7 @@ and expr_to_sexpr e env = match e with
   | StringLit(s)        -> (SStringLit(s), env)
   | Id(s)               -> (check_record_access s env, env)
   (*
-  | Id(s)               -> (SId(s, get_Id_type s env), env) 
+  | Id(s)               -> (SId(s, get_Id_type s env), env)
   | This                -> (SId("this", get_this_type env), env)
     *)
   | Noexpr              -> (SNoexpr, env)
@@ -579,17 +576,17 @@ and check_expr_stmt e env =
 and check_return e env =
     let (se, _) = expr_to_sexpr e env in
     let data_t = sexpr_to_type_exn se in
-    match data_t, env.env_return_t  with 
+    match data_t, env.env_return_t  with
         (* Allow unit returns for reference types e.g. objects, arrays *)
         (* TODO: See if this makes sense for Unit_t... *)
         Datatype(Unit_t), Datatype(Object_t(_))
       | Datatype(Unit_t), Arraytype(_, _) -> ([SReturn(se, data_t)], env)
-      | _ -> 
+      | _ ->
             if data_t = env.env_return_t
             then ([SReturn(se, data_t)], env)
             else raise (E.ReturnTypeMismatch
-                (U.string_of_datatype data_t, 
-                U.string_of_datatype env.env_return_t, 
+                (U.string_of_datatype data_t,
+                U.string_of_datatype env.env_return_t,
                 env.env_fname))
 
 and local_handler s data_t e env =
@@ -597,13 +594,13 @@ and local_handler s data_t e env =
     then raise (E.DuplicateVar(s))
     else
         let (se, _) = expr_to_sexpr e env in
-        if se = SNoexpr then 
-            let named_vars = StringMap.add env.env_named_vars 
-                ~key:s 
+        if se = SNoexpr then
+            let named_vars = StringMap.add env.env_named_vars
+                ~key:s
                 ~data:data_t;
             in
-            let record_vars = StringMap.add env.env_record_vars 
-                ~key:s 
+            let record_vars = StringMap.add env.env_record_vars
+                ~key:s
                 ~data:data_t;
             in
             let new_env = {
@@ -617,7 +614,7 @@ and local_handler s data_t e env =
                 env_return_t = env.env_return_t;
                 env_in_for = env.env_in_for;
                 env_in_while = env.env_in_while;
-            } 
+            }
             in
             let save_obj_with_storage =
                 (* Add the temp var as a local *)
@@ -634,7 +631,7 @@ and local_handler s data_t e env =
             match data_t with
                     Datatype(Object_t(_)) -> save_obj_with_storage
                   | _ -> ([SExpr(SNoexpr, Datatype(Unit_t))], new_env)
-        else 
+        else
             let se_data_t = sexpr_to_type_exn se in
             let is_assignable = function
                 NoFunctiontype
@@ -643,17 +640,17 @@ and local_handler s data_t e env =
             in
             let valid_assignment = function
                 (Any, _) -> is_assignable se_data_t
-              | (data_t, se_data_t) -> if data_t = se_data_t 
+              | (data_t, se_data_t) -> if data_t = se_data_t
                     then true else false
             in
             if valid_assignment (data_t, se_data_t)
-            then 
-                let named_vars = StringMap.add env.env_named_vars 
-                    ~key:s 
+            then
+                let named_vars = StringMap.add env.env_named_vars
+                    ~key:s
                     ~data:se_data_t;
                 in
-                let record_vars = StringMap.add env.env_record_vars 
-                    ~key:s 
+                let record_vars = StringMap.add env.env_record_vars
+                    ~key:s
                     ~data:se_data_t;
                 in
                 let new_env = {
@@ -667,7 +664,7 @@ and local_handler s data_t e env =
                     env_return_t = env.env_return_t;
                     env_in_for = env.env_in_for;
                     env_in_while = env.env_in_while;
-                } 
+                }
                 in
                 let save_object_no_storage =
                     let lhs = check_record_access s new_env in
@@ -676,9 +673,9 @@ and local_handler s data_t e env =
                     ([sstmt], new_env)
                 in
                 save_object_no_storage
-                                    
+
                 (* (SLocal(s, se_data_t, se), new_env) *)
-            else 
+            else
                 let type1 = U.string_of_datatype data_t in
                 let type2 = U.string_of_datatype se_data_t in
                 raise (E.LocalAssignmentTypeMismatch(type1, type2))
@@ -687,7 +684,7 @@ and parse_stmt stmt env = match stmt with
     Block sl                -> check_sblock sl env
   | Expr e                  -> check_expr_stmt e env
   | Return e                -> check_return e env
-  | Local(s, data_t, e)     -> local_handler s data_t e env 
+  | Local(s, data_t, e)     -> local_handler s data_t e env
   | If(e, s1, s2)           -> check_if e s1 s2 env
   | For(e1, e2, e3, s)      -> check_for e1 e2 e3 s env
   | While(e, s)             -> check_while e s env
@@ -712,7 +709,7 @@ and check_if e s1 s2 env =
     let t = sexpr_to_type_exn se in
     let (ifbody, _) = parse_stmt s1 env in
     let (elsebody, _) = parse_stmt s2 env in
-    if t = Datatype(Bool_t) 
+    if t = Datatype(Bool_t)
         then ([SIf(se, SBlock(ifbody), SBlock(elsebody))], env)
         else raise E.InvalidIfStatementType
 
@@ -725,7 +722,7 @@ and check_for e1 e2 e3 s env =
     let (sbody,_) = parse_stmt s env in
     let conditional_t = sexpr_to_type_exn se2 in
     let sfor =
-        if conditional_t = Datatype(Bool_t) 
+        if conditional_t = Datatype(Bool_t)
             then SFor(se1, se2, se3, SBlock(sbody))
             else raise E.InvalidForStatementType
     in
@@ -738,7 +735,7 @@ and check_while e s env =
     let (se,_) = expr_to_sexpr e env in
     let conditional_t = sexpr_to_type_exn se in
     let (sbody,_) = parse_stmt s env in
-    let swhile = 
+    let swhile =
         if conditional_t = Datatype(Bool_t)
             then SWhile(se, SBlock(sbody))
             else raise E.InvalidWhileStatementType
@@ -746,12 +743,12 @@ and check_while e s env =
     let env = update_call_stack env.env_in_for old_in_while env in
     ([swhile], env)
 
-and check_break env = 
+and check_break env =
     if env.env_in_for || env.env_in_while then
         ([SBreak], env)
     else raise E.BreakOutsideOfLoop
 
-and check_continue env = 
+and check_continue env =
     if env.env_in_for || env.env_in_while then
         ([SContinue], env)
     else raise E.ContinueOustideOfLoop
@@ -782,20 +779,20 @@ and build_crecord_map fmap cdecls fdecls =
         if (StringMap.mem m cdecl.cname) then raise (E.DuplicateClassName(cdecl.cname))
         (* Add Class Record to Map *)
         else StringMap.add m
-            ~key:cdecl.cname 
+            ~key:cdecl.cname
             ~data:({
                 field_map = List.fold_left cdecl.cbody.fields
-                    ~f:check_fields 
+                    ~f:check_fields
                     ~init:StringMap.empty;
                 method_map = List.fold_left cdecl.cbody.methods
-                    ~f:check_methods 
+                    ~f:check_methods
                     ~init:StringMap.empty;
                 cdecl = cdecl
-            }) 
+            })
     in
     let crecord_map = List.fold_left cdecls
-        ~f:helper 
-        ~init:StringMap.empty 
+        ~f:helper
+        ~init:StringMap.empty
     in
     (* Add function Records *)
     let discover_named_vars fdecl =
@@ -814,7 +811,7 @@ and build_crecord_map fmap cdecls fdecls =
               | None -> m)
             ~init:field_map
     in
-    let fhelper m (fdecl : Ast.fdecl) = 
+    let fhelper m (fdecl : Ast.fdecl) =
         let temp_class =    ({
             field_map = discover_named_vars fdecl;
             method_map = StringMap.empty;
@@ -845,13 +842,13 @@ and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
     in
 
     (* Add all the first order functions to the map *)
-    let map = List.fold_left first_order_fdecls 
-        ~f:check_functions 
+    let map = List.fold_left first_order_fdecls
+        ~f:check_functions
         ~init:StringMap.empty;
     in
 
     (* DFS to discover all higher-order functions *)
-    let rec discover_higher_order l fdecl = 
+    let rec discover_higher_order l fdecl =
         let check_higher_order_helper l stmt = match stmt with
             Local(_, _, e) -> (match e with
                 FunctionLit(fdecl) -> fdecl :: discover_higher_order l fdecl
@@ -868,8 +865,8 @@ and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
     in
 
     (* Add all the higher order functions to the map *)
-    let map = List.fold_left higher_order_fdecls 
-        ~f:check_functions 
+    let map = List.fold_left higher_order_fdecls
+        ~f:check_functions
         ~init:map;
     in
 
@@ -904,7 +901,7 @@ and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
 (* Name = <root_class>.<fname> *)
 (* Prepend instance of class to function parameters *)
 and convert_method_to_sfdecl fmap cmap cname fdecl =
-    let crecord = StringMap.find_exn cmap cname 
+    let crecord = StringMap.find_exn cmap cname
     in
     let root_cname = match fdecl.root_cname with
         Some(c) -> c
@@ -922,8 +919,8 @@ and convert_method_to_sfdecl fmap cmap cname fdecl =
       | _ -> m
     in
     let env_params = List.fold_left (class_formal :: fdecl.formals)
-        ~f:env_param_helper 
-        ~init:StringMap.empty 
+        ~f:env_param_helper
+        ~init:StringMap.empty
     in
     let env = {
         env_cname       = Some(cname);
@@ -966,18 +963,18 @@ and convert_method_to_sfdecl fmap cmap cname fdecl =
 (* Convert a function to a semantically checked function *)
 and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars =
     let env_param_helper m formal = match formal with
-        Formal(s, data_t) -> 
+        Formal(s, data_t) ->
             if StringMap.mem named_vars s
             then raise (E.DuplicateVar s)
             else StringMap.add m ~key:s ~data:data_t
       | _ -> m
     in
     let named_vars = List.fold_left fdecl.formals
-        ~f:env_param_helper 
+        ~f:env_param_helper
         ~init:named_vars
     in
     let record_vars = List.fold_left fdecl.formals
-        ~f:env_param_helper 
+        ~f:env_param_helper
         ~init:StringMap.empty
     in
     let env = {
@@ -1039,8 +1036,8 @@ and convert_cdecl_to_scdecl sfdecls (c:Ast.cdecl) =
     }
 
 (* Generate Sast: sprogram *)
-and convert_ast_to_sast 
-    crecord_map (cdecls : cdecl list) 
+and convert_ast_to_sast
+    crecord_map (cdecls : cdecl list)
     fdecl_map (first_order_fdecls : fdecl list) (higher_order_fdecls : fdecl list) =
     let is_main = (fun f -> match f.sfname with s -> s = "main") in
     let get_main fdecls =
@@ -1050,7 +1047,7 @@ and convert_ast_to_sast
             raise E.MissingMainFunction
         else if List.length mains > 1 then
             raise E.MultipleMainFunctions
-        else 
+        else
             List.hd_exn mains
     in
     let remove_main fdecls =
@@ -1058,9 +1055,9 @@ and convert_ast_to_sast
     in
     let handle_cdecl cdecl =
         let crecord = StringMap.find_exn crecord_map cdecl.cname in
-        let sfdecls = List.fold_left cdecl.cbody.methods 
+        let sfdecls = List.fold_left cdecl.cbody.methods
             ~f:(fun l f -> (convert_method_to_sfdecl fdecl_map crecord_map cdecl.cname f) :: l)
-            ~init:[] 
+            ~init:[]
         in
         let sfdecls = remove_main sfdecls in
         let scdecl = convert_cdecl_to_scdecl sfdecls cdecl in
@@ -1071,14 +1068,14 @@ and convert_ast_to_sast
         (fst scdecl :: fst t, snd scdecl @ snd t)
     in
     let (scdecl_list, sfdecl_list) = List.fold_left cdecls
-        ~f:iter_cdecls 
-        ~init:([], []) 
+        ~f:iter_cdecls
+        ~init:([], [])
     in
 
     (* Append first order fdecls to the tuple *)
     let sfdecls = List.fold_left first_order_fdecls
-        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty) :: l) 
-        ~init:[] 
+        ~f:(fun l f -> (convert_fdecl_to_sfdecl fdecl_map crecord_map f StringMap.empty) :: l)
+        ~init:[]
     in
 
     (* Append higher order fdecls to the tuple *)

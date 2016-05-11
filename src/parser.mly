@@ -1,8 +1,8 @@
 /* Ocamlyacc Parser for Stop */
 
-%{ 
+%{
     open Ast
-    open Core.Std 
+    open Core.Std
     module E = Exceptions
     let lambda_num = ref 0
 %}
@@ -17,9 +17,9 @@
 %token FINAL
 %token PUBLIC PRIVATE ANON
 %token SPEC CLASS METHOD
-%token MATCH CASE 
+%token MATCH CASE
 %token TYPE VAR THIS
-%token DEF EXTENDS 
+%token DEF EXTENDS
 %token EOF
 
 /* Processor Directives */
@@ -66,11 +66,11 @@
 /* -------------------- */
 
 program:
-    constituents EOF { Program(List.rev $1.includes, List.rev $1.specs, 
-                                List.rev $1.cdecls, List.rev $1.fdecls) } 
+    constituents EOF { Program(List.rev $1.includes, List.rev $1.specs,
+                                List.rev $1.cdecls, List.rev $1.fdecls) }
 
 constituents:
-    { { 
+    { {
         includes = [];
         specs = [];
         cdecls = [];
@@ -78,27 +78,27 @@ constituents:
     } }
   | constituents include_stmt { {
         includes = $2 :: $1.includes;
-        specs = $1.specs; 
-        cdecls = $1.cdecls; 
-        fdecls = $1.fdecls; 
+        specs = $1.specs;
+        cdecls = $1.cdecls;
+        fdecls = $1.fdecls;
     } }
   | constituents sdecl { {
         includes = $1.includes;
-        specs = $2 :: $1.specs; 
-        cdecls = $1.cdecls; 
-        fdecls = $1.fdecls; 
+        specs = $2 :: $1.specs;
+        cdecls = $1.cdecls;
+        fdecls = $1.fdecls;
     } }
   | constituents cdecl { {
         includes = $1.includes;
-        specs = $1.specs; 
-        cdecls = $2 :: $1.cdecls; 
-        fdecls = $1.fdecls; 
+        specs = $1.specs;
+        cdecls = $2 :: $1.cdecls;
+        fdecls = $1.fdecls;
     } }
   | constituents fdecl { {
         includes = $1.includes;
-        specs = $1.specs; 
-        cdecls = $1.cdecls; 
-        fdecls = $2 :: $1.fdecls; 
+        specs = $1.specs;
+        cdecls = $1.cdecls;
+        fdecls = $2 :: $1.fdecls;
     } }
 
 /* Includes */
@@ -111,7 +111,7 @@ include_stmt:
 /* --------- */
 
 fdecl:
-    DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+    DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { {
         fname = $2;
         ftype = Functiontype(snd $5, $8);
         return_t = $8;
@@ -126,7 +126,7 @@ fdecl:
 /* ----- */
 
 sdecl:
-    SPEC TYPE_ID LBRACE RBRACE { { 
+    SPEC TYPE_ID LBRACE RBRACE { {
             sname = $2;
     } }
 
@@ -155,7 +155,7 @@ cbody:
     } }
 
 cfdecl:
-    scope DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { { 
+    scope DEF ID ASSIGN LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { {
             fname = $3;
             ftype = Functiontype(snd $6, $9);
             return_t = $9;
@@ -212,7 +212,7 @@ function_type:
 
 field:
     scope VAR ID COLON datatype SEMI { Field($1, $3, $5) }
-      
+
 /* Formals and Actuals */
 /* ------------------- */
 
@@ -270,7 +270,7 @@ literals:
     | THIS              { This }
 
 function_literal:
-    ANON LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE { 
+    ANON LPAREN formals_opt RPAREN COLON datatype LBRACE stmts RBRACE {
         lambda_num := !lambda_num + 1;
         FunctionLit({
             fname = "@" ^ string_of_int !lambda_num;
@@ -281,7 +281,7 @@ function_literal:
             scope = Private;
             overrides = false;
             root_cname = None;
-        }) 
+        })
     }
 
 bracket_args:
@@ -293,7 +293,7 @@ bracket_args:
 
 stmts:
     | stmt_list             { List.rev $1 }
-    
+
 stmt_list:
       stmt                  { [$1] }
     | stmt_list stmt        { $2::$1 }
@@ -302,7 +302,7 @@ stmt:
       expr SEMI                                 { Expr($1) }
     | RETURN SEMI                               { Return(Noexpr) }
     | RETURN expr SEMI                          { Return($2) }
-    | LBRACE stmts RBRACE                       { Block($2) } 
+    | LBRACE stmts RBRACE                       { Block($2) }
     | IF LPAREN expr RPAREN stmt ELSE stmt      { If($3, $5, $7) }
     | WHILE LPAREN expr RPAREN stmt             { While($3, $5) }
     | VAR ID COLON datatype SEMI                { Local($2, $4, Noexpr) }
@@ -340,7 +340,7 @@ expr:
     | expr ASSIGN   expr                { Assign($1, $3) }
     | expr DOT      expr                { ObjAccess($1, $3) }
     | expr bracket_args RBRACKET        { ArrayAccess($1, List.rev $2) }
-    | MINUS expr %prec NEG              { Unop(Neg, $2) } 
+    | MINUS expr %prec NEG              { Unop(Neg, $2) }
     | NOT expr                          { Unop(Not, $2) }
     | LPAREN expr RPAREN                { $2 }
     | ID LPAREN actuals_opt RPAREN      { Call($1, $3) }

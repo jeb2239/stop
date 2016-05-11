@@ -1,35 +1,35 @@
-(* Code Generation Phase *) 
+(* Code Generation Phase *)
 
 (*
     Input: Semantically Checked AST (type sprogram)
-    Output: LLVM Module 
-       
+    Output: LLVM Module
+
     Produces an LLVM IR translation of the source program
     LLVM Tutorial:
         http://llvm.org/docs/tutorial/index.html
     LLVM Documentation:
         http://llvm.moe/
         http://llvm.moe/ocaml/
-*)    
+*)
 
 open Core.Std
-open Sast 
+open Sast
 open Ast
 
 module A = Analysis
 module E = Exceptions
 module L = Llvm
 module U = Utils
-      
+
 let context     = L.global_context ()
 let the_module  = L.create_module context "Stop"
 let builder     = L.builder context
 let i32_t       = L.i32_type context
 let i8_t        = L.i8_type context
-let i1_t        = L.i1_type context 
+let i1_t        = L.i1_type context
 let float_t     = L.float_type context
 let double_t    = L.double_type context
-let void_t      = L.void_type context 
+let void_t      = L.void_type context
 let str_t       = L.pointer_type (L.i8_type context)
 
 (* Control Flow References *)
@@ -38,21 +38,21 @@ let cont_block  = ref (L.block_of_value (L.const_int i32_t 0))
 let is_loop     = ref false
 
 let struct_types:(string, L.lltype) Hashtbl.t = Hashtbl.create ()
-    ~hashable:String.hashable 
+    ~hashable:String.hashable
     ~size:10
 
 let struct_field_indexes:(string, int) Hashtbl.t = Hashtbl.create ()
-    ~hashable:String.hashable 
+    ~hashable:String.hashable
     ~size:50
 
 (* Named Values inside current scope *)
 let named_values:(string, L.llvalue) Hashtbl.t = Hashtbl.create ()
-    ~hashable:String.hashable 
+    ~hashable:String.hashable
     ~size:50
 
 (* Named parameters inside current scope *)
 let named_parameters:(string, L.llvalue) Hashtbl.t = Hashtbl.create ()
-    ~hashable:String.hashable 
+    ~hashable:String.hashable
     ~size:50
 
 let str_type = Arraytype(Char_t, 1)
@@ -64,7 +64,7 @@ let rec get_array_type array_t = (*print_endline (U.string_of_datatype array_t);
   | _ -> raise(E.InvalidDatatype "Array Type")
 
 and find_struct_exn name =
-    if name = "String" then (L.i8_type context) else 
+    if name = "String" then (L.i8_type context) else
     try
         Hashtbl.find_exn struct_types name
     with
@@ -90,12 +90,13 @@ match data_t with
   | Functiontype(dt_l, dt) -> get_function_type dt_l dt
   | data_t -> raise (E.InvalidDatatype(U.string_of_datatype data_t))
 
-let lookup_llfunction_exn fname = match (L.lookup_function fname the_module) with
+let lookup_llfunction_exn fname = print_endline (L.string_of_llmodule the_module);
+ match (L.lookup_function fname the_module) with
     None -> raise (E.LLVMFunctionNotFound(fname))
   | Some f -> f
 
 (* Generate Code for Binop *)
-let rec handle_binop e1 op e2 data_t llbuilder = 
+let rec handle_binop e1 op e2 data_t llbuilder =
     (* Get the types of e1 and e2 *)
     let type1 = A.sexpr_to_type e1 in
     let type2 = A.sexpr_to_type e2 in
@@ -143,7 +144,7 @@ let rec handle_binop e1 op e2 data_t llbuilder =
     (* Use Integer Arithmetic for Ints, Chars, and Bools *)
     (* Use Floating-Point Arithmetic for Floats *)
     let type_handler data_t = match data_t with
-        Datatype(Int_t) 
+        Datatype(Int_t)
       | Datatype(Char_t)
       | Datatype(Bool_t) -> int_ops e1 op e2
       | Datatype(Float_t) -> float_ops e1 op e2
@@ -184,22 +185,26 @@ and codegen_sizeof el llbuilder =
 
 
 and codegen_function_call fname sexpr_l data_t llbuilder =
+    print_endline "-)_)_)_)_----)_)_000-_)_)";
+    Hashtbl.iteri ~f:(fun ~key:x ~data:y -> print_endline x; print_endline (L.string_of_llvalue y);) named_parameters;
     let call_function fllval =
         let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
         match data_t with
             Datatype(Unit_t) -> L.build_call fllval (Array.of_list params) "" llbuilder
           | _ -> L.build_call fllval (Array.of_list params) "tmp" llbuilder
     in
-    try 
+    try
         let fpointer = Hashtbl.find_exn named_parameters fname in
         let f = L.build_load fpointer "f" llbuilder in
         call_function f
     with | Not_found ->
-        try 
+        try
+            Hashtbl.iteri ~f:(fun ~key:x ~data:y -> print_endline x; print_endline (L.string_of_llvalue y);) named_values;
             let fpointer = Hashtbl.find_exn named_values fname in
             let f = L.build_load fpointer "f" llbuilder in
             call_function f
         with | Not_found ->
+            print_endline ("we die here");
             let f = lookup_llfunction_exn fname in
             call_function f
 
@@ -218,50 +223,57 @@ and codegen_printf sexpr_l llbuilder =
     let llargs = Array.of_list (format_llstr :: format_llargs) in
     L.build_call fun_llvalue llargs "printf" llbuilder
 
-and codegen_id isDeref id llbuilder = 
+and codegen_id isDeref id llbuilder =
+    print_endline ("--"^L.string_of_llmodule the_module);
+    Hashtbl.iteri ~f:(fun ~key:x ~data:y -> print_endline x; print_endline (L.string_of_llvalue y);) named_values;
     if isDeref then
         try Hashtbl.find_exn named_parameters id
         with | Not_found ->
             try let var = Hashtbl.find_exn named_values id in
-                L.build_load var id llbuilder 
+                L.build_load var id llbuilder
             with | Not_found -> raise (E.UndefinedId id)
     else
         try Hashtbl.find_exn named_values id
         with | Not_found ->
-            try Hashtbl.find_exn named_values id 
+            try Hashtbl.find_exn named_values id
             with | Not_found -> raise (E.UndefinedId id)
 
-and codegen_assign se1 se2 llbuilder = (*print_endline (U.string_of_sexpr se1 ^" = "^ U.string_of_sexpr se2);*)
+and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^"= = "^ U.string_of_sexpr se2);
+    print_endline (U.string_of_sexpr se1);
     (* Get lhs llvalue; don't emit as expression *)
     let lhs = match se1 with
-        SId(id, _) -> 
+        SId(id, _) -> print_endline id;
             (try Hashtbl.find_exn named_parameters id
             with Not_found ->
                 try Hashtbl.find_exn named_values id
                 with Not_found -> raise (E.UndefinedId id))
-      | SObjAccess(se1, se2, data_t) ->(* print_endline (U.string_of_sexpr se1 ^"-()-"^ U.string_of_sexpr se2) ;*) codegen_obj_access false se1 se2 data_t llbuilder
-      | SArrayAccess(se, se_l, _) -> 
+      | SObjAccess(se1, se2, data_t) ->print_endline (U.string_of_datatype data_t);  print_endline (U.string_of_sexpr se1 ^"-()-"^ U.string_of_sexpr se2) ; codegen_obj_access false se1 se2 data_t llbuilder
+      | SArrayAccess(se, se_l, _) ->
             codegen_array_access true se se_l llbuilder
       | _ -> raise E.AssignmentLhsMustBeAssignable
     in
     (* Get rhs llvalue *)
     let rhs = (*print_endline "yo";*)
-     match se2 with 
+     match se2 with
         SObjAccess(se1, se2, data_t) -> (*print_endline "codass"; *)codegen_obj_access true se1 se2 data_t llbuilder
-      | _ -> codegen_sexpr se2 ~builder:llbuilder 
+      | _ -> print_endline ((U.string_of_sexpr se2)^"----") ; codegen_sexpr se2 ~builder:llbuilder
     in
     (* Codegen Assignment Stmt *)
     ignore(L.build_store rhs lhs llbuilder);
     rhs
 
-and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.string_of_sexpr lhs ^"---------");*)
+and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.string_of_sexpr lhs ^"---------");
    let obj_type_name = match lhs with
         SId(_, data_t) -> U.string_of_datatype data_t
       | SObjAccess(_, _, data_t) -> U.string_of_datatype data_t
+      | SCall(_,_,data_t,_) -> U.string_of_datatype data_t
 
-    in 
-    let struct_llval = match lhs with
+    in
+    let struct_llval =
+    print_endline (U.string_of_sexpr lhs ^ "-----");
+     match lhs with
         SId(s, _) -> codegen_id false s llbuilder
+      | SCall(s,sel,data_t,t) -> codegen_function_call s sel data_t llbuilder
       | SObjAccess(le, re, data_t) -> codegen_obj_access true le re data_t llbuilder
 
     in
@@ -274,7 +286,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.st
     let search_term = obj_type_name ^ "." ^ field_name in
     let field_index = Hashtbl.find_exn struct_field_indexes search_term in
     let llvalue = L.build_struct_gep struct_llval field_index field_name llbuilder in
-    let llvalue = if isAssign 
+    let llvalue = if isAssign
         then L.build_load llvalue field_name llbuilder
         else llvalue
     in
@@ -289,7 +301,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.st
   in
     let rec check_rhs isLHS lhs lhs_t = print_endline "----*----";
       let lhs_str = U.string_of_datatype lhs_t in
-      function 
+      function
         SId(field,d) -> print_endline "In codegen_obj_access SId";
               let search_term = (lhs_str ^ "." ^ field) in
 
@@ -300,8 +312,8 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.st
               print_endline ("-------");
               let _val = L.build_struct_gep lhs field_index field llbuilder in
               print_endline "heyy";
-              let _val = match d with 
-                    Datatype(Object_t(_)) -> 
+              let _val = match d with
+                    Datatype(Object_t(_)) ->
                     if not isAssign then _val
                     else L.build_load _val field llbuilder
               | _ ->
@@ -311,18 +323,18 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.st
                 L.build_load _val field llbuilder
               in
               _val
-        | SArrayAccess(e,el,d) -> 
+        | SArrayAccess(e,el,d) ->
               let ce = check_rhs false lhs lhs_t e in
               let index = codegen_sexpr (List.hd_exn el) ~builder:llbuilder  in
               let index = match d with
                   Datatype(Char_t) -> index
                |   _ -> L.build_add index (L.const_int i32_t 1) "tmp" llbuilder
-              in 
+              in
              let _val = L.build_gep ce [| index |] "tmp" llbuilder in
              if isLHS && isAssign
                 then _val
               else L.build_load _val "tmp" llbuilder
-        | SObjAccess(e1,e2,d) -> 
+        | SObjAccess(e1,e2,d) ->
               print_endline (U.string_of_datatype d);
               print_endline ("U.string_of_datatype");
               let e1_type = Analysis.sexpr_to_type_exn e1 in
@@ -330,8 +342,8 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.st
               let e2 = check_rhs true e1 e1_type e2 in
               e2
         | _ as e -> raise (Exceptions.InvalidAccessLHS (Utils.string_of_sexpr e))
-        in 
-        let lhs_type = Analysis.sexpr_to_type_exn lhs in 
+        in
+        let lhs_type = Analysis.sexpr_to_type_exn lhs in
         match lhs_type with
             Arraytype(_,_) ->
                 let lhs = codegen_sexpr lhs llbuilder in
@@ -343,12 +355,12 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.st
                 L.build_load _val "tmp" llbuilder
             | _ ->
                 let lhs = check_lhs lhs in
-                let rhs = check_rhs true lhs lhs_type rhs in 
+                let rhs = check_rhs true lhs lhs_type rhs in
                 rhs  *)
 
 
 
-    
+
   (*   let struct_llval = match lhs with
         SId(s, _) -> codegen_id false s llbuilder
       | SArrayAccess(e,el,d) ->
@@ -374,7 +386,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = (*print_endline (U.st
     let search_term = obj_type_name ^ "." ^ field_name in
     let field_index = Hashtbl.find_exn struct_field_indexes search_term in
     let llvalue = L.build_struct_gep struct_llval field_index field_name llbuilder in
-    let llvalue = if isAssign 
+    let llvalue = if isAssign
         then L.build_load llvalue field_name llbuilder
         else llvalue
     in
@@ -390,10 +402,13 @@ and codegen_array_access isAssign e e_l llbuilder =
         else L.build_load llvalue "tmp" llbuilder
 
 and codegen_function_lit fname llbuilder =
+    (* print_endline (L.string_of_llmodule the_module); *)
+    print_endline "codegen_function_lit";
+    print_endline fname;
     let f_llval = lookup_llfunction_exn fname in
     f_llval
 
-and codegen_sexpr sexpr ~builder:llbuilder =  match sexpr with 
+and codegen_sexpr sexpr ~builder:llbuilder =  match sexpr with
     SIntLit(i)                  -> L.const_int i32_t i
   | SFloatLit(f)                -> L.const_float float_t f
   | SBoolLit(b)                 -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
@@ -402,17 +417,17 @@ and codegen_sexpr sexpr ~builder:llbuilder =  match sexpr with
   | SFunctionLit(s, _)          -> codegen_function_lit s llbuilder
   | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
   | SArrayAccess(se, se_l, _)   -> codegen_array_access true se se_l llbuilder
-  | SObjAccess(se1, se2, d)     
+  | SObjAccess(se1, se2, d)
         -> codegen_obj_access true se1 se2 d llbuilder
   | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
   | SId(id, _)                      -> codegen_id false id llbuilder
   | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
   | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
-  | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el 
+  | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el
  (*| SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder*)
   | _ -> raise E.NotImplemented
-  
+
  (* | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
   | SNull                       -> const_null i32_t
   | SDelete e                   -> codegen_delete e llbuilder
@@ -422,16 +437,16 @@ and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder
   | _ -> L.build_ret (codegen_sexpr sexpr ~builder:llbuilder) llbuilder
 
-and codegen_break llbuilder = 
+and codegen_break llbuilder =
     let b = fun () -> !br_block in
     L.build_br (b ()) llbuilder
 
-and codegen_continue llbuilder = 
+and codegen_continue llbuilder =
     let b = fun () -> !cont_block in
     L.build_br (b ()) llbuilder
-    
+
 (* TODO: Alloca vs. Malloc *)
-and codegen_local var_name data_t sexpr llbuilder = 
+and codegen_local var_name data_t sexpr llbuilder =
     let lltype = match data_t with
         Datatype(Object_t(name)) -> find_struct_exn name
       | _ -> get_lltype_exn data_t
@@ -450,7 +465,7 @@ and codegen_stmt stmt ~builder:llbuilder = match stmt with
   | SExpr(se, _)            -> codegen_sexpr se llbuilder
   | SReturn(se, _)          -> codegen_return se llbuilder
   | SLocal(s, data_t, se)   -> codegen_local s data_t se llbuilder
-  | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 llbuilder 
+  | SIf(se, s1, s2)         -> codegen_if_stmt se s1 s2 llbuilder
   | SFor(se1, se2, se3, ss) -> codegen_for_stmt se1 se2 se3 ss llbuilder
   | SWhile(se, ss)          -> codegen_while_stmt se ss llbuilder
   | SBreak                  -> codegen_break llbuilder
@@ -519,7 +534,7 @@ and codegen_for_stmt init_se cond_se inc_se body_stmt llbuilder =
 
     (* Start insertion in loop_bb. *)
     L.position_at_end inc_bb llbuilder;
- 
+
     (* Emit the step value. *)
     let _ = codegen_sexpr inc_se llbuilder in
     ignore(L.build_br cond_bb llbuilder);
@@ -536,12 +551,12 @@ and codegen_while_stmt cond_se body_stmt llbuilder =
     let null_sexpr = SIntLit(0) in
     codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt llbuilder
 
-and codegen_array_create llbuilder t expr_type el = 
+and codegen_array_create llbuilder t expr_type el =
   (*print_endline "helll";*)
   if(List.length el > 1) then raise(Exceptions.ArrayLargerThan1Unsupported)
   else
-  match expr_type with 
-    Arraytype(Char_t, 1) -> 
+  match expr_type with
+    Arraytype(Char_t, 1) ->
     let e = List.hd_exn el in
     let size = (codegen_sexpr e llbuilder) in
     let t = get_lltype_exn t in
@@ -549,7 +564,7 @@ and codegen_array_create llbuilder t expr_type el =
     let arr = L.build_pointercast arr (L.pointer_type t) "tmp" llbuilder in
     (* initialise_array arr size (const_int i32_t 0) 0 llbuilder; *)
     arr
-  |   _ -> 
+  |   _ ->
     let e = List.hd_exn el in
     let t = get_lltype_exn t in
 
@@ -558,34 +573,34 @@ and codegen_array_create llbuilder t expr_type el =
     let size_t = L.build_intcast (L.size_of t) i32_t "tmp" llbuilder in
     let size = L.build_mul size_t size "tmp" llbuilder in
     let size_real = L.build_add size (L.const_int i32_t 1) "arr_size" llbuilder in
-    
+
       let arr = L.build_array_malloc t size_real "tmp" llbuilder in
     let arr = L.build_pointercast arr (L.pointer_type t) "tmp" llbuilder in
 
     let arr_len_ptr = L.build_pointercast arr (L.pointer_type i32_t) "tmp" llbuilder in
 
     (* Store length at this position *)
-    ignore(L.build_store size_real arr_len_ptr llbuilder); 
+    ignore(L.build_store size_real arr_len_ptr llbuilder);
     (* initialise_array arr_len_ptr size_real (const_int i32_t 0) 0 llbuilder; *)
     arr
 
 (* Codegen Library Functions *)
 (* ========================= *)
 
-let codegen_library_functions () = 
+let codegen_library_functions () =
     (* C Std lib functions (Free with Llvm) *)
     let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
     let _ = L.declare_function "printf" printf_t the_module in
     let malloc_t = L.function_type (str_t) [| i32_t |] in
     let _ = L.declare_function "malloc" malloc_t the_module in
-    let open_t = L.function_type i32_t [| (L.pointer_type i8_t); i32_t |] in 
+    let open_t = L.function_type i32_t [| (L.pointer_type i8_t); i32_t |] in
     let _ = L.declare_function "open" open_t the_module in
     let close_t = L.function_type i32_t [| i32_t |] in
     let _ = L.declare_function "close" close_t the_module in
     let read_t = L.function_type i32_t [| i32_t; L.pointer_type i8_t; i32_t |] in
     let _ = L.declare_function "read" read_t the_module in
     let write_t = L.function_type i32_t [| i32_t; L.pointer_type i8_t; i32_t |] in
-    let _ = L.declare_function "write" write_t the_module in 
+    let _ = L.declare_function "write" write_t the_module in
     let lseek_t = L.function_type i32_t [| i32_t; i32_t; i32_t |] in
     let _ = L.declare_function "lseek" lseek_t the_module in
     let exit_t = L.function_type void_t [| i32_t |] in
@@ -595,7 +610,7 @@ let codegen_library_functions () =
     let getchar_t = L.function_type (i32_t) [| |] in
     let _ = L.declare_function "getchar" getchar_t the_module in
     let sizeof_t = L.function_type (i32_t) [| i32_t |] in
-    let _ = L.declare_function "sizeof" sizeof_t the_module in 
+    let _ = L.declare_function "sizeof" sizeof_t the_module in
     ()
 
 let codegen_struct_stub s =
@@ -608,11 +623,11 @@ let codegen_struct_stub s =
 
 let codegen_struct s =
     let struct_t = Hashtbl.find_exn struct_types s.scname in
-    let type_list = List.map s.sfields 
+    let type_list = List.map s.sfields
         ~f:(function Field(_, _, data_t) -> get_lltype_exn data_t)
     in
     let name_list = List.map s.sfields
-        ~f:(function Field(_, s, _) -> s)  
+        ~f:(function Field(_, s, _) -> s)
     in
 
     (* Add key field to all structs *)
@@ -620,7 +635,7 @@ let codegen_struct s =
     let name_list = ".key" :: name_list in
     let type_array = Array.of_list type_list in
     List.iteri name_list
-        ~f:(fun i f -> 
+        ~f:(fun i f ->
             let n = s.scname ^ "." ^ f in
             (* print_string (n ^ "\n"); *)
             Hashtbl.add_exn struct_field_indexes ~key:n ~data:i);
@@ -630,21 +645,21 @@ let codegen_struct s =
 let codegen_function_stub sfdecl =
     let fname = sfdecl.sfname in
     let is_var_arg = ref false in
-    let params = List.rev 
+    let params = List.rev
         (List.fold_left sfdecl.sformals
-            ~f:(fun l -> (function 
+            ~f:(fun l -> (function
                 Formal(_, data_t) -> get_lltype_exn data_t :: l
               | _ -> is_var_arg := true; l))
             ~init: [])
     in
-    let ftype = 
+    let ftype =
         if !is_var_arg
         then L.var_arg_function_type (get_lltype_exn sfdecl.sreturn_t) (Array.of_list params)
         else L.function_type (get_lltype_exn sfdecl.sreturn_t) (Array.of_list params)
     in
     L.define_function fname ftype the_module
 
-let init_params f formals = 
+let init_params f formals =
     let formals = Array.of_list formals in
     Array.iteri (L.params f)
         ~f:(fun i element ->
@@ -657,6 +672,7 @@ let init_params f formals =
             )
 
 let codegen_function sfdecl =
+    print_endline (U.string_of_sfdecl sfdecl);
     Hashtbl.clear named_values;
     Hashtbl.clear named_parameters;
     let fname = sfdecl.sfname in
@@ -665,7 +681,7 @@ let codegen_function sfdecl =
 
     let _ = init_params f sfdecl.sformals in
     let _ = codegen_stmt (SBlock(sfdecl.sbody)) ~builder:llbuilder in
-    
+
     (* Check to make sure we return; add a return statement if not *)
     let last_bb = match (L.block_end (lookup_llfunction_exn fname)) with
         L.After(block) -> block
@@ -676,13 +692,13 @@ let codegen_function sfdecl =
     match (L.instr_end last_bb) with
         L.After(instr) ->
             let op = L.instr_opcode instr in
-            if op = L.Opcode.Ret 
+            if op = L.Opcode.Ret
             then ()
-            else 
+            else
                 if return_t = void_t
                 then (ignore(L.build_ret_void); ())
                 else (ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ())
-      | L.At_start(_) -> 
+      | L.At_start(_) ->
             if return_t = void_t
             then (ignore(L.build_ret_void); ())
             else (ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ())
@@ -690,7 +706,7 @@ let codegen_function sfdecl =
 let codegen_main main =
     Hashtbl.clear named_values;
     Hashtbl.clear named_parameters;
-    let ftype = L.function_type i32_t [| i32_t; L.pointer_type str_t |] in 
+    let ftype = L.function_type i32_t [| i32_t; L.pointer_type str_t |] in
     let f = L.define_function "main" ftype the_module in
     let llbuilder = L.builder_at_end context (L.entry_block f) in
 
@@ -711,7 +727,7 @@ let codegen_main main =
     match (L.instr_end last_bb) with
         L.After(instr) ->
             let op = L.instr_opcode instr in
-            if op = L.Opcode.Ret 
+            if op = L.Opcode.Ret
             then ()
             else ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()
       | L.At_start(_) -> ignore(L.build_ret (L.const_int i32_t 0) llbuilder); ()

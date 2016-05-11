@@ -3,15 +3,44 @@
  * ================
  */
 
+class Rectangle = {
+    var a:Int;
+    var b:Int;
+}
+
+def print_rectangle = (a:Rectangle):Int {
+    printf("%d\n",a);
+    //printf("%d\n",a.a );
+return 0;
+}
+
+def main = ():Int {
+
+
+    var j:Rectangle;
+    printf("%d\n",j);
+    printf("%s\n","---------");
+    j.a = 0;
+    printf("%d\n",j.a); //works up to here
+
+    print_rectangle(j); //now we seg
+
+}
+
+
+
+
+
+/*
 class Test = {
 	var a:Int[];
 	def call_me = ():Int{
 		var g:Int = 0;
 		this.a;
-		
-		return 0; 
+
+		return 0;
 	}
-	
+
 }
 
 def main = ():Int {
@@ -28,3 +57,4 @@ def main = ():Int {
 	printf("%d\n",33);
 	return 0;
 }
+*/

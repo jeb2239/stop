@@ -28,7 +28,7 @@ let i32_t       = L.i32_type context
 let i8_t        = L.i8_type context
 let i1_t        = L.i1_type context 
 let float_t     = L.float_type context
-let double_t    = L.double_type context
+(*let double_t    = L.double_type context*)
 let void_t      = L.void_type context 
 let str_t       = L.pointer_type (L.i8_type context)
 
@@ -78,7 +78,7 @@ and get_function_type data_t_list return_t =
 
 and get_lltype_exn (data_t:datatype) = match data_t with
     Datatype(Int_t) -> i32_t
-  | Datatype(Float_t) -> double_t (* TODO: Decide what to do a/b doubles & floats *)
+  | Datatype(Float_t) -> float_t (* TODO: Decide what to do a/b doubles & floats *)
   | Datatype(Bool_t) -> i1_t
   | Datatype(Char_t) -> i8_t
   | Datatype(Unit_t) -> void_t
@@ -258,10 +258,12 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder =
     let obj_type_name = match lhs with
         SId(_, data_t) -> U.string_of_datatype data_t
       | SObjAccess(_, _, data_t) -> U.string_of_datatype data_t
+
     in 
     let struct_llval = match lhs with
         SId(s, _) -> codegen_id false s llbuilder
       | SObjAccess(le, re, data_t) -> codegen_obj_access true le re data_t llbuilder
+
     in
     let field_name = match rhs with
         SId(field, _) -> field
@@ -282,7 +284,7 @@ and codegen_array_access isAssign e e_l llbuilder =
     let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in
     let indices = Array.of_list indices in
     let arr = codegen_sexpr e ~builder:llbuilder in
-    let llvalue = L.build_gep arr indices "tmp" llbuilder in
+    let llvalue =L.build_gep arr indices "tmp" llbuilder in
     if isAssign
         then llvalue
         else L.build_load llvalue "tmp" llbuilder
@@ -307,7 +309,12 @@ and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with
   | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
   | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
   | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el 
+ (*| SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder*)
   | _ -> raise E.NotImplemented
+ (* | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
+  | SNull                       -> const_null i32_t
+  | SDelete e                   -> codegen_delete e llbuilder
+    *)
 
 and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder
@@ -484,6 +491,8 @@ let codegen_library_functions () =
     let _ = L.declare_function "realloc" realloc_t the_module in
     let getchar_t = L.function_type (i32_t) [| |] in
     let _ = L.declare_function "getchar" getchar_t the_module in
+    let sizeof_t = L.function_type (i32_t) [| i32_t |] in
+    let _ = L.declare_function "sizeof" sizeof_t the_module in 
     ()
 
 let codegen_struct_stub s =

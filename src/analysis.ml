@@ -173,6 +173,7 @@ and get_arithmetic_binop_type se1 op se2 =
     let type2 = sexpr_to_type_exn se2 in
     match (type1, type2) with
         (Datatype(Int_t), Datatype(Int_t))  -> SBinop(se1, op, se2, Datatype(Int_t))
+      | (Datatype(Float_t), Datatype (Float_t)) -> SBinop(se1, op, se2, Datatype(Float_t))
       | _ -> raise E.InvalidBinaryOperation
 
 (* Return Datatype for ID *)

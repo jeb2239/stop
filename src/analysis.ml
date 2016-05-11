@@ -330,7 +330,9 @@ and expr_list_to_sexpr_list e_l env = match e_l with
   | [] -> []
 
 and check_array_access e e_l env =
+    print_endline (U.string_of_expr e);
     (* print_endline (string_of_env env); *)
+    print_endline "arrr access";
     let (se, _) = expr_to_sexpr e env in
     let data_t = sexpr_to_type_exn se in
     let se_l = expr_list_to_sexpr_list e_l env in
@@ -378,7 +380,7 @@ and check_function_literal fdecl env =
     higher_order_sfdecls := StringMap.add !higher_order_sfdecls ~key:fdecl.fname ~data:sfdecl;
     SFunctionLit(fdecl.fname, fdecl.ftype)
 
-and check_obj_access e1 e2 env = print_endline (string_of_env env);
+and check_obj_access e1 e2 env = print_endline ("object access");
   let get_cname_exn = function
         Some(cname) -> cname
       | None -> raise E.CannotUseThisKeywordOutsideOfClass
@@ -386,8 +388,8 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
     let check_lhs = (*print_endline "hell0";*)
     function
         This -> SId("this", Datatype(Object_t(get_cname_exn env.env_cname)))
-      | Id(s) -> check_record_access s env (* SId(s, get_Id_type s env) *)
-      | ArrayAccess(e,el) -> check_array_access e el env
+      | Id(s) -> print_endline (s^"-=-=-=-"); check_record_access s env (* SId(s, get_Id_type s env) *)
+      | ArrayAccess(e,el) -> print_endline (U.string_of_expr e ^"98989898989898989") ;check_array_access e el env
       | _ as e -> raise E.LHSofObjectAccessMustBeAccessible
     in
     let check_rhs e2 =
@@ -521,6 +523,7 @@ and check_obj_access e1 e2 env = print_endline (string_of_env env);
     SObjAccess(lhs, rhs, rhs_t) *)
 
 and check_record_access s env =
+    (* print_endline "hello"; *)
     let fname = get_fname_exn env.env_fname in
     let record_type = Datatype(Object_t(fname ^ ".record")) in
     let record_type_name = fname ^ ".record" in

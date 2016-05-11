@@ -4,38 +4,14 @@
  */
 
 
-class Rectangle = {
-    var a:Int;
-    var b:Int;
-    var c:Int;
-}
-
-def print_rectangle = (a:Rectangle):Rectangle {
-    printf("%d\n",a.a);
-    return a;
-}
 
 def main = ():Int {
 
-    var j:Rectangle;
-    j.a=0;
-    printf("%d\n",j);
-
-    print_rectangle(j);
-    printf("%d\n",j.a); //works up to here
-
-    print_rectangle(j); //now we seg
-    var a:Rectangle = print_rectangle(j);
-    print_rectangle(a);
-    var r:Int[] = Int[9]();
-    r[0]=3;
-    r[1]=9;
-    var i:Int;
-    for(i=0;i<2;i=i+1){
-        printf("%d\n", r[i]);
-
-    }
-
+    var a:Int[];
+    a = Int[9]();
+    a[4]=10;
+    
+    printf("%d\n",a[0]);
 }
 
 

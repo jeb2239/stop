@@ -90,7 +90,7 @@ match data_t with
   | Functiontype(dt_l, dt) -> get_function_type dt_l dt
   | data_t -> raise (E.InvalidDatatype(U.string_of_datatype data_t))
 
-let lookup_llfunction_exn fname = print_endline (L.string_of_llmodule the_module);
+let lookup_llfunction_exn fname =
  match (L.lookup_function fname the_module) with
     None -> raise (E.LLVMFunctionNotFound(fname))
   | Some f -> f
@@ -260,6 +260,8 @@ and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^"= 
                 with Not_found -> raise (E.UndefinedId id))
       | SObjAccess(se1, se2, data_t) ->print_endline (U.string_of_datatype data_t);  print_endline (U.string_of_sexpr se1 ^"-()-"^ U.string_of_sexpr se2) ; codegen_obj_access false se1 se2 data_t llbuilder
       | SArrayAccess(se, se_l, _) ->
+            print_endline ("SArrayAccess in code gen");
+            print_endline (U.string_of_sexpr se);
             codegen_array_access true se se_l llbuilder
       | _ -> raise E.AssignmentLhsMustBeAssignable
     in
@@ -274,19 +276,21 @@ and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^"= 
     rhs
 
 and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.string_of_sexpr lhs ^"---------");
+
    let obj_type_name = match lhs with
-        SId(_, data_t) -> U.string_of_datatype data_t
-      | SObjAccess(_, _, data_t) -> U.string_of_datatype data_t
+        SId(s, data_t) -> print_endline (s^"()()()"^U.string_of_datatype data_t); U.string_of_datatype data_t
+      | SObjAccess(_, _, data_t) -> print_endline ("()()()"^U.string_of_datatype data_t); U.string_of_datatype data_t
       | SCall(_,_,data_t,_) -> U.string_of_datatype data_t
 
     in
     let struct_llval =
     print_endline (U.string_of_sexpr lhs ^ "-----");
      match lhs with
-        SId(s, _) -> codegen_id false s llbuilder
+        SId(s, d) -> print_endline (s^ U.string_of_datatype d); codegen_id false s llbuilder
       | SCall(s,sel,data_t,t) -> codegen_function_call s sel data_t llbuilder
-      | SObjAccess(le, re, data_t) -> codegen_obj_access true le re data_t llbuilder
-
+      | SObjAccess(le, re, data_t) -> print_endline ("--*--"^U.string_of_datatype data_t); codegen_obj_access true le re data_t llbuilder
+      | SArrayAccess(e,el,d) -> (print_endline ("U.string_of_sexpr e"));
+       codegen_array_access false e el llbuilder
     in
     let field_name = match rhs with
         SId(field, _) -> field
@@ -404,6 +408,7 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.stri
     llvalue *)
 
 and codegen_array_access isAssign e e_l llbuilder =
+    print_endline (String.concat ~sep:"" (List.map ~f:(fun x -> U.string_of_sexpr x) e_l));
     let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in
     let indices = Array.of_list indices in
     let arr = codegen_sexpr e ~builder:llbuilder in

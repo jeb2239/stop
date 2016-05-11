@@ -17,9 +17,13 @@ let string_of_list string_of_item l =
 
 let higher_order_sfdecls = ref StringMap.empty
 
-(* Type of access link to use *)
+(* Type of access link to pass to function *)
 let access_link_types:(string, datatype) Hashtbl.t = Hashtbl.create ()
     ~hashable:String.hashable 
+    ~size:10
+
+let access_link_fnames:(string, string) Hashtbl.t = Hashtbl.create ()
+    ~hashable:String.hashable
     ~size:10
 
 (* Record which contains information re: Classes *)
@@ -396,18 +400,54 @@ and check_obj_access e1 e2 env =
         SId(_, data_t) -> data_t
     in
     SObjAccess(lhs, rhs, rhs_t)
-    
+
+    (*
+    StringMap.iter record_class.field_map
+        ~f:(fun ~key:s ~data:d -> print_string (s ^ "\n"));
+
+    let link_type = Hashtbl.find access_link_types fname in
+    let print =match link_type with
+        Some(dt) ->
+            print_string ("fname: " ^ fname ^ "\n");
+            print_string ("ltype: " ^ U.string_of_datatype dt ^ "\n");
+            print_string "===\n"
+      | None -> ()
+    in
+    print;
+    *)
+ 
+(* Follow access links if var defined outside of function *)
 and check_record_access s env =
     let fname = get_fname_exn env.env_fname in
-    let record_type = Datatype(Object_t(fname ^ ".record")) in
-    let record_type_name = fname ^ ".record" in
-    let record_name = fname ^ "_record" in
-    let record_class = StringMap.find_exn env.env_cmap record_type_name in
+
+    let build_lhs_helper fname inner = 
+        inner
+    in
+
+    let build_lhs fname = 
+        let record_name = fname ^ "_record" in
+        let record_type_name = fname ^ ".record" in
+        let record_class = StringMap.find_exn env.env_cmap record_type_name in
+        let record_type = Datatype(Object_t(record_type_name)) in
+        try 
+            (* Access item if it is the current record *)
+            let _ = StringMap.find_exn record_class.field_map s in
+            let result = SId(record_name, record_type) in
+            result
+
+        with | Not_found ->
+            (* Access the item through access links otherwise *)
+            let access_link_name = fname ^ "_@link" in
+            let access_link_type = Hashtbl.find_exn access_link_types fname in
+            let outer_fname = Hashtbl.find_exn access_link_fnames fname in
+            build_lhs_helper outer_fname 
+            (SObjAccess(SId(record_name, record_type), SId(access_link_name, access_link_type), access_link_type))
+    in
+    let lhs = build_lhs fname in
+
     let rhs_type = StringMap.find_exn env.env_named_vars s in
-    let lhs = SId(record_name, record_type) in
     let rhs = SId(s, rhs_type) in
     SObjAccess(lhs, rhs, rhs_type)
-
 
 and arraytype_to_access_type data_t = match data_t with
     Arraytype(p, _) -> Datatype(p)
@@ -752,6 +792,9 @@ and build_fdecl_map reserved_sfdecl_map first_order_fdecls =
                     Hashtbl.add_exn access_link_types
                         ~key:nested_fdecl.fname
                         ~data:link_t;
+                    Hashtbl.add_exn access_link_fnames
+                        ~key:nested_fdecl.fname
+                        ~data:fdecl.fname;
                     nested_fdecl :: discover_higher_order l nested_fdecl
               | _ -> l)
           | _ -> l

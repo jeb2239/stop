@@ -1,0 +1,11 @@
+/*
+ * test-array3.stp
+ * =====================
+ */
+
+def main = ():Int {
+        var arr:Int[] = Int[2]();
+	printf("%d\n", arr[0]);
+
+        return 0;
+}

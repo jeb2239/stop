@@ -259,7 +259,7 @@ and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^"= 
                 try Hashtbl.find_exn named_values id
                 with Not_found -> raise (E.UndefinedId id))
       | SObjAccess(se1, se2, data_t) ->print_endline (U.string_of_datatype data_t);  print_endline (U.string_of_sexpr se1 ^"-()-"^ U.string_of_sexpr se2) ; codegen_obj_access false se1 se2 data_t llbuilder
-      | SArrayAccess(se, se_l, _) ->
+      | SArrayAccess(se, se_l, _printf) ->
             print_endline ("SArrayAccess in code gen");
             print_endline (U.string_of_sexpr se);
             codegen_array_access true se se_l llbuilder
@@ -268,7 +268,7 @@ and codegen_assign se1 se2 llbuilder = print_endline (U.string_of_sexpr se1 ^"= 
     (* Get rhs llvalue *)
     let rhs = (*print_endline "yo";*)
      match se2 with
-        SObjAccess(se1, se2, data_t) -> (*print_endline "codass"; *)codegen_obj_access true se1 se2 data_t llbuilder
+        SObjAccess(se1, se2, data_t) -> print_endline "codass"; codegen_obj_access true se1 se2 data_t llbuilder
       | _ -> print_endline ((U.string_of_sexpr se2)^"----") ; codegen_sexpr se2 ~builder:llbuilder
     in
     (* Codegen Assignment Stmt *)
@@ -409,13 +409,17 @@ and codegen_obj_access isAssign lhs rhs data_t llbuilder = print_endline (U.stri
 
 and codegen_array_access isAssign e e_l llbuilder =
     print_endline (String.concat ~sep:"" (List.map ~f:(fun x -> U.string_of_sexpr x) e_l));
-    let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in
+    print_endline ("In array access");
+    let indices = List.map e_l ~f:(codegen_sexpr ~builder:llbuilder) in (*generate code to produce the number at runtime*)
     let indices = Array.of_list indices in
+    
     let arr = codegen_sexpr e ~builder:llbuilder in
-    let llvalue =L.build_gep arr indices "tmp" llbuilder in
+    print_endline (L.string_of_llvalue arr);
+    let llvalue = L.build_gep arr indices "tmp" llbuilder in
     if isAssign
-        then llvalue
-        else L.build_load llvalue "tmp" llbuilder
+        then  llvalue
+        else (print_endline "in load builder";
+        L.build_load llvalue "tmp" llbuilder)
 
 and codegen_function_lit fname llbuilder =
     (* print_endline (L.string_of_llmodule the_module); *)
@@ -567,38 +571,22 @@ and codegen_while_stmt cond_se body_stmt llbuilder =
     let null_sexpr = SIntLit(0) in
     codegen_for_stmt null_sexpr cond_se null_sexpr body_stmt llbuilder
 
-and codegen_array_create llbuilder t expr_type el =
-  (*print_endline "helll";*)
-  if(List.length el > 1) then raise(Exceptions.ArrayLargerThan1Unsupported)
-  else
-  match expr_type with
-    Arraytype(Char_t, 1) ->
-    let e = List.hd_exn el in
-    let size = (codegen_sexpr e llbuilder) in
-    let t = get_lltype_exn t in
-    let arr = L.build_array_malloc t size "tmp" llbuilder in
-    let arr = L.build_pointercast arr (L.pointer_type t) "tmp" llbuilder in
-    (* initialise_array arr size (const_int i32_t 0) 0 llbuilder; *)
-    arr
-  |   _ ->
-    let e = List.hd_exn el in
-    let t = get_lltype_exn t in
+and codegen_array_create llbuilder t d el  =
+let t = d in
+let size = (L.const_int i32_t ((List.length el))) in
+let size_real = (L.const_int i32_t ((List.length el) + 1)) in
+let t = get_lltype_exn t in
+let arr = L.build_array_malloc t size_real "tmp" llbuilder in
+let arr = L.build_pointercast arr t "tmp" llbuilder in
+let size_casted = L.build_bitcast size t "tmp" llbuilder in
+ignore(if d = Arraytype(Char_t, 1) then ignore(L.build_store size_casted arr llbuilder);); (* Store length at this position *)
+(* initialise_array arr size_real (const_int i32_t 0) 1 llbuilder; *)
 
-    (* This will not work for arrays of objects *)
-    let size = (codegen_sexpr e llbuilder) in
-    let size_t = L.build_intcast (L.size_of t) i32_t "tmp" llbuilder in
-    let size = L.build_mul size_t size "tmp" llbuilder in
-    let size_real = L.build_add size (L.const_int i32_t 1) "arr_size" llbuilder in
-
-      let arr = L.build_array_malloc t size_real "tmp" llbuilder in
-    let arr = L.build_pointercast arr (L.pointer_type t) "tmp" llbuilder in
-
-    let arr_len_ptr = L.build_pointercast arr (L.pointer_type i32_t) "tmp" llbuilder in
-
-    (* Store length at this position *)
-    ignore(L.build_store size_real arr_len_ptr llbuilder);
-    (* initialise_array arr_len_ptr size_real (const_int i32_t 0) 0 llbuilder; *)
-    arr
+let llvalues = List.map ~f:(fun x -> codegen_sexpr  x llbuilder) el in
+List.iteri ~f:(fun i llval ->
+          let arr_ptr = L.build_gep arr [| (L.const_int i32_t (i+1)) |] "tmp" llbuilder in
+          ignore(L.build_store llval arr_ptr llbuilder);  ) llvalues;
+arr
 
 (* Codegen Library Functions *)
 (* ========================= *)

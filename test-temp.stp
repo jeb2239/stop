@@ -1,29 +1,33 @@
 /*
- * test-nested2.stp
+ * test-nested1.stp
  * ================
  */
+
 
 class Rectangle = {
     var a:Int;
     var b:Int;
+    var c:Int;
 }
 
-def print_rectangle = (a:Rectangle):Int {
-    printf("%d\n",a);
+def print_rectangle = (a:Rectangle):Rectangle {
+    printf("%d\n",a.a);
     //printf("%d\n",a.a );
-return 0;
+return a;
 }
 
 def main = ():Int {
 
-
     var j:Rectangle;
+    j.a=0;
     printf("%d\n",j);
-    printf("%s\n","---------");
-    j.a = 0;
+
+    print_rectangle(j);
     printf("%d\n",j.a); //works up to here
 
     print_rectangle(j); //now we seg
+    var a:Rectangle = print_rectangle(j);
+    print_rectangle(a);
 
 }
 
@@ -55,6 +59,21 @@ def main = ():Int {
 	printf("%d\n",b.a[i]);
 	}
 	printf("%d\n",33);
+=======
+class Example = {
+	var b : Int;
+}
+
+def f = (a:Example):Int {
+	return a.b;
+}
+
+def main = ():Int {
+	var c:Example;
+	c.b = 5;
+	var i:Int = f(c);
+	printf("%d\n", i);
+>>>>>>> compiler_updates_everyone
 	return 0;
 }
 */

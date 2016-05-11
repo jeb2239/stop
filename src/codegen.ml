@@ -81,7 +81,7 @@ and get_lltype_exn (data_t:datatype) = (*print_endline (U.string_of_datatype dat
 match data_t with
 
     Datatype(Int_t) -> i32_t
-  | Datatype(Float_t) -> double_t (* TODO: Decide what to do a/b doubles & floats *)
+  | Datatype(Float_t) -> float_t (* TODO: Decide what to do a/b doubles & floats *)
   | Datatype(Bool_t) -> i1_t
   | Datatype(Char_t) -> i8_t
   | Datatype(Unit_t) -> void_t
@@ -172,10 +172,13 @@ and handle_unop op se data_t llbuilder =
 
     type_handler data_t
 
-and codegen_call fname sexpr_l data_t llbuilder = match fname with
-    "printf" -> codegen_printf sexpr_l llbuilder
-  | "sizeof" -> codegen_sizeof sexpr_l llbuilder
-  | _ as fname -> codegen_function_call fname sexpr_l data_t llbuilder
+and codegen_call sexpr sexpr_l data_t llbuilder = match sexpr with
+    SId(fname, _) ->
+        (match fname with
+            "printf" -> codegen_printf sexpr_l llbuilder
+          | _ -> codegen_function_call sexpr sexpr_l data_t llbuilder)
+  | _ -> codegen_function_call sexpr sexpr_l data_t llbuilder
+
 
 and codegen_sizeof el llbuilder =
   let type_of = A.sexpr_to_type_exn (List.hd_exn el) in
@@ -184,16 +187,23 @@ and codegen_sizeof el llbuilder =
   L.build_bitcast size_of i32_t "tmp" llbuilder
 
 
-and codegen_function_call fname sexpr_l data_t llbuilder =
-    print_endline "-)_)_)_)_----)_)_000-_)_)";
-    Hashtbl.iteri ~f:(fun ~key:x ~data:y -> print_endline x; print_endline (L.string_of_llvalue y);) named_parameters;
-    let call_function fllval =
-        let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
-        match data_t with
-            Datatype(Unit_t) -> L.build_call fllval (Array.of_list params) "" llbuilder
-          | _ -> L.build_call fllval (Array.of_list params) "tmp" llbuilder
-    in
+  and codegen_function_call sexpr sexpr_l data_t llbuilder =
+      let call_function fllval =
+          let params = List.map ~f:(codegen_sexpr ~builder:llbuilder) sexpr_l in
+          match data_t with
+              Datatype(Unit_t) -> L.build_call fllval (Array.of_list params) "" llbuilder
+            | _ -> L.build_call fllval (Array.of_list params) "tmp" llbuilder
+      in
+      match sexpr with
+          SId(fname, _) ->
+              let f = lookup_llfunction_exn fname in
+              call_function f
+        | SObjAccess(se1, se2, data_t) ->
+              let f = codegen_obj_access true se1 se2 data_t llbuilder in
+              call_function f
+    (*
     try
+>>>>>>> compiler_updates_everyone
         let fpointer = Hashtbl.find_exn named_parameters fname in
         let f = L.build_load fpointer "f" llbuilder in
         call_function f
@@ -207,6 +217,7 @@ and codegen_function_call fname sexpr_l data_t llbuilder =
             print_endline ("we die here");
             let f = lookup_llfunction_exn fname in
             call_function f
+            *)
 
 and codegen_printf sexpr_l llbuilder =
     (* Convert printf format string to llvalue *)
@@ -233,7 +244,7 @@ and codegen_id isDeref id llbuilder =
                 L.build_load var id llbuilder
             with | Not_found -> raise (E.UndefinedId id)
     else
-        try Hashtbl.find_exn named_values id
+        try Hashtbl.find_exn named_parameters id
         with | Not_found ->
             try Hashtbl.find_exn named_values id
             with | Not_found -> raise (E.UndefinedId id)
@@ -431,7 +442,7 @@ and codegen_sexpr sexpr ~builder:llbuilder =  match sexpr with
  (* | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
   | SNull                       -> const_null i32_t
   | SDelete e                   -> codegen_delete e llbuilder
-*)
+    *)
 
 and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder

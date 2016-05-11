@@ -13,7 +13,11 @@ def main = ():Int {
 	return 0;
 }
 
+<<<<<<< HEAD
 class Rectangle = {
+=======
+class Rectangle {
+>>>>>>> compiler_updates_everyone
 	var x:Int;
 	var y:Int;
 	var w:Int;

@@ -42,7 +42,7 @@ and sexpr =
   | SUnop of uop * sexpr * datatype
   | SBinop of sexpr * op * sexpr * datatype
   | SAssign of sexpr * sexpr * datatype
-  | SCall of string * sexpr list * datatype * int
+  | SCall of sexpr * sexpr list * datatype * int
   | SObjAccess of sexpr * sexpr * datatype
   | SArrayAccess of sexpr * sexpr list * datatype
   | SArrayCreate of datatype * sexpr list * datatype 

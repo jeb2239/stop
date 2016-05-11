@@ -30,7 +30,7 @@ type class_record = {
     (* constructor_map : Ast.fdecl StringMap.t; *)
 }
 
-(* Analysis Environment *)
+(* Analysis Environment x *)
 (* Named vars = vars in scope *)
 (* Record vars = vars to be placed in function activation record *)
 type env = {

@@ -28,7 +28,7 @@ let i32_t       = L.i32_type context
 let i8_t        = L.i8_type context
 let i1_t        = L.i1_type context 
 let float_t     = L.float_type context
-let double_t    = L.double_type context
+(*let double_t    = L.double_type context*)
 let void_t      = L.void_type context 
 let str_t       = L.pointer_type (L.i8_type context)
 
@@ -78,7 +78,7 @@ and get_function_type data_t_list return_t =
 
 and get_lltype_exn (data_t:datatype) = match data_t with
     Datatype(Int_t) -> i32_t
-  | Datatype(Float_t) -> double_t (* TODO: Decide what to do a/b doubles & floats *)
+  | Datatype(Float_t) -> float_t (* TODO: Decide what to do a/b doubles & floats *)
   | Datatype(Bool_t) -> i1_t
   | Datatype(Char_t) -> i8_t
   | Datatype(Unit_t) -> void_t

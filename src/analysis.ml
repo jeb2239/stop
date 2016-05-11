@@ -420,8 +420,17 @@ and check_obj_access e1 e2 env =
 and check_record_access s env =
     let fname = get_fname_exn env.env_fname in
 
-    let build_lhs_helper fname inner = 
-        inner
+    let rec build_lhs_helper fname inner = 
+        let record_type_name = fname ^ ".record" in
+        let record_class = StringMap.find_exn env.env_cmap record_type_name in
+        if StringMap.mem record_class.field_map s then 
+            inner
+        else
+            let access_link_name = fname ^ "_@link" in
+            let access_link_type = Hashtbl.find_exn access_link_types fname in
+            let outer_fname = Hashtbl.find_exn access_link_fnames fname in
+            let inner = SObjAccess(inner, SId(access_link_name, access_link_type), access_link_type) in
+            build_lhs_helper outer_fname inner
     in
 
     let build_lhs fname = 

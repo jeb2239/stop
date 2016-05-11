@@ -70,7 +70,7 @@ and find_struct_exn name =
         Not_found -> raise (E.InvalidStructType(name))
 
 and get_function_type data_t_list return_t =
-    let llargs = List.fold_left data_t_list
+    let llargs = List.fold_left (List.rev data_t_list)
         ~f:(fun l data_t -> get_lltype_exn data_t :: l)
         ~init:[]
     in
@@ -91,8 +91,31 @@ let lookup_llfunction_exn fname = match (L.lookup_function fname the_module) wit
     None -> raise (E.LLVMFunctionNotFound(fname))
   | Some f -> f
 
+let rec codegen_sexpr sexpr ~builder:llbuilder = match sexpr with 
+    SIntLit(i)                  -> L.const_int i32_t i
+  | SFloatLit(f)                -> L.const_float float_t f
+  | SBoolLit(b)                 -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
+  | SCharLit(c)                 -> L.const_int i8_t (Char.to_int c)
+  | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
+  | SFunctionLit(s, _)          -> codegen_function_lit s llbuilder
+  | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
+  | SArrayAccess(se, se_l, _)   -> codegen_array_access true se se_l llbuilder
+  | SObjAccess(se1, se2, d)     -> codegen_obj_access true se1 se2 d llbuilder
+  | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
+  | SId(id, _)                      -> codegen_id false id llbuilder
+  | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
+  | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
+  | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
+  | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el 
+  | _ -> raise E.NotImplemented
+ (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder *)
+ (* | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
+  | SNull                       -> const_null i32_t
+  | SDelete e                   -> codegen_delete e llbuilder
+    *)
+
 (* Generate Code for Binop *)
-let rec handle_binop e1 op e2 data_t llbuilder = 
+and handle_binop e1 op e2 data_t llbuilder = 
     (* Get the types of e1 and e2 *)
     let type1 = A.sexpr_to_type e1 in
     let type2 = A.sexpr_to_type e2 in
@@ -278,28 +301,7 @@ and codegen_function_lit fname llbuilder =
     let f_llval = lookup_llfunction_exn fname in
     f_llval
 
-and codegen_sexpr sexpr ~builder:llbuilder = match sexpr with 
-    SIntLit(i)                  -> L.const_int i32_t i
-  | SFloatLit(f)                -> L.const_float float_t f
-  | SBoolLit(b)                 -> if b then L.const_int i1_t 1 else L.const_int i1_t 0
-  | SCharLit(c)                 -> L.const_int i8_t (Char.to_int c)
-  | SStringLit(s)               -> L.build_global_stringptr s "tmp" llbuilder
-  | SFunctionLit(s, _)          -> codegen_function_lit s llbuilder
-  | SAssign(e1, e2, _)          -> codegen_assign e1 e2 llbuilder
-  | SArrayAccess(se, se_l, _)   -> codegen_array_access true se se_l llbuilder
-  | SObjAccess(se1, se2, d)     -> codegen_obj_access true se1 se2 d llbuilder
-  | SNoexpr                     -> L.build_add (L.const_int i32_t 0) (L.const_int i32_t 0) "nop" llbuilder
-  | SId(id, _)                      -> codegen_id false id llbuilder
-  | SBinop(e1, op, e2, data_t)      -> handle_binop e1 op e2 data_t llbuilder
-  | SUnop(op, e, d)                 -> handle_unop op e d llbuilder
-  | SCall(fname, se_l, data_t, _)   -> codegen_call fname se_l data_t llbuilder
-  | SArrayCreate(t, el, d)          -> codegen_array_create llbuilder t d el 
-  | _ -> raise E.NotImplemented
- (* | SObjectCreate(id, el, d)    -> codegen_obj_create id el d llbuilder *)
- (* | SArrayPrimitive(el, d)      -> codegen_array_prim d el llbuilder
-  | SNull                       -> const_null i32_t
-  | SDelete e                   -> codegen_delete e llbuilder
-    *)
+
 
 and codegen_return sexpr llbuilder = match sexpr with
     SNoexpr -> L.build_ret_void llbuilder

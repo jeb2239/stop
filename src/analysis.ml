@@ -127,8 +127,32 @@ let build_reserved_map =
     in
     reserved_map
 
+let rec expr_to_sexpr e env = match e with
+    (* Literals *)
+    IntLit(i)           -> (SIntLit(i), env)
+  | FloatLit(b)         -> (SFloatLit(b), env)
+  | BoolLit(b)          -> (SBoolLit(b), env)
+  | CharLit(c)          -> (SCharLit(c), env)
+  | StringLit(s)        -> (SStringLit(s), env)
+  | Id(s)               -> (check_record_access s env, env)
+  (*
+  | Id(s)               -> (SId(s, get_Id_type s env), env) 
+  | This                -> (SId("this", get_this_type env), env)
+    *)
+  | Noexpr              -> (SNoexpr, env)
+
+    (* Operations *)
+  | Unop(op, e)         -> (check_unop op e env, env)
+  | Binop(e1, op, e2)   -> (check_binop e1 op e2 env, env)
+  | Assign(e1, e2)      -> (check_assign e1 e2 env, env)
+  | Call(s, e_l)        -> (check_call s e_l env, env)
+  | ArrayAccess(e, e_l) -> (check_array_access e e_l env, env)
+  | ArrayCreate(d, e_l) -> (check_array_create d e_l env, env)
+  | FunctionLit(f)      -> (check_function_literal f env, env)
+  | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
+
 (* Return Datatype for Binops with an Equality Operator (=, !=) *)
-let rec get_equality_binop_type se1 op se2 =
+and get_equality_binop_type se1 op se2 =
     let type1 = sexpr_to_type_exn se1 in
     let type2 = sexpr_to_type_exn se2 in
     match (type1, type2) with
@@ -330,7 +354,7 @@ and check_function_literal fdecl env =
     let link_type = Some(Datatype(Object_t(f.fname ^ ".record"))) in
     let sfdecl = convert_fdecl_to_sfdecl env.env_fmap env.env_cmap fdecl env.env_named_vars link_type env.env_record_to_pass in
     higher_order_sfdecls := StringMap.add !higher_order_sfdecls ~key:fdecl.fname ~data:sfdecl;
-    SFunctionLit(fdecl.fname, fdecl.ftype)
+    SFunctionLit(sfdecl.sfname, sfdecl.sftype)
 
 and check_obj_access e1 e2 env =
     let get_cname_exn = function
@@ -380,30 +404,6 @@ and check_record_access s env =
     let rhs = SId(s, rhs_type) in
     SObjAccess(lhs, rhs, rhs_type)
 
-(* TODO: Add all match cases for stmts, exprs *)
-and expr_to_sexpr e env = match e with
-    (* Literals *)
-    IntLit(i)           -> (SIntLit(i), env)
-  | FloatLit(b)         -> (SFloatLit(b), env)
-  | BoolLit(b)          -> (SBoolLit(b), env)
-  | CharLit(c)          -> (SCharLit(c), env)
-  | StringLit(s)        -> (SStringLit(s), env)
-  | Id(s)               -> (check_record_access s env, env)
-  (*
-  | Id(s)               -> (SId(s, get_Id_type s env), env) 
-  | This                -> (SId("this", get_this_type env), env)
-    *)
-  | Noexpr              -> (SNoexpr, env)
-
-    (* Operations *)
-  | Unop(op, e)         -> (check_unop op e env, env)
-  | Binop(e1, op, e2)   -> (check_binop e1 op e2 env, env)
-  | Assign(e1, e2)      -> (check_assign e1 e2 env, env)
-  | Call(s, e_l)        -> (check_call s e_l env, env)
-  | ArrayAccess(e, e_l) -> (check_array_access e e_l env, env)
-  | ArrayCreate(d, e_l) -> (check_array_create d e_l env, env)
-  | FunctionLit(f)      -> (check_function_literal f env, env)
-  | ObjAccess(e1, e2)   -> (check_obj_access e1 e2 env, env)
 
 and arraytype_to_access_type data_t = match data_t with
     Arraytype(p, _) -> Datatype(p)
@@ -866,6 +866,9 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
         Some(t) -> let access_link = Formal(fdecl.fname ^ "_@link", t) in access_link :: fdecl.formals
       | None -> fdecl.formals
     in
+    (*
+    let sformals = fdecl.formals in
+    *)
 
     (* Add named values to env *)
     let env_param_helper m formal = match formal with
@@ -929,6 +932,15 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
     let record_type = Datatype(Object_t(fdecl.fname ^ ".record")) in
     let record_name = fdecl.fname ^ "_record" in
     let sfbody = SLocal(record_name, record_type, SNoexpr) :: sfbody in
+
+    (* Make sure the function has the correct type (prepend access link) *)
+    let sftype = match link_type with
+        Some(t) -> (match fdecl.ftype with
+            Functiontype(dt_l, dt) -> Functiontype(t :: dt_l, dt)
+          | _ -> raise E.FTypeMustBeFunctiontype)
+      | None -> fdecl.ftype
+    in
+
     {
         sfname          = fdecl.fname;
         sreturn_t       = fdecl.return_t;
@@ -938,7 +950,7 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
         fgroup          = Sast.User;
         overrides       = fdecl.overrides;
         source          = None;
-        sftype          = fdecl.ftype;
+        sftype          = sftype;
     }
 
 (* Generate activation records for fdecls *)

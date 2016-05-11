@@ -4,7 +4,7 @@
  */
 
 def main = ():Int {
-	var lambda_add_3 = @(i:Int):Int {
+	var lambda_add_3:Int->Int = @(i:Int):Int {
 		return i + 3;
 	};
 

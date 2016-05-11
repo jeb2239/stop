@@ -1,0 +1,53 @@
+; ModuleID = 'Stop'
+
+%"@1.record" = type <{ i32, i32 }>
+%main.record = type <{ i32, i32 (i32)* }>
+
+@fmt = private unnamed_addr constant [4 x i8] c"%d\0A\00"
+
+declare i32 @printf(i8*, ...)
+
+declare noalias i8* @malloc(i32)
+
+declare i32 @open(i8*, i32)
+
+declare i32 @close(i32)
+
+declare i32 @read(i32, i8*, i32)
+
+declare i32 @write(i32, i8*, i32)
+
+declare i32 @lseek(i32, i32, i32)
+
+declare void @exit(i32)
+
+declare i8* @realloc(i8*, i32)
+
+declare i32 @getchar()
+
+declare i32 @sizeof(i32)
+
+define i32 @"@1"(i32 %i) {
+entry:
+  %malloccall = tail call i8* @malloc(i32 ptrtoint (%"@1.record"* getelementptr (%"@1.record", %"@1.record"* null, i32 1) to i32))
+  %"@1_record" = bitcast i8* %malloccall to %"@1.record"*
+  %i1 = getelementptr inbounds %"@1.record", %"@1.record"* %"@1_record", i32 0, i32 1
+  store i32 %i, i32* %i1
+  %i2 = getelementptr inbounds %"@1.record", %"@1.record"* %"@1_record", i32 0, i32 1
+  %i3 = load i32, i32* %i2
+  %addtmp = add i32 %i3, 3
+  ret i32 %addtmp
+}
+
+define i32 @main(i32 %argc, i8** %argv) {
+entry:
+  %malloccall = tail call i8* @malloc(i32 ptrtoint (%main.record* getelementptr (%main.record, %main.record* null, i32 1) to i32))
+  %main_record = bitcast i8* %malloccall to %main.record*
+  %lambda_add_3 = getelementptr inbounds %main.record, %main.record* %main_record, i32 0, i32 1
+  store i32 (i32)* @"@1", i32 (i32)** %lambda_add_3
+  %lambda_add_31 = getelementptr inbounds %main.record, %main.record* %main_record, i32 0, i32 1
+  %lambda_add_32 = load i32 (i32)*, i32 (i32)** %lambda_add_31
+  %tmp = call i32 %lambda_add_32(i32 4)
+  %printf = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @fmt, i32 0, i32 0), i32 %tmp)
+  ret i32 0
+}

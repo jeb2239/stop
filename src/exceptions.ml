@@ -13,6 +13,7 @@ exception CannotDefineVariableLengthArgFunction
 exception MissingEOF
 
 (* Semant Exceptions *)
+exception FTypeMustBeFunctiontype
 exception ThisUsedOutsideClass
 exception MissingMainFunction
 exception MultipleMainFunctions

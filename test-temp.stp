@@ -4,6 +4,10 @@
  */
 
 def main = ():Int {
+	var lambda_add = @(i:Int, j:Int):Int {
+		return i + 3;
+	};
+
 	var lambda_add_3 = @(i:Int):Int {
 		return i + 3;
 	};

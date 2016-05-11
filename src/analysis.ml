@@ -272,7 +272,11 @@ and check_call s e_l env =
     let se_l = expr_list_to_sexpr_list e_l env in
     let record_to_pass = StringMap.find env.env_record_to_pass s in
     let se_l = match record_to_pass with
-        Some(t) -> se_l
+        Some(tuple) -> 
+            let record_name = fst tuple in
+            let record_type = snd tuple in
+            let se = SId(record_name, record_type) in
+            se :: se_l
       | None -> se_l
     in
     try 

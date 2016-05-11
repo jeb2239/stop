@@ -13,7 +13,7 @@ def main = ():Int {
 	return 0;
 }
 
-class Rectangle{
+class Rectangle {
 	var x:Int;
 	var y:Int;
 	var w:Int;

@@ -14,6 +14,8 @@ exception MissingEOF
 
 (* Semant Exceptions *)
 exception FTypeMustBeFunctiontype
+exception CannotReturnFunctionWithoutAccessLinkAsFirstParameter
+exception ReturnTypeMustBeFunctiontype
 exception ThisUsedOutsideClass
 exception MissingMainFunction
 exception MultipleMainFunctions

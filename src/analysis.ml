@@ -502,7 +502,6 @@ and check_return e env =
     let data_t = sexpr_to_type_exn se in
     match data_t, env.env_return_t  with
         (* Allow unit returns for reference types e.g. objects, arrays *)
-        (* TODO: See if this makes sense for Unit_t... *)
         Datatype(Unit_t), Datatype(Object_t(_))
       | Datatype(Unit_t), Arraytype(_, _) -> ([SReturn(se, data_t)], env)
       | _ ->
@@ -947,6 +946,16 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
         ~f:env_param_helper
         ~init:StringMap.empty
     in
+
+    (* Ensure function has the correct return type *)
+    (* If the function returns a function, the first parameter is the returning function's activation record *)
+    let record_type = Datatype(Object_t(fdecl.fname ^ ".record")) in
+
+    let sreturn_t = match fdecl.return_t with
+        Functiontype(dt_l, dt) -> Functiontype(record_type :: dt_l, dt)
+      | _ as return_t -> return_t
+    in
+
     let env = {
         env_cname       = None;
         env_crecord     = None;
@@ -956,7 +965,7 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
         env_named_vars  = named_vars;
         env_record_vars = record_vars;
         env_record_to_pass = record_to_pass;
-        env_return_t    = fdecl.return_t;
+        env_return_t    = sreturn_t;
         env_in_for      = false;
         env_in_while    = false;
     }
@@ -1001,10 +1010,9 @@ and convert_fdecl_to_sfdecl fmap cmap fdecl named_vars link_type record_to_pass 
           | _ -> raise E.FTypeMustBeFunctiontype)
       | None -> fdecl.ftype
     in
-
     {
         sfname          = fdecl.fname;
-        sreturn_t       = fdecl.return_t;
+        sreturn_t       = sreturn_t;
         srecord_vars    = record_vars;
         sformals        = sformals;
         sbody           = sfbody;
